@@ -1,6 +1,6 @@
-# Laberintos_y_Fantasmas
+# Laberintos y Fantasmas
 
-TP Algoritmos y Estructuras de Datos
+TP Algoritmos y Estructuras de Datos - Grupo Pixelados
 
 
 
@@ -13,3 +13,9 @@ TP Algoritmos y Estructuras de Datos
 | Struct   | `pascalCase` (prefijo `s`) | `sNodo`                                                             |
 | Macro    | `SCREAMING_SNAKE_CASE`     | `CANT_PIXELES`, `TAM_VEC`                                           |
 | Funcion  | `snake_case`               | `inicializar_motor()`, `movimiento_es_valido()`, `destruir_juego()` |
+
+
+
+#### **Librerias de terceros utilizadas**
+
+-  [SDL  2.32.8]([Release 2.32.8 · libsdl-org/SDL · GitHub](https://github.com/libsdl-org/SDL/releases/tag/release-2.32.8))
