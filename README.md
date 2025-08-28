@@ -18,4 +18,4 @@ TP Algoritmos y Estructuras de Datos - Grupo Pixelados
 
 #### **Librerias de terceros utilizadas**
 
--  [SDL  2.32.8]([Release 2.32.8 · libsdl-org/SDL · GitHub](https://github.com/libsdl-org/SDL/releases/tag/release-2.32.8))
+-  [SDL  2.32.8](https://github.com/libsdl-org/SDL/releases/tag/release-2.32.8)
