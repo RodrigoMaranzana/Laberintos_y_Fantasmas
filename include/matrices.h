@@ -4,13 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct{
-    void** matriz;
-    size_t filas;
-    size_t columnas;
-    size_t tamElem;
-}Matriz;
-
 
 void** crearMatriz(size_t filas, size_t columnas, size_t tamElem);
 
