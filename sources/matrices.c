@@ -1,10 +1,12 @@
 #include "../include/matrices.h"
+#include "../include/retornos.h"
 
 void** crearMatriz(size_t filas, size_t columnas, size_t tamElem)
 {
     void** fila;
     void** ultimaFila;
     void** matriz;
+    int estado = TODO_OK;
 
     matriz = malloc(filas * sizeof(void*));
     if(!matriz){
@@ -14,14 +16,13 @@ void** crearMatriz(size_t filas, size_t columnas, size_t tamElem)
 
     ultimaFila = matriz + filas - 1;
 
-    for(fila = matriz; fila <= ultimaFila; fila++){
+    for(fila = matriz; estado == TODO_OK && fila <= ultimaFila; fila++){
 
         *fila = malloc(columnas * tamElem);
-
         if(!*fila){
 
             destruirMatriz(matriz, fila - matriz);
-            return NULL;
+            estado = ERR_SIN_MEMORIA;
         }
     }
 
