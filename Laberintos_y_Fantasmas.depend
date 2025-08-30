@@ -491,7 +491,7 @@
 	<SDL2/SDL_mixer.h>
 	"../include/logica.h"
 
-1756518282 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\juego.c
+1756518578 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\juego.c
 	<stdio.h>
 	<SDL2/SDL_image.h>
 	"../include/juego.h"

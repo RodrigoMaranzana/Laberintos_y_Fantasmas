@@ -46,6 +46,7 @@
 		<Unit filename="include/input.h" />
 		<Unit filename="include/juego.h" />
 		<Unit filename="include/logica.h" />
+		<Unit filename="include/matrices.h" />
 		<Unit filename="include/retornos.h" />
 		<Unit filename="sources/assets.c">
 			<Option compilerVar="CC" />
@@ -69,6 +70,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/matrices.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions />
