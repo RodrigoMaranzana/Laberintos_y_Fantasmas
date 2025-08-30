@@ -1,7 +1,7 @@
 #include "../include/matrices.h"
 #include "../include/retornos.h"
 
-void** crearMatriz(size_t filas, size_t columnas, size_t tamElem)
+void** crear_matriz(size_t filas, size_t columnas, size_t tamElem)
 {
     void** fila;
     void** ultimaFila;
@@ -21,7 +21,7 @@ void** crearMatriz(size_t filas, size_t columnas, size_t tamElem)
         *fila = malloc(columnas * tamElem);
         if(!*fila){
 
-            destruirMatriz(matriz, fila - matriz);
+            destruir_matriz(matriz, fila - matriz);
             estado = ERR_SIN_MEMORIA;
         }
     }
@@ -29,7 +29,7 @@ void** crearMatriz(size_t filas, size_t columnas, size_t tamElem)
     return matriz;
 }
 
-void destruirMatriz(void** matriz, size_t filas)
+void destruir_matriz(void** matriz, size_t filas)
 {
     void **fila;
     void **ultimaFila = matriz + filas - 1;
@@ -44,7 +44,7 @@ void destruirMatriz(void** matriz, size_t filas)
     matriz = NULL;
 }
 
-void initMatriz(void** matriz ,size_t filas, size_t columnas, size_t tamElem)
+void init_matriz(void** matriz ,size_t filas, size_t columnas, size_t tamElem)
 {
     size_t fila;
 

@@ -5,11 +5,9 @@
 #include <string.h>
 
 
-void** crearMatriz(size_t filas, size_t columnas, size_t tamElem);
-
-void destruirMatriz(void** matriz, size_t filas);
-
-void initMatriz(void** matriz ,size_t filas, size_t columnas, size_t tamElem);
+void** crear_matriz(size_t filas, size_t columnas, size_t tamElem);
+void destruir_matriz(void** matriz, size_t filas);
+void init_matriz(void** matriz ,size_t filas, size_t columnas, size_t tamElem);
 
 
 #endif // MATRICES_H_INCLUDED
