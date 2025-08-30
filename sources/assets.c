@@ -2,9 +2,6 @@
 #include "../include/retornos.h"
 #include "../include/assets.h"
 
-
-
-
 int assets_cargar_imagenes(SDL_Renderer *renderer, SDL_Texture **imgAssets)
 {
     int i = 0;

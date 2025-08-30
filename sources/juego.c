@@ -7,6 +7,8 @@
 #include "../include/assets.h"
 
 static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, SDL_Texture **framebuffer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
+static void _juego_sonidos(tLogica *logica, Mix_Chunk **sndAssets);
+static void _juego_renderizar(SDL_Renderer* renderer, SDL_Texture* framebuffer, SDL_Texture **imgAssets,  tLogica *logica);
 
 int juego_inicializar(tJuego* juego, unsigned anchoRes, unsigned altoRes, const char *tituloVentana)
 {
@@ -85,35 +87,16 @@ int juego_ejecutar(tJuego* juego)
             if(Mix_Playing(0) == 0 && evento.type == SDL_KEYDOWN && (accion = input_procesar_tecla(evento.key.keysym.sym, logica.mapaTeclas, logica.mapaCant)) != -1){
 
                 logica_actualizar(&logica, accion);
-                puts("Logica actualizada.");
-
-                if(Mix_Playing(0) == 0) {
-
-                    Mix_PlayChannel(0, *(juego->sndAssets + SONIDO_FANTASMA_01), 0);
-                }
+                _juego_sonidos(&logica, juego->sndAssets);
             }
         }
 
-        ///if(haySonidosEnCola)
-            ///juego_sonidos();
-
-        juego_renderizar(juego->renderer, juego->framebuffer, juego->imgAssets, &logica);
+        _juego_renderizar(juego->renderer, juego->framebuffer, juego->imgAssets, &logica);
     }
 
     logica_destruir(&logica);
 
     return ret;
-}
-
-void juego_renderizar(SDL_Renderer* renderer, SDL_Texture* framebuffer, SDL_Texture **imgAssets, tLogica *logica)
-{
-    // Borra el renderer
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-
-    graficos_dibujar_textura(*imgAssets, renderer, &(SDL_Rect){.x = 0, .y = 0, .w = 16, .h = 16}, &(SDL_Rect){.x = logica->jugador.ubic.columna * 16, .y = logica->jugador.ubic.fila * 16, .w = 16, .h = 16});
-
-    SDL_RenderPresent(renderer);
 }
 
 void juego_destruir(tJuego* juego)
@@ -128,6 +111,30 @@ void juego_destruir(tJuego* juego)
     SDL_Quit();
 
     juego->estado = JUEGO_CERRANDO;
+}
+
+
+/*************************
+    FUNCIONES ESTATICAS
+*************************/
+
+static void _juego_sonidos(tLogica *logica, Mix_Chunk **sndAssets)
+{
+    if(Mix_Playing(0) == 0) {
+
+        Mix_PlayChannel(0, *(sndAssets + SONIDO_FANTASMA_01), 0);
+    }
+}
+
+static void _juego_renderizar(SDL_Renderer* renderer, SDL_Texture* framebuffer, SDL_Texture **imgAssets, tLogica *logica)
+{
+    // Borra el renderer
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    graficos_dibujar_textura(*imgAssets, renderer, &(SDL_Rect){.x = 0, .y = 0, .w = 16, .h = 16}, &(SDL_Rect){.x = logica->jugador.ubic.columna * 16, .y = logica->jugador.ubic.fila * 16, .w = 16, .h = 16});
+
+    SDL_RenderPresent(renderer);
 }
 
 static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, SDL_Texture **framebuffer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana)

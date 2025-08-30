@@ -25,7 +25,6 @@ typedef struct{
 
 int juego_inicializar(tJuego *juego, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
 int juego_ejecutar(tJuego *juego);
-void juego_renderizar(SDL_Renderer* renderer, SDL_Texture* framebuffer, SDL_Texture **imgAssets,  tLogica *logica);
 void juego_destruir(tJuego *juego);
 
 #endif // MOTOR_H_INCLUDED
