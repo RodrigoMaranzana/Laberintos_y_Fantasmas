@@ -1,6 +1,7 @@
 #ifndef LOGICA_H_INCLUDED
 #define LOGICA_H_INCLUDED
-
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_mixer.h>
 #include "../include/input.h"
 #include "../include/entidad.h"
 #include "../include/escenario.h"

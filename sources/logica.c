@@ -6,13 +6,13 @@
 #include <stdio.h>
 #include <string.h>
 
-/// MACROS TEMPORALES
 #define PIXELES_TILE 48
 
 static void _logica_procesar_turno(tLogica *logica, eAccion accion);
 
 void logica_calc_resolucion(unsigned cantColumnas, unsigned cantFilas, unsigned *anchoRes, unsigned *altoRes)
 {
+    /// DEBE OBTENERSE DESDE EL ARCHIVO DE TEXTO CONF
     *anchoRes =  cantColumnas * PIXELES_TILE;
     *altoRes =  cantFilas * PIXELES_TILE;
 }

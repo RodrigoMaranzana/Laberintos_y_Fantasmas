@@ -21,16 +21,16 @@ typedef struct{
     SDL_Texture **imagenes;
     Mix_Chunk **sonidos;
     TTF_Font *fuente;
-    tMenu *menu;
-    //tMenu **menus; // Si se necesita mas de un menu
+    tMenu *menu; //tMenu **menus; // Si se necesita mas de un menu
+    tLogica logica;
     eJuegoEstado estado;
     const char *tituloVentana;
     unsigned anchoRes;
     unsigned altoRes;
 }tJuego;
 
-int juego_inicializar(tJuego *juego, tLogica *logica, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
-int juego_ejecutar(tJuego *juego, tLogica *logica);
+int juego_inicializar(tJuego *juego, const char *tituloVentana);
+int juego_ejecutar(tJuego *juego);
 void juego_destruir(tJuego *juego);
 
 #endif // MOTOR_H_INCLUDED
