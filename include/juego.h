@@ -4,6 +4,10 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_mixer.h>
 #include "../include/logica.h"
+#include "../include/texto.h"
+#include "../include/menu.h"
+
+#define SDL_COLOR_BLANCO ((SDL_Color){255, 255, 255, 255})
 
 typedef enum{
     JUEGO_NO_INICIADO,
@@ -14,17 +18,19 @@ typedef enum{
 typedef struct{
     SDL_Window *ventana;
     SDL_Renderer *renderer;
-    SDL_Texture *framebuffer;
-    SDL_Texture **imgAssets;
-    Mix_Chunk **sndAssets;
+    SDL_Texture **imagenes;
+    Mix_Chunk **sonidos;
+    TTF_Font *fuente;
+    tMenu *menu;
+    //tMenu **menus; // Si se necesita mas de un menu
     eJuegoEstado estado;
     const char *tituloVentana;
     unsigned anchoRes;
     unsigned altoRes;
 }tJuego;
 
-int juego_inicializar(tJuego *juego, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
-int juego_ejecutar(tJuego *juego);
+int juego_inicializar(tJuego *juego, tLogica *logica, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
+int juego_ejecutar(tJuego *juego, tLogica *logica);
 void juego_destruir(tJuego *juego);
 
 #endif // MOTOR_H_INCLUDED

@@ -1,15 +1,20 @@
 #include "../include/logica.h"
-#include "../include/retornos.h"
+#include "../include/retorno.h"
+#include "../include/matriz.h"
+#include "../include/menu.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 /// MACROS TEMPORALES
-#define PIXELES_X_TILE 16
+#define PIXELES_TILE 48
+
+static void _logica_procesar_turno(tLogica *logica, eAccion accion);
 
 void logica_calc_resolucion(unsigned cantColumnas, unsigned cantFilas, unsigned *anchoRes, unsigned *altoRes)
 {
-    *anchoRes =  cantColumnas * PIXELES_X_TILE;
-    *altoRes =  cantFilas * PIXELES_X_TILE;
+    *anchoRes =  cantColumnas * PIXELES_TILE;
+    *altoRes =  cantFilas * PIXELES_TILE;
 }
 
 int logica_inicializar(tLogica *logica)
@@ -33,10 +38,10 @@ int logica_inicializar(tLogica *logica)
 
     memcpy(logica->mapaTeclas, keyMapLocal, sizeof(keyMapLocal));
 
-    /// TEMPORAL
-    logica->jugador.ubic.columna = 2;
-    logica->jugador.ubic.fila = 2;
+    escenario_crear(&logica->escenario, 16, 16);
+    escenario_generar(&logica->escenario);
 
+    logica->estado = LOGICA_EN_ESPERA;
 
     return TODO_OK;
 }
@@ -47,29 +52,48 @@ void logica_destruir(tLogica *logica)
 
         free(logica->mapaTeclas);
     }
+
+    escenario_destruir(&logica->escenario);
 }
 
 int logica_actualizar(tLogica *logica, eAccion accion)
 {
+    _logica_procesar_turno(logica, accion);
+
+    return TODO_OK;
+}
+
+static void _logica_procesar_turno(tLogica *logica, eAccion accion)
+{
+    tUbicacion nuevaUbic = logica->escenario.jugador.ubic;
+
     switch(accion){
 
         case ACCION_ARRIBA:
-            logica->jugador.ubic.fila--;
+            nuevaUbic.fila--;
             break;
         case ACCION_ABAJO:
-            logica->jugador.ubic.fila++;
+            nuevaUbic.fila++;
             break;
         case ACCION_IZQUIERDA:
-            logica->jugador.ubic.columna--;
+            nuevaUbic.columna--;
             break;
         case ACCION_DERECHA:
-            logica->jugador.ubic.columna++;
+            nuevaUbic.columna++;
             break;
         default:
             break;
     }
 
-    return TODO_OK;
+    if(logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].tile.imagen != IMAGEN_PARED_LAD_GRIS){
+
+        logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad = logica->escenario.tablero[logica->escenario.jugador.ubic.fila][logica->escenario.jugador.ubic.columna].entidad;
+        logica->escenario.tablero[logica->escenario.jugador.ubic.fila][logica->escenario.jugador.ubic.columna].entidad = NULL;
+
+        logica->escenario.jugador.ubic.columna = nuevaUbic.columna;
+        logica->escenario.jugador.ubic.fila = nuevaUbic.fila;
+    }
+
 }
 
 

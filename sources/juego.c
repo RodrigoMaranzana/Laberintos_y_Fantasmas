@@ -2,31 +2,50 @@
 #include <SDL2/SDL_image.h>
 #include "../include/juego.h"
 #include "../include/logica.h"
-#include "../include/retornos.h"
+#include "../include/retorno.h"
 #include "../include/graficos.h"
 #include "../include/assets.h"
 
-static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, SDL_Texture **framebuffer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
-static void _juego_sonidos(tLogica *logica, Mix_Chunk **sndAssets);
-static void _juego_renderizar(SDL_Renderer* renderer, SDL_Texture* framebuffer, SDL_Texture **imgAssets,  tLogica *logica);
+typedef enum {
+    MENU_PRINCIPAL_JUGAR,
+    MENU_PRINCIPAL_SALIR,
+    MENU_PRINCIPAL_ESTADISTICAS,
+    MENU_PRINCIPAL_OPCIONES,
+    MENU_PRINCIPAL_CANTIDAD,
+}eMenuPrincipalAccion;
 
-int juego_inicializar(tJuego* juego, unsigned anchoRes, unsigned altoRes, const char *tituloVentana)
+static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
+static void _juego_sonidos(tLogica *logica, Mix_Chunk **sonidos);
+static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica);
+static void _juego_renderizar_menu(SDL_Renderer *renderer, tMenu *menu);
+static void _juego_iniciar_partida(void* datos);
+static void _juego_salir_del_juego(void* datos);
+static eMenuComando _juego_accion_a_menu(eAccion accion);
+
+int juego_inicializar(tJuego *juego, tLogica *logica, unsigned anchoRes, unsigned altoRes, const char *tituloVentana)
 {
     int ret = TODO_OK;
+    SDL_Texture *texturaAux;
     juego->estado = JUEGO_NO_INICIADO;
 
     printf("Iniciando SDL\n");
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != TODO_OK){
 
-        printf("SDL_Init() Error: %s\n", SDL_GetError());
+        printf("SDL_Init() ERROR: %s\n", SDL_GetError());
         return ERR_SDL_INI;
     }
 
     // Inicializa SDL_mixer
     if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0){
 
-        printf("Mix_OpenAudio() Error: %s\n", Mix_GetError());
+        printf("Mix_OpenAudio() ERROR: %s\n", Mix_GetError());
         SDL_Quit();
+        return ERR_SDL_INI;
+    }
+
+    if(TTF_Init() < 0){
+
+        printf("TTF_Init() ERROR: %s\n", TTF_GetError());
         return ERR_SDL_INI;
     }
 
@@ -36,7 +55,6 @@ int juego_inicializar(tJuego* juego, unsigned anchoRes, unsigned altoRes, const 
     ret = _juego_crear_ventana(
         &juego->ventana,
         &juego->renderer,
-        &juego->framebuffer,
         juego->anchoRes,
         juego->altoRes,
         tituloVentana
@@ -50,20 +68,58 @@ int juego_inicializar(tJuego* juego, unsigned anchoRes, unsigned altoRes, const 
         return ERR_VENTANA;
     }
 
-    juego->sndAssets = malloc(sizeof(Mix_Chunk*) * SONIDO_CANTIDAD);
-    if(!juego->sndAssets){
+    juego->sonidos = malloc(sizeof(Mix_Chunk*) * SONIDO_CANTIDAD);
+    if(!juego->sonidos){
 
         return ERR_SIN_MEMORIA;
     }
 
-    juego->imgAssets = malloc(sizeof(SDL_Texture*) * IMAGEN_CANTIDAD);
-    if(!juego->imgAssets){
+    juego->imagenes = malloc(sizeof(SDL_Texture*) * IMAGEN_CANTIDAD);
+    if(!juego->imagenes){
 
         return ERR_SIN_MEMORIA;
     }
 
-    assets_cargar_imagenes(juego->renderer, juego->imgAssets);
-    assets_cargar_sonidos(juego->sndAssets);
+    ret = assets_cargar_imagenes(juego->renderer, juego->imagenes);
+    if(ret != TODO_OK){
+
+        return ret;
+    }
+
+    ret = assets_cargar_sonidos(juego->sonidos);
+    if(ret != TODO_OK){
+
+        return ret;
+    }
+
+    ret = assets_cargar_fuente(&juego->fuente, 64);
+    if(ret != TODO_OK){
+
+        return ret;
+    }
+
+    juego->menu = menu_crear(2, (SDL_Point){32,32});
+    if(!juego->menu){
+
+        return ERR_MENU;
+    }
+
+    texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "NUEVA PARTIDA", SDL_COLOR_BLANCO);
+    if(menu_agregar_opcion(juego->menu, texturaAux, 64, (tMenuAccion){_juego_iniciar_partida, logica}) != TODO_OK){
+
+        return ERR_MENU;
+    }
+
+    texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "SALIR", SDL_COLOR_BLANCO);
+    if(menu_agregar_opcion(juego->menu, texturaAux, 64, (tMenuAccion){_juego_salir_del_juego, juego}) != TODO_OK){
+
+        return ERR_MENU;
+    }
+
+    if(menu_agregar_opcion(juego->menu, *(juego->imagenes + IMAGEN_PUERTA_SALIDA), 64, (tMenuAccion){_juego_salir_del_juego, juego}) != TODO_OK){
+
+        return ERR_MENU;
+    }
 
     juego->estado = JUEGO_CORRIENDO;
     printf("Motor iniciado con exito.\n");
@@ -71,43 +127,68 @@ int juego_inicializar(tJuego* juego, unsigned anchoRes, unsigned altoRes, const 
     return ret;
 }
 
-int juego_ejecutar(tJuego* juego)
+int juego_ejecutar(tJuego *juego, tLogica *logica)
 {
-    eRetornos ret = TODO_OK;
-    tLogica logica;
+    eRetorno ret = TODO_OK;
+    tMenuAccion accionProcesada;
     eAccion accion;
     SDL_Event evento;
 
-    logica_inicializar(&logica);
-
     while(juego->estado == JUEGO_CORRIENDO){
 
-        while(SDL_PollEvent(&evento)){
+        accion = ACCION_NINGUNA;
 
-            if(Mix_Playing(0) == 0 && evento.type == SDL_KEYDOWN && (accion = input_procesar_tecla(evento.key.keysym.sym, logica.mapaTeclas, logica.mapaCant)) != -1){
+        if(SDL_PollEvent(&evento)){
 
-                logica_actualizar(&logica, accion);
-                _juego_sonidos(&logica, juego->sndAssets);
+            if(evento.type == SDL_KEYDOWN){
+
+                 accion = input_procesar_tecla(evento.key.keysym.sym, logica->mapaTeclas, logica->mapaCant);
             }
         }
 
-        _juego_renderizar(juego->renderer, juego->framebuffer, juego->imgAssets, &logica);
-    }
+        if(accion != ACCION_NINGUNA){
 
-    logica_destruir(&logica);
+            switch(logica->estado){
+
+                case LOGICA_JUGANDO:
+                    logica_actualizar(logica, accion);
+                    _juego_sonidos(logica, juego->sonidos);
+                    break;
+                default:
+                    accionProcesada = menu_procesar_comando(juego->menu, _juego_accion_a_menu(accion));
+                    if(accionProcesada.funcion){
+                        accionProcesada.funcion(accionProcesada.datos);
+                    }
+                    break;
+            }
+        }
+
+        if(logica->estado == LOGICA_JUGANDO){
+
+            _juego_renderizar(juego->renderer, juego->imagenes, logica);
+        }else{
+
+            _juego_renderizar_menu(juego->renderer, juego->menu);
+        }
+
+
+        SDL_RenderPresent(juego->renderer);
+        SDL_Delay(16);
+    }
 
     return ret;
 }
 
-void juego_destruir(tJuego* juego)
+void juego_destruir(tJuego *juego)
 {
     SDL_DestroyRenderer(juego->renderer);
     SDL_DestroyWindow(juego->ventana);
-    SDL_DestroyTexture(juego->framebuffer);
+
+    assets_destuir_imagenes(juego->imagenes);
+    assets_destuir_sonidos(juego->sonidos);
+    assets_destruir_fuente(juego->fuente);
+
     Mix_CloseAudio();
-
-    /// FREE TEXTURAS
-
     SDL_Quit();
 
     juego->estado = JUEGO_CERRANDO;
@@ -118,28 +199,39 @@ void juego_destruir(tJuego* juego)
     FUNCIONES ESTATICAS
 *************************/
 
-static void _juego_sonidos(tLogica *logica, Mix_Chunk **sndAssets)
+static void _juego_sonidos(tLogica *logica, Mix_Chunk **sonidos)
 {
+    /// Test
     if(Mix_Playing(0) == 0) {
 
-        Mix_PlayChannel(0, *(sndAssets + SONIDO_FANTASMA_01), 0);
+        Mix_PlayChannel(0, *(sonidos + SONIDO_FANTASMA_01), 0);
     }
+    ///
 }
 
-static void _juego_renderizar(SDL_Renderer* renderer, SDL_Texture* framebuffer, SDL_Texture **imgAssets, tLogica *logica)
+static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica)
 {
-    // Borra el renderer
+    /// Test
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    graficos_dibujar_textura(*imgAssets, renderer, &(SDL_Rect){.x = 0, .y = 0, .w = 16, .h = 16}, &(SDL_Rect){.x = logica->jugador.ubic.columna * 16, .y = logica->jugador.ubic.fila * 16, .w = 16, .h = 16});
-
-    SDL_RenderPresent(renderer);
+    escenario_dibujar(renderer, &logica->escenario, imagenes);
+    ///
 }
 
-static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, SDL_Texture **framebuffer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana)
+static void _juego_renderizar_menu(SDL_Renderer *renderer, tMenu *menu)
 {
-    *ventana = SDL_CreateWindow(tituloVentana, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, anchoRes * 2, altoRes * 2, SDL_WINDOW_SHOWN);
+    /// Test
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    menu_dibujar(renderer, menu);
+    ///
+}
+
+static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana)
+{
+    *ventana = SDL_CreateWindow(tituloVentana, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, anchoRes, altoRes, SDL_WINDOW_SHOWN);
     if(!*ventana){
 
         printf("Error: %s\n", SDL_GetError());
@@ -154,18 +246,41 @@ static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, S
         return ERR_RENDERER;
     }
 
-//    *framebuffer = SDL_CreateTexture(*renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, anchoRes, altoRes);
-//    if(!*framebuffer){
-//
-//        SDL_DestroyRenderer(*renderer);
-//        SDL_DestroyWindow(*ventana);
-//        printf("Error: %s", SDL_GetError());
-//        return ERR_TEXTURA;
-//    }
-//    SDL_SetTextureBlendMode(*framebuffer, SDL_BLENDMODE_BLEND);
-
     SDL_RenderSetLogicalSize(*renderer, anchoRes, altoRes);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
 
     return TODO_OK;
+}
+
+static eMenuComando _juego_accion_a_menu(eAccion accion)
+{
+    switch(accion){
+
+        case ACCION_ARRIBA:
+            return MENU_ANTERIOR;
+        case ACCION_ABAJO:
+            return MENU_SIGUIENTE;
+        case ACCION_CONFIRMAR:
+            return MENU_CONFIRMAR;
+        default:
+            break;
+    }
+
+    return MENU_NINGUNO;
+}
+
+static void _juego_iniciar_partida(void* datos)
+{
+    tLogica *logica = (tLogica*)datos;
+    puts("Iniciando partida\n");
+
+    logica->estado = LOGICA_JUGANDO;
+}
+
+static void _juego_salir_del_juego(void* datos)
+{
+    tJuego *juego = (tJuego*)datos;
+    puts("Saliendo\n");
+
+    juego->estado = JUEGO_CERRANDO;
 }

@@ -2,19 +2,32 @@
 #define LOGICA_H_INCLUDED
 
 #include "../include/input.h"
-#include "../include/entidades.h"
+#include "../include/entidad.h"
+#include "../include/escenario.h"
+
+typedef enum{
+    LOGICA_EN_ESPERA,
+    LOGICA_JUGANDO,
+    LOGICA_FIN_PARTIDA
+}eLogicaEstado;
 
 typedef struct{
+    unsigned semilla;
+    unsigned numero;
+}tRonda;
+
+typedef struct{
+    //tLista *rondas; //Para retroceder y avanzar entre rondas
+    tRonda ronda;
     unsigned puntaje;
 }tPartida;
 
 typedef struct{
-    char **tablero;
-    tJugador jugador;
-    //TDA Vector fantasmas
+    tEscenario escenario;
     tPartida partida;
     tKeyMap *mapaTeclas;
     unsigned mapaCant;
+    eLogicaEstado estado;
 }tLogica;
 
 int logica_inicializar(tLogica *logica);

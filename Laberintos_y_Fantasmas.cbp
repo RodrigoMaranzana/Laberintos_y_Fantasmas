@@ -20,6 +20,7 @@
 					<Add library="SDL2" />
 					<Add library="SDL2_mixer" />
 					<Add library="SDL2_image" />
+					<Add library="SDL2_ttf" />
 					<Add directory="libraries/SDL2-2.32.8/x86_64-w64-mingw32/lib" />
 				</Linker>
 			</Target>
@@ -40,14 +41,16 @@
 			<Add option="-Wall" />
 		</Compiler>
 		<Unit filename="include/assets.h" />
-		<Unit filename="include/entidades.h" />
+		<Unit filename="include/entidad.h" />
 		<Unit filename="include/escenario.h" />
 		<Unit filename="include/graficos.h" />
 		<Unit filename="include/input.h" />
 		<Unit filename="include/juego.h" />
 		<Unit filename="include/logica.h" />
-		<Unit filename="include/matrices.h" />
-		<Unit filename="include/retornos.h" />
+		<Unit filename="include/matriz.h" />
+		<Unit filename="include/menu.h" />
+		<Unit filename="include/retorno.h" />
+		<Unit filename="include/texto.h" />
 		<Unit filename="sources/assets.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -72,7 +75,13 @@
 		<Unit filename="sources/main.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/matrices.c">
+		<Unit filename="sources/matriz.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/menu.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/texto.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions />

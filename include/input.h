@@ -4,6 +4,7 @@
 #include <SDL2/SDL_keycode.h>
 
 typedef enum{
+    ACCION_NINGUNA,
     ACCION_SALIR,
     ACCION_CONFIRMAR,
     ACCION_CANCELAR,
