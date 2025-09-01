@@ -51,6 +51,7 @@
 		<Unit filename="include/menu.h" />
 		<Unit filename="include/retorno.h" />
 		<Unit filename="include/texto.h" />
+		<Unit filename="include/vector.h" />
 		<Unit filename="sources/assets.c">
 			<Option compilerVar="CC" />
 		</Unit>
@@ -82,6 +83,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/texto.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/vector.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions />

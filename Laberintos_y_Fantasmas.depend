@@ -547,17 +547,18 @@
 	<SDL2/SDL_mixer.h>
 	<SDL2/SDL_ttf.h>
 
-1756562944 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\assets.c
+1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\assets.c
 	<stdio.h>
-	"../include/retornos.h"
+	"../include/retorno.h"
 	"../include/assets.h"
 
-1756562943 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\retornos.h
+1756741308 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\retornos.h
 
-1756562943 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\assets.h
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\assets.h
 	<SDL2/SDL.h>
 	<SDL2/SDL_image.h>
 	<SDL2/SDL_mixer.h>
+	<SDL2/SDL_ttf.h>
 
 1756562944 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl.h
 	"SDL_main.h"
@@ -1016,59 +1017,72 @@
 	"begin_code.h"
 	"close_code.h"
 
-1756562944 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\entidades.c
-	"../include/entidades.h"
+1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\entidades.c
+	"../include/entidad.h"
 
 1756562943 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\entidades.h
 
-1756562944 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\escenario.c
+1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\escenario.c
 	"../include/escenario.h"
+	"../include/matriz.h"
+	"../include/retorno.h"
+	<stdio.h>
 
-1756562943 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\escenario.h
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\escenario.h
+	<SDL2/SDL.h>
+	"../include/entidad.h"
+	"../include/assets.h"
+	"../include/graficos.h"
 
 1756562944 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\graficos.c
 	<stdio.h>
 	"..\include\graficos.h"
 
-1756562943 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\graficos.h
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\graficos.h
 	<SDL2/SDL.h>
 
 1756562944 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\input.c
 	"../include/input.h"
 
-1756562943 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\input.h
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\input.h
 	<SDL2/SDL_keycode.h>
 
-1756562944 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\juego.c
+1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\juego.c
 	<stdio.h>
 	<SDL2/SDL_image.h>
 	"../include/juego.h"
 	"../include/logica.h"
-	"../include/retornos.h"
+	"../include/retorno.h"
 	"../include/graficos.h"
 	"../include/assets.h"
 
-1756562943 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\juego.h
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\juego.h
 	<SDL2/SDL.h>
 	<SDL2/SDL_mixer.h>
 	"../include/logica.h"
+	"../include/texto.h"
+	"../include/menu.h"
 
-1756562943 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\logica.h
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\logica.h
 	"../include/input.h"
-	"../include/entidades.h"
+	"../include/entidad.h"
+	"../include/escenario.h"
 
-1756562944 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\logica.c
+1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\logica.c
 	"../include/logica.h"
-	"../include/retornos.h"
+	"../include/retorno.h"
+	"../include/matriz.h"
+	"../include/menu.h"
 	<stdlib.h>
+	<stdio.h>
 	<string.h>
 
-1756562944 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\main.c
+1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\main.c
 	<stdio.h>
 	<stdlib.h>
 	"..\include\juego.h"
 	"..\include\logica.h"
-	"..\include\retornos.h"
+	"..\include\retorno.h"
 
 1756567047 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\matrices.c
 	"../include/matrices.h"
@@ -1114,4 +1128,50 @@
 1756650831 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\texto.c
 	"../include/texto.h"
 	<stdio.h>
+
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\retorno.h
+
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_ttf.h
+	"SDL.h"
+	"begin_code.h"
+	"close_code.h"
+
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\entidad.h
+	"../include/assets.h"
+
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\matriz.h
+	<stdlib.h>
+	<string.h>
+
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\texto.h
+	<SDL2/SDL.h>
+	<SDL2/SDL_ttf.h>
+
+1756741285 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\menu.h
+	<SDL2/SDL.h>
+
+1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\matriz.c
+	"../include/matriz.h"
+	"../include/retorno.h"
+
+1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\menu.c
+	"../include/menu.h"
+	"../include/retorno.h"
+	"../include/graficos.h"
+	"../include/input.h"
+	<stdlib.h>
+	<string.h>
+
+1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\texto.c
+	"../include/texto.h"
+	<stdio.h>
+
+1756744423 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\vector.c
+	"../include/vector.h"
+	"../include/retornos.h"
+	<stdlib.h>
+	<string.h>
+	<stdio.h>
+
+1756744431 c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\include\vector.h
 
