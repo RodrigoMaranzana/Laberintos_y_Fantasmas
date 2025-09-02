@@ -26,14 +26,12 @@ typedef struct{
 typedef struct{
     tEscenario escenario;
     tPartida partida;
-    tKeyMap *mapaTeclas;
-    unsigned mapaCant;
     eLogicaEstado estado;
 }tLogica;
 
 int logica_inicializar(tLogica *logica);
 void logica_destruir(tLogica *logica);
 void logica_calc_resolucion(unsigned cantFilas, unsigned cantColumnas, unsigned *anchoRes, unsigned *altoRes);
-int logica_actualizar(tLogica *logica, eAccion accion);
+int logica_actualizar(tLogica *logica, SDL_Keycode tecla);
 
 #endif // LOGICA_H_INCLUDED

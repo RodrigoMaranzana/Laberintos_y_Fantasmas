@@ -11,19 +11,18 @@
 #define CANT_FILAS 16
 
 typedef enum {
-    MENU_PRINCIPAL_JUGAR,
-    MENU_PRINCIPAL_SALIR,
-    MENU_PRINCIPAL_ESTADISTICAS,
-    MENU_PRINCIPAL_OPCIONES,
-    MENU_PRINCIPAL_CANTIDAD,
-}eMenuPrincipalAccion;
+    M_PRI_NUEVA_PARTIDA,
+    M_PRI_SALIR,
+    M_PRI_ESTADISTICAS,
+    M_PRI_TEST,
+    M_PRI_CANTIDAD,
+}eMenuOpcionID;
 
 static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
 static void _juego_sonidos(tLogica *logica, Mix_Chunk **sonidos);
 static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tMenu *menu);
 static void _juego_iniciar_partida(void* datos);
 static void _juego_salir_del_juego(void* datos);
-static eMenuComando _juego_accion_a_menu(eAccion accion);
 
 int juego_inicializar(tJuego *juego, const char *tituloVentana)
 {
@@ -112,21 +111,29 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
     }
 
     texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "NUEVA PARTIDA", SDL_COLOR_BLANCO);
-    if(menu_agregar_opcion(juego->menu, texturaAux, 64, (tMenuAccion){_juego_iniciar_partida, juego}) != TODO_OK){
+    if(menu_agregar_opcion(juego->menu, M_PRI_NUEVA_PARTIDA, texturaAux, 64, (tMenuAccion){_juego_iniciar_partida, juego}, OPCION_HABILITADA) != TODO_OK){
+
+        return ERR_MENU;
+    }
+
+    texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "ESTADISTICAS", SDL_COLOR_BLANCO);
+    if(menu_agregar_opcion(juego->menu, M_PRI_ESTADISTICAS, texturaAux, 64, (tMenuAccion){_juego_iniciar_partida, juego}, OPCION_DESHABILITADA) != TODO_OK){
 
         return ERR_MENU;
     }
 
     texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "SALIR", SDL_COLOR_BLANCO);
-    if(menu_agregar_opcion(juego->menu, texturaAux, 64, (tMenuAccion){_juego_salir_del_juego, juego}) != TODO_OK){
+    if(menu_agregar_opcion(juego->menu, M_PRI_SALIR, texturaAux, 64, (tMenuAccion){_juego_salir_del_juego, juego}, OPCION_HABILITADA) != TODO_OK){
 
         return ERR_MENU;
     }
 
-    if(menu_agregar_opcion(juego->menu, *(juego->imagenes + IMAGEN_PUERTA_SALIDA), 64, (tMenuAccion){_juego_salir_del_juego, juego}) != TODO_OK){
+    ///TEST
+    if(menu_agregar_opcion(juego->menu, M_PRI_TEST, *(juego->imagenes + IMAGEN_PUERTA_SALIDA), 64, (tMenuAccion){_juego_salir_del_juego, juego}, OPCION_OCULTA) != TODO_OK){
 
         return ERR_MENU;
     }
+    ///
 
     juego->estado = JUEGO_CORRIENDO;
     printf("Juego iniciado con exito.\n");
@@ -137,38 +144,59 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
 int juego_ejecutar(tJuego *juego)
 {
     eRetorno ret = TODO_OK;
-    tMenuAccion accionProcesada;
-    eAccion accion;
+    tMenuAccion accionProcesada = {NULL, NULL};
+    SDL_Keycode tecla;
     SDL_Event evento;
 
     logica_inicializar(&juego->logica);
 
     while(juego->estado == JUEGO_CORRIENDO){
 
-        accion = ACCION_NINGUNA;
-
         if(SDL_PollEvent(&evento)){
 
-            if(evento.type == SDL_KEYDOWN){
+            if(evento.type == SDL_QUIT){
 
-                 accion = input_procesar_tecla(evento.key.keysym.sym, juego->logica.mapaTeclas, juego->logica.mapaCant);
+                juego->estado = JUEGO_CERRANDO;
             }
-        }
 
-        if(accion != ACCION_NINGUNA){
+            if(evento.type == SDL_KEYDOWN && input_tecla_valida(evento.key.keysym.sym)){
 
-            switch(juego->logica.estado){
+                tecla = evento.key.keysym.sym;
 
-                case LOGICA_JUGANDO:
-                    logica_actualizar(&juego->logica, accion);
-                    _juego_sonidos(&juego->logica, juego->sonidos);
-                    break;
-                default:
-                    accionProcesada = menu_procesar_comando(juego->menu, _juego_accion_a_menu(accion));
-                    if(accionProcesada.funcion){
-                        accionProcesada.funcion(accionProcesada.datos);
+                switch(juego->logica.estado){
+
+                    case LOGICA_JUGANDO:
+
+                        logica_actualizar(&juego->logica, tecla);
+                        _juego_sonidos(&juego->logica, juego->sonidos);
+                        break;
+                    case LOGICA_EN_ESPERA:{
+
+                        if(tecla == SDLK_UP){
+
+                            menu_anterior_opcion(juego->menu);
+                            Mix_PlayChannel(0, *(juego->sonidos + SONIDO_MENU_MOVIMIENTO), 0);
+
+                        }else if(tecla == SDLK_DOWN){
+
+                            menu_siguiente_opcion(juego->menu);
+                            Mix_PlayChannel(0, *(juego->sonidos + SONIDO_MENU_MOVIMIENTO), 0);
+
+                        }else if(tecla == SDLK_RETURN){
+
+                            accionProcesada = menu_confirmar_opcion(juego->menu);
+                            Mix_PlayChannel(0, *(juego->sonidos + SONIDO_MENU_CONFIRMAR), 0);
+                        }
+
+                        if(accionProcesada.funcion){
+
+                            accionProcesada.funcion(accionProcesada.datos);
+                        }
+                        break;
                     }
-                    break;
+                    default:
+                        break;
+                }
             }
         }
 
@@ -177,8 +205,6 @@ int juego_ejecutar(tJuego *juego)
         SDL_RenderPresent(juego->renderer);
         SDL_Delay(16);
     }
-
-
 
     return ret;
 }
@@ -217,7 +243,6 @@ static void _juego_sonidos(tLogica *logica, Mix_Chunk **sonidos)
 
 static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tMenu *menu)
 {
-    /// Test
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
@@ -228,7 +253,6 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
 
         menu_dibujar(renderer, menu);
     }
-    ///
 }
 
 static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana)
@@ -252,23 +276,6 @@ static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, u
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
 
     return TODO_OK;
-}
-
-static eMenuComando _juego_accion_a_menu(eAccion accion)
-{
-    switch(accion){
-
-        case ACCION_ARRIBA:
-            return MENU_ANTERIOR;
-        case ACCION_ABAJO:
-            return MENU_SIGUIENTE;
-        case ACCION_CONFIRMAR:
-            return MENU_CONFIRMAR;
-        default:
-            break;
-    }
-
-    return MENU_NINGUNO;
 }
 
 static void _juego_iniciar_partida(void* datos)

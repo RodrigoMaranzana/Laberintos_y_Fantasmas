@@ -8,7 +8,7 @@
 
 #define PIXELES_TILE 48
 
-static void _logica_procesar_turno(tLogica *logica, eAccion accion);
+static void _logica_procesar_turno(tLogica *logica, SDL_Keycode tecla);
 
 void logica_calc_resolucion(unsigned cantColumnas, unsigned cantFilas, unsigned *anchoRes, unsigned *altoRes)
 {
@@ -19,25 +19,6 @@ void logica_calc_resolucion(unsigned cantColumnas, unsigned cantFilas, unsigned 
 
 int logica_inicializar(tLogica *logica)
 {
-    tKeyMap keyMapLocal[ACCION_CANTIDAD] = {
-        {SDLK_ESCAPE, ACCION_SALIR},
-        {SDLK_RETURN, ACCION_CONFIRMAR},
-        {SDLK_BACKSPACE, ACCION_CANCELAR},
-        {SDLK_UP, ACCION_ARRIBA},
-        {SDLK_DOWN, ACCION_ABAJO},
-        {SDLK_LEFT, ACCION_IZQUIERDA},
-        {SDLK_RIGHT, ACCION_DERECHA},
-    };
-
-    logica->mapaCant = ACCION_CANTIDAD;
-    logica->mapaTeclas = malloc(logica->mapaCant * sizeof(tKeyMap));
-    if(!logica->mapaTeclas){
-
-        return ERR_SIN_MEMORIA;
-    }
-
-    memcpy(logica->mapaTeclas, keyMapLocal, sizeof(keyMapLocal));
-
     escenario_crear(&logica->escenario, 16, 16);
     escenario_generar(&logica->escenario);
 
@@ -48,37 +29,32 @@ int logica_inicializar(tLogica *logica)
 
 void logica_destruir(tLogica *logica)
 {
-    if(logica->mapaTeclas){
-
-        free(logica->mapaTeclas);
-    }
-
     escenario_destruir(&logica->escenario);
 }
 
-int logica_actualizar(tLogica *logica, eAccion accion)
+int logica_actualizar(tLogica *logica, SDL_Keycode tecla)
 {
-    _logica_procesar_turno(logica, accion);
+    _logica_procesar_turno(logica, tecla);
 
     return TODO_OK;
 }
 
-static void _logica_procesar_turno(tLogica *logica, eAccion accion)
+static void _logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
 {
     tUbicacion nuevaUbic = logica->escenario.jugador.ubic;
 
-    switch(accion){
+    switch(tecla){
 
-        case ACCION_ARRIBA:
+        case SDLK_UP:
             nuevaUbic.fila--;
             break;
-        case ACCION_ABAJO:
+        case SDLK_DOWN:
             nuevaUbic.fila++;
             break;
-        case ACCION_IZQUIERDA:
+        case SDLK_LEFT:
             nuevaUbic.columna--;
             break;
-        case ACCION_DERECHA:
+        case SDLK_RIGHT:
             nuevaUbic.columna++;
             break;
         default:
