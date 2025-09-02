@@ -43,7 +43,7 @@ void menu_destruir(tMenu* menu)
     free(menu);
 }
 
-int menu_agregar_opcion(tMenu *menu, SDL_Texture *textura, unsigned tamAltura, tMenuAccion accion)
+int menu_agregar_opcion(tMenu *menu, int id, SDL_Texture *textura, unsigned tamAltura, tMenuAccion accion, eOpcionEstado estado)
 {
     unsigned nuevaCapOpc;
     tMenuOpcion *pOpciones;
@@ -72,38 +72,85 @@ int menu_agregar_opcion(tMenu *menu, SDL_Texture *textura, unsigned tamAltura, t
 
     pOpciones->textura = textura;
 
+    pOpciones->id = id;
+    pOpciones->estado = estado;
     pOpciones->accion = accion;
     menu->cantOpc++;
 
     return TODO_OK;
 }
 
-tMenuAccion menu_procesar_comando(tMenu* menu, eMenuComando comando)
+void menu_siguiente_opcion(tMenu *menu)
 {
-    switch(comando){
+    int encontrado = 0;
 
-        case MENU_ANTERIOR:
-            menu->selecOpc--;
-            if(menu->selecOpc < 0){
+    if(menu->cantOpc == 0){
 
-                menu->selecOpc = menu->cantOpc - 1;
-            }
-            break;
-        case MENU_SIGUIENTE:
-            menu->selecOpc++;
-            if(menu->selecOpc >= menu->cantOpc){
+        return;
+    }
 
-                menu->selecOpc = 0;
-            }
-            break;
-        case MENU_CONFIRMAR:
-            return menu->opciones[menu->selecOpc].accion;;
-            break;
-        default:
-            break;
+    for(int i = 0;!encontrado && i < menu->cantOpc; i++){
+
+        menu->selecOpc++;
+        if(menu->selecOpc >= menu->cantOpc){
+
+            menu->selecOpc = 0;
+        }
+
+        if(menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA){
+
+            encontrado = 1;
+        }
+    }
+}
+
+void menu_anterior_opcion(tMenu *menu)
+{
+    int encontrado = 0;
+
+    if (menu->cantOpc == 0){
+
+        return;
+    }
+
+    for(int i = 0;!encontrado && i < menu->cantOpc; i++){
+
+        menu->selecOpc--;
+        if(menu->selecOpc < 0){
+
+            menu->selecOpc = menu->cantOpc - 1;
+        }
+
+        if(menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA){
+
+            encontrado = 1;
+        }
+    }
+}
+
+tMenuAccion menu_confirmar_opcion(tMenu *menu)
+{
+    if(menu->cantOpc > 0 && menu->selecOpc < menu->cantOpc && menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA){
+
+        return menu->opciones[menu->selecOpc].accion;
     }
 
     return (tMenuAccion){NULL, NULL};
+}
+
+void menu_estado_opcion(tMenu *menu, int id, eOpcionEstado nuevoEstado)
+{
+    tMenuOpcion *pOpciones = menu->opciones, *pOpcionesUlt = (menu->opciones + menu->cantOpc - 1);
+
+    while(pOpciones <= pOpcionesUlt && pOpciones->id != id){
+
+        pOpciones++;
+    }
+
+    if(pOpciones <= pOpcionesUlt && pOpciones->id == id){
+
+        pOpciones->estado = nuevoEstado;
+    }
 }
 
 void menu_dibujar(SDL_Renderer *renderer, tMenu* menu)
@@ -117,22 +164,33 @@ void menu_dibujar(SDL_Renderer *renderer, tMenu* menu)
 
     for(pOpciones = menu->opciones; pOpciones <= pOpcionesUlt; pOpciones++, i++){
 
-        rectDestino.w = pOpciones->tamTextura.x;
-        rectDestino.h = pOpciones->tamTextura.y;
+        if(pOpciones->estado != OPCION_OCULTA){
 
-        if(i == menu->selecOpc){
+            rectDestino.w = pOpciones->tamTextura.x;
+            rectDestino.h = pOpciones->tamTextura.y;
 
-            SDL_SetTextureColorMod(pOpciones->textura, 255, 255, 0);
-        }else{
+            if(pOpciones->estado == OPCION_HABILITADA){
 
-            SDL_SetTextureColorMod(pOpciones->textura, 255, 255, 255);
+                if(i == menu->selecOpc){
+
+                    SDL_SetTextureColorMod(pOpciones->textura, 255, 255, 0);
+                }else{
+
+                    SDL_SetTextureColorMod(pOpciones->textura, 255, 255, 255);
+                }
+            }else{
+
+                SDL_SetTextureColorMod(pOpciones->textura, 128, 128, 128);
+            }
+
+            graficos_dibujar_textura(pOpciones->textura, renderer, NULL, &rectDestino);
+            rectDestino.y += pOpciones->tamTextura.y + padding;
         }
-
-        graficos_dibujar_textura(pOpciones->textura, renderer, NULL, &rectDestino);
-
-        rectDestino.y += pOpciones->tamTextura.y + padding;
     }
 }
+
+
+
 
 
 
