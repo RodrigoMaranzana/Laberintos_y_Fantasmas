@@ -1,7 +1,7 @@
 #ifndef GRAFICOS_H_INCLUDED
 #define GRAFICOS_H_INCLUDED
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 typedef struct{
     SDL_Texture *textura;

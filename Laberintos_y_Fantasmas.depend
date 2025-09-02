@@ -479,27 +479,27 @@
 	<stdio.h>
 	<string.h>
 
-1756780373 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\logica.h
-	<SDL2/SDL.h>
-	<SDL2/SDL_mixer.h>
+1756832337 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\logica.h
+	<SDL.h>
+	<SDL_mixer.h>
 	"../include/input.h"
 	"../include/entidad.h"
 	"../include/escenario.h"
 
-1756780335 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\input.h
-	<SDL2/SDL_keycode.h>
+1756832333 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\input.h
+	<SDL_keycode.h>
 
 1756780280 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\input.c
 	"../include/input.h"
 
-1756768144 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\juego.h
-	<SDL2/SDL.h>
-	<SDL2/SDL_mixer.h>
+1756832341 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\juego.h
+	<SDL.h>
+	<SDL_mixer.h>
 	"../include/logica.h"
 	"../include/texto.h"
 	"../include/menu.h"
 
-1756825743 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\juego.c
+1756826379 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\juego.c
 	<stdio.h>
 	<SDL2/SDL_image.h>
 	"../include/juego.h"
@@ -512,8 +512,8 @@
 	<stdio.h>
 	"..\include\graficos.h"
 
-1756648573 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\graficos.h
-	<SDL2/SDL.h>
+1756832330 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\graficos.h
+	<SDL.h>
 
 1756567516 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\entidades.h
 
@@ -526,8 +526,8 @@
 	"../include/retorno.h"
 	<stdio.h>
 
-1756685138 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\escenario.h
-	<SDL2/SDL.h>
+1756832327 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\escenario.h
+	<SDL.h>
 	"../include/entidad.h"
 	"../include/assets.h"
 	"../include/graficos.h"
@@ -543,11 +543,11 @@
 	"../include/retorno.h"
 	"../include/assets.h"
 
-1756826316 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\assets.h
-	<SDL2/SDL.h>
-	<SDL2/SDL_image.h>
-	<SDL2/SDL_mixer.h>
-	<SDL2/SDL_ttf.h>
+1756832323 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\assets.h
+	<SDL.h>
+	<SDL_image.h>
+	<SDL_mixer.h>
+	<SDL_ttf.h>
 
 1756741285 source:c:\users\daiana\onedrive\escritorio\tp_ayed\laberintos_y_fantasmas\sources\assets.c
 	<stdio.h>
@@ -1115,17 +1115,17 @@
 	<stdlib.h>
 	<string.h>
 
-1756825464 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\menu.h
-	<SDL2/SDL.h>
+1756832344 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\menu.h
+	<SDL.h>
 
 1735843588 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_ttf.h
 	"SDL.h"
 	"begin_code.h"
 	"close_code.h"
 
-1756650831 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\texto.h
-	<SDL2/SDL.h>
-	<SDL2/SDL_ttf.h>
+1756832348 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\texto.h
+	<SDL.h>
+	<SDL_ttf.h>
 
 1756650831 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\texto.c
 	"../include/texto.h"
@@ -1185,4 +1185,24 @@
 
 1756766609 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\vector.h
 	<stdlib.h>
+
+1741049608 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\libraries\sdl2_image-2.8.8\x86_64-w64-mingw32\include\sdl2\sdl_image.h
+	"SDL.h"
+	"SDL_version.h"
+	"begin_code.h"
+	"close_code.h"
+
+1738973080 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\libraries\sdl2_mixer-2.8.1\x86_64-w64-mingw32\include\sdl2\sdl_mixer.h
+	"SDL_stdinc.h"
+	"SDL_rwops.h"
+	"SDL_audio.h"
+	"SDL_endian.h"
+	"SDL_version.h"
+	"begin_code.h"
+	"close_code.h"
+
+1735843588 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\libraries\sdl2_ttf-2.24.0\x86_64-w64-mingw32\include\sdl2\sdl_ttf.h
+	"SDL.h"
+	"begin_code.h"
+	"close_code.h"
 

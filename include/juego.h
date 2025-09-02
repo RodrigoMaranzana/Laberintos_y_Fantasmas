@@ -1,8 +1,8 @@
 #ifndef MOTOR_H_INCLUDED
 #define MOTOR_H_INCLUDED
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_mixer.h>
+#include <SDL.h>
+#include <SDL_mixer.h>
 #include "../include/logica.h"
 #include "../include/texto.h"
 #include "../include/menu.h"

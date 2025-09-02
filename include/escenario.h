@@ -1,7 +1,7 @@
 #ifndef ESCENARIO_H_INCLUDED
 #define ESCENARIO_H_INCLUDED
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #include "../include/entidad.h"
 #include "../include/assets.h"
 #include "../include/graficos.h"
