@@ -1,19 +1,20 @@
 #include "../include/input.h"
 
-eAccion input_procesar_tecla(SDL_Keycode sdlKeycode, const tKeyMap* mapaTeclas, int mapaCant)
+int input_tecla_valida(SDL_Keycode sdlKeycode)
 {
-    int i = 0;
-    eAccion accion = -1;
+    switch(sdlKeycode){
 
-    while(i < mapaCant && accion == -1){
-
-        if(mapaTeclas[i].tecla == sdlKeycode){
-
-            accion = (eAccion)mapaTeclas[i].accion;
-        }
-
-        i++;
+        case SDLK_ESCAPE:
+        case SDLK_RETURN:
+        case SDLK_BACKSPACE:
+        case SDLK_UP:
+        case SDLK_DOWN:
+        case SDLK_LEFT:
+        case SDLK_RIGHT:
+            return 1;
+        default:
+            break;
     }
 
-    return accion;
+    return 0;
 }
