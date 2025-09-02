@@ -47,6 +47,8 @@ int assets_cargar_sonidos(Mix_Chunk **sonidos)
         [SONIDO_JUGADOR_MUERTE_02]= "assets/snd/jugador_muerte_02.wav",
         [SONIDO_JUGADOR_PREMIO]   = "assets/snd/jugador_premio.wav",
         [SONIDO_JUGADOR_VIDA]     = "assets/snd/jugador_vida.wav",
+        [SONIDO_MENU_CONFIRMAR]     = "assets/snd/menu_confirmar.wav",
+        [SONIDO_MENU_MOVIMIENTO]     = "assets/snd/menu_movimiento.wav",
         [SONIDO_MUSICA]           = "assets/snd/musica.mp3",
         [SONIDO_PUERTA_SALIDA]    = "assets/snd/puerta_salida.wav",
     };
