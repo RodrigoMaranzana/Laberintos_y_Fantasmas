@@ -7,8 +7,8 @@
 #include "../include/escenario.h"
 
 /// MACROS TEMPORALES
-#define CANT_COLUMNAS 16
-#define CANT_FILAS 16
+#define CANT_COLUMNAS 17
+#define CANT_FILAS 17
 
 typedef enum{
     LOGICA_EN_ESPERA,
