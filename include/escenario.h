@@ -13,6 +13,8 @@ typedef struct{
 }tTile;
 
 typedef struct{
+    unsigned columna;
+    unsigned fila;
     tTile tile;
     tEntidad *entidad;
 }tCasilla;

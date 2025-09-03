@@ -1,10 +1,15 @@
 #include "../include/escenario.h"
 #include "../include/matriz.h"
 #include "../include/retorno.h"
+#include "../include/pila.h"
+#include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
+
 
 static int _escenario_calcular_pared(tEscenario *escenario, int columna, int fila);
 static int _escenario_es_pared(tEscenario *escenario, int columna, int fila);
+static void _escenario_generar_laberinto(tEscenario *escenario);
 
 int escenario_crear(tEscenario *escenario, unsigned columnas, unsigned filas)
 {
@@ -21,9 +26,72 @@ int escenario_crear(tEscenario *escenario, unsigned columnas, unsigned filas)
     return TODO_OK;
 }
 
+static void _escenario_generar_laberinto(tEscenario *escenario)
+{
+    tPila pila;
+    tCasilla *casTope, *casAdya;
+    SDL_Rect rectPiso = {.x = 0, .y = 0, .w = 48, .h = 48};
+
+    int desplazamientos[] = { 0, 0, 2, -2 };
+
+    int i, selecDir, offsetY, offsetX, encontrado, columAdya, filaAdya;
+
+    ///TEST, DEBE GUARDARSE LA SEMILLA
+    srand(2000);
+    ///
+
+    pila_crear(&pila);
+    casTope = &escenario->tablero[1][1];
+    casTope->tile.imagen = IMAGEN_PISO;
+    pila_apilar(&pila, &casTope, sizeof(tCasilla*));
+
+    while(pila_vacia(&pila) == TODO_OK){
+
+        pila_tope(&pila, &casTope, sizeof(tCasilla*));
+
+        i = 0;
+        encontrado = 0;
+        while(!encontrado && i < 4){
+
+            selecDir = rand()%4;
+
+            offsetX = desplazamientos[selecDir];
+            offsetY = desplazamientos[(selecDir + 2) % 4];
+
+            columAdya = casTope->columna + offsetX;
+            filaAdya = casTope->fila + offsetY;
+
+            if((columAdya >= 1) && (columAdya < escenario->columnas - 1) && (filaAdya >= 1) && (filaAdya < escenario->filas - 1)){
+
+                casAdya = &escenario->tablero[filaAdya][columAdya];
+
+                if(casAdya->tile.imagen == IMAGEN_PARED_LAD_GRIS){
+
+                    escenario->tablero[casTope->fila + (offsetY / 2)][casTope->columna + (offsetX / 2)].tile.imagen = IMAGEN_PISO;
+
+                    casAdya->tile.imagen = IMAGEN_PISO;
+                    casAdya->tile.rectTile = rectPiso;
+
+                    pila_apilar(&pila, &casAdya, sizeof(tCasilla*));
+
+                    encontrado = 1;
+                }
+            }
+
+            i++;
+        }
+
+        if(!encontrado){
+
+            pila_desapilar(&pila, &casTope, sizeof(tCasilla*));
+        }
+    }
+
+    pila_vaciar(&pila);
+}
+
 void escenario_generar(tEscenario *escenario)
 {
-    eImagenes imagen;
     unsigned fila, columna;
     int mascara;
 
@@ -31,30 +99,15 @@ void escenario_generar(tEscenario *escenario)
 
         for(columna = 0; columna < escenario->columnas; columna++){
 
-            ///TEST
-            imagen = (fila == 0 || columna == 0 || fila == escenario->filas - 1 || columna == escenario->columnas - 1) ? IMAGEN_PARED_LAD_GRIS : IMAGEN_PISO;
-
-            if((fila == 2 && columna == 2) || (fila == 5 && columna == 5) || (fila == 5 && columna == 6) || (fila == 5 && columna == 7) || (fila == 4 && columna == 7)
-               || (fila == 6 && columna == 6) || (fila == 7 && columna == 6) || (fila == 7 && columna == 7) || (fila == 8 && columna == 7)
-                || (fila == 8 && columna == 6) || (fila == 8 && columna == 7) || (fila == 8 && columna == 8)){
-
-                imagen = IMAGEN_PARED_LAD_GRIS;
-            }
-
-            escenario->tablero[fila][columna].tile.imagen = imagen;
-
-            if(imagen == IMAGEN_PARED_LAD_GRIS){
-
-                escenario->tablero[fila][columna].tile.rectTile = (SDL_Rect){.x = 0, .y = 0, .w = 48, .h = 64};
-            }else{
-
-                escenario->tablero[fila][columna].tile.rectTile = (SDL_Rect){.x = 0, .y = 0, .w = 48, .h = 48};
-            }
-            ///
-
+            escenario->tablero[fila][columna].tile.imagen = IMAGEN_PARED_LAD_GRIS;
+            escenario->tablero[fila][columna].tile.rectTile = (SDL_Rect){.x = 0, .y = 0, .w = 48, .h = 64};
             escenario->tablero[fila][columna].entidad = NULL;
+            escenario->tablero[fila][columna].fila = fila;
+            escenario->tablero[fila][columna].columna = columna;
         }
     }
+
+    _escenario_generar_laberinto(escenario);
 
     for(fila = 0; fila < escenario->filas; fila++){
 
@@ -75,7 +128,6 @@ void escenario_generar(tEscenario *escenario)
             }
         }
     }
-
 
     ///TEST
     escenario->jugador.ubic.columna = 1;

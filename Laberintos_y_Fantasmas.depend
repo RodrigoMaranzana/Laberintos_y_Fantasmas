@@ -470,7 +470,7 @@
 	"begin_code.h"
 	"close_code.h"
 
-1756867074 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\logica.c
+1756906548 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\logica.c
 	"../include/logica.h"
 	"../include/retorno.h"
 	"../include/matriz.h"
@@ -479,7 +479,7 @@
 	<stdio.h>
 	<string.h>
 
-1756867385 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\logica.h
+1756912503 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\logica.h
 	<SDL.h>
 	<SDL_mixer.h>
 	"../include/input.h"
@@ -499,7 +499,7 @@
 	"../include/texto.h"
 	"../include/menu.h"
 
-1756867056 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\juego.c
+1756906548 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\juego.c
 	<stdio.h>
 	<SDL_image.h>
 	"../include/juego.h"
@@ -520,7 +520,7 @@
 1756585212 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\entidades.c
 	"../include/entidad.h"
 
-1756867372 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\escenario.c
+1756912565 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\escenario.c
 	"../include/escenario.h"
 	"../include/matriz.h"
 	"../include/retorno.h"
@@ -529,7 +529,7 @@
 	<stdio.h>
 	<time.h>
 
-1756855381 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\escenario.h
+1756906548 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\escenario.h
 	<SDL.h>
 	"../include/entidad.h"
 	"../include/assets.h"
@@ -541,7 +541,7 @@
 	"begin_code.h"
 	"close_code.h"
 
-1756826316 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\assets.c
+1756912585 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\assets.c
 	<stdio.h>
 	"../include/retorno.h"
 	"../include/assets.h"
@@ -1097,7 +1097,7 @@
 	<stdlib.h>
 	<string.h>
 
-1756848459 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\retorno.h
+1756906548 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\retorno.h
 
 1756666222 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\entidad.h
 	"../include/assets.h"
@@ -1209,11 +1209,11 @@
 	"begin_code.h"
 	"close_code.h"
 
-1756849540 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\pila.c
+1756906544 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\pila.c
 	<string.h>
 	"../include/pila.h"
 	"../include/retorno.h"
 
-1756840190 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\pila.h
+1756906544 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\pila.h
 	<stdlib.h>
 
