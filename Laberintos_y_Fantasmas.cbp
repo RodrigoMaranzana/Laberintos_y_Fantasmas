@@ -49,6 +49,7 @@
 		<Unit filename="include/logica.h" />
 		<Unit filename="include/matriz.h" />
 		<Unit filename="include/menu.h" />
+		<Unit filename="include/pila.h" />
 		<Unit filename="include/retorno.h" />
 		<Unit filename="include/texto.h" />
 		<Unit filename="include/vector.h" />
@@ -80,6 +81,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/menu.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/pila.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/texto.c">
