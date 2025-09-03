@@ -6,6 +6,10 @@
 #include "../include/entidad.h"
 #include "../include/escenario.h"
 
+/// MACROS TEMPORALES
+#define CANT_COLUMNAS 16
+#define CANT_FILAS 16
+
 typedef enum{
     LOGICA_EN_ESPERA,
     LOGICA_JUGANDO,

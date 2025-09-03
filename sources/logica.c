@@ -19,7 +19,7 @@ void logica_calc_resolucion(unsigned cantColumnas, unsigned cantFilas, unsigned 
 
 int logica_inicializar(tLogica *logica)
 {
-    escenario_crear(&logica->escenario, 16, 16);
+    escenario_crear(&logica->escenario, CANT_COLUMNAS, CANT_FILAS);
     escenario_generar(&logica->escenario);
 
     logica->estado = LOGICA_EN_ESPERA;

@@ -6,10 +6,6 @@
 #include "../include/graficos.h"
 #include "../include/assets.h"
 
-/// MACROS TEMPORALES
-#define CANT_COLUMNAS 16
-#define CANT_FILAS 16
-
 typedef enum {
     M_PRI_NUEVA_PARTIDA,
     M_PRI_SALIR,

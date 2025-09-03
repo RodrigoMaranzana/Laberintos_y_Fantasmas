@@ -21,7 +21,11 @@ typedef enum{
     // Assets
     ERR_ARCH_FUENTE,
     ERR_ARCH_IMAGEN,
-    ERR_ARCH_SONIDO
+    ERR_ARCH_SONIDO,
+
+    // Pila
+    ERR_PILA_VACIA,
+    ERR_PILA_LLENA
 }eRetorno;
 
 #endif //ERR_H
