@@ -48,6 +48,8 @@
 			<Add option="-Wall" />
 		</Compiler>
 		<Unit filename="include/assets.h" />
+		<Unit filename="include/cola.h" />
+		<Unit filename="include/comun.h" />
 		<Unit filename="include/entidad.h" />
 		<Unit filename="include/escenario.h" />
 		<Unit filename="include/graficos.h" />
@@ -58,9 +60,13 @@
 		<Unit filename="include/menu.h" />
 		<Unit filename="include/pila.h" />
 		<Unit filename="include/retorno.h" />
+		<Unit filename="include/temporizador.h" />
 		<Unit filename="include/texto.h" />
 		<Unit filename="include/vector.h" />
 		<Unit filename="sources/assets.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/cola.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/entidades.c">
@@ -91,6 +97,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/pila.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/temporizador.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/texto.c">

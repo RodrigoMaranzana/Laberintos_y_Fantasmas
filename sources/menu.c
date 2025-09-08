@@ -7,16 +7,16 @@
 
 tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion)
 {
-    tMenu* menu = (tMenu*)malloc(sizeof(tMenu));
-    if(!menu){
+    tMenu* menu = (tMenu*) malloc(sizeof(tMenu));
+    if (!menu) {
 
         return NULL;
     }
 
     menu->selecOpc = 0;
 
-    menu->opciones = (tMenuOpcion*)malloc(capOpc * sizeof(tMenuOpcion));
-    if(!menu->opciones){
+    menu->opciones = (tMenuOpcion*) malloc(capOpc * sizeof(tMenuOpcion));
+    if (!menu->opciones) {
 
         free(menu);
         return NULL;
@@ -33,7 +33,7 @@ void menu_destruir(tMenu* menu)
 {
     tMenuOpcion *pOpciones = menu->opciones, *pOpcionesUlt = (menu->opciones + menu->cantOpc - 1);
 
-    while(pOpciones <= pOpcionesUlt){
+    while (pOpciones <= pOpcionesUlt) {
 
         SDL_DestroyTexture(pOpciones->textura);
         pOpciones++;
@@ -49,11 +49,11 @@ int menu_agregar_opcion(tMenu *menu, int id, SDL_Texture *textura, unsigned tamA
     tMenuOpcion *pOpciones;
     int x, y;
 
-    if(menu->cantOpc >= menu->capOpc){
+    if (menu->cantOpc >= menu->capOpc) {
 
         nuevaCapOpc = menu->capOpc * 2;
-        tMenuOpcion* nuevasOpciones = (tMenuOpcion*)realloc(menu->opciones, nuevaCapOpc * sizeof(tMenuOpcion));
-        if(!nuevasOpciones){
+        tMenuOpcion* nuevasOpciones = (tMenuOpcion*) realloc(menu->opciones, nuevaCapOpc * sizeof(tMenuOpcion));
+        if (!nuevasOpciones) {
 
             return ERR_SIN_MEMORIA;
         }
@@ -84,20 +84,20 @@ void menu_siguiente_opcion(tMenu *menu)
 {
     int encontrado = 0;
 
-    if(menu->cantOpc == 0){
+    if (menu->cantOpc == 0) {
 
         return;
     }
 
-    for(int i = 0;!encontrado && i < menu->cantOpc; i++){
+    for (int i = 0; !encontrado && i < menu->cantOpc; i++) {
 
         menu->selecOpc++;
-        if(menu->selecOpc >= menu->cantOpc){
+        if (menu->selecOpc >= menu->cantOpc) {
 
             menu->selecOpc = 0;
         }
 
-        if(menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA){
+        if (menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA) {
 
             encontrado = 1;
         }
@@ -108,20 +108,20 @@ void menu_anterior_opcion(tMenu *menu)
 {
     int encontrado = 0;
 
-    if (menu->cantOpc == 0){
+    if (menu->cantOpc == 0) {
 
         return;
     }
 
-    for(int i = 0;!encontrado && i < menu->cantOpc; i++){
+    for (int i = 0; !encontrado && i < menu->cantOpc; i++) {
 
         menu->selecOpc--;
-        if(menu->selecOpc < 0){
+        if (menu->selecOpc < 0) {
 
             menu->selecOpc = menu->cantOpc - 1;
         }
 
-        if(menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA){
+        if (menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA) {
 
             encontrado = 1;
         }
@@ -130,24 +130,26 @@ void menu_anterior_opcion(tMenu *menu)
 
 tMenuAccion menu_confirmar_opcion(tMenu *menu)
 {
-    if(menu->cantOpc > 0 && menu->selecOpc < menu->cantOpc && menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA){
+    if (menu->cantOpc > 0 && menu->selecOpc < menu->cantOpc && menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA) {
 
         return menu->opciones[menu->selecOpc].accion;
     }
 
-    return (tMenuAccion){NULL, NULL};
+    return (tMenuAccion) {
+        NULL, NULL
+    };
 }
 
 void menu_estado_opcion(tMenu *menu, int id, eOpcionEstado nuevoEstado)
 {
     tMenuOpcion *pOpciones = menu->opciones, *pOpcionesUlt = (menu->opciones + menu->cantOpc - 1);
 
-    while(pOpciones <= pOpcionesUlt && pOpciones->id != id){
+    while (pOpciones <= pOpcionesUlt && pOpciones->id != id) {
 
         pOpciones++;
     }
 
-    if(pOpciones <= pOpcionesUlt && pOpciones->id == id){
+    if (pOpciones <= pOpcionesUlt && pOpciones->id == id) {
 
         pOpciones->estado = nuevoEstado;
     }
@@ -162,23 +164,23 @@ void menu_dibujar(SDL_Renderer *renderer, tMenu* menu)
     rectDestino.x = menu->ubicacion.x;
     rectDestino.y = menu->ubicacion.y;
 
-    for(pOpciones = menu->opciones; pOpciones <= pOpcionesUlt; pOpciones++, i++){
+    for (pOpciones = menu->opciones; pOpciones <= pOpcionesUlt; pOpciones++, i++) {
 
-        if(pOpciones->estado != OPCION_OCULTA){
+        if (pOpciones->estado != OPCION_OCULTA) {
 
             rectDestino.w = pOpciones->tamTextura.x;
             rectDestino.h = pOpciones->tamTextura.y;
 
-            if(pOpciones->estado == OPCION_HABILITADA){
+            if (pOpciones->estado == OPCION_HABILITADA) {
 
-                if(i == menu->selecOpc){
+                if (i == menu->selecOpc) {
 
                     SDL_SetTextureColorMod(pOpciones->textura, 255, 255, 0);
-                }else{
+                } else {
 
                     SDL_SetTextureColorMod(pOpciones->textura, 255, 255, 255);
                 }
-            }else{
+            } else {
 
                 SDL_SetTextureColorMod(pOpciones->textura, 128, 128, 128);
             }

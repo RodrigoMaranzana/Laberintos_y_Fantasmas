@@ -9,13 +9,13 @@
 
 #define SDL_COLOR_BLANCO ((SDL_Color){255, 255, 255, 255})
 
-typedef enum{
+typedef enum {
     JUEGO_NO_INICIADO,
     JUEGO_CORRIENDO,
     JUEGO_CERRANDO
-}eJuegoEstado;
+} eJuegoEstado;
 
-typedef struct{
+typedef struct {
     SDL_Window *ventana;
     SDL_Renderer *renderer;
     SDL_Texture **imagenes;
@@ -27,7 +27,7 @@ typedef struct{
     const char *tituloVentana;
     unsigned anchoRes;
     unsigned altoRes;
-}tJuego;
+} tJuego;
 
 int juego_inicializar(tJuego *juego, const char *tituloVentana);
 int juego_ejecutar(tJuego *juego);

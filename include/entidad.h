@@ -2,19 +2,27 @@
 #define ENTIDADES_H_INCLUDED
 
 #include "../include/assets.h"
+#include "../include/temporizador.h"
 
-typedef struct{
-    unsigned columna;
-    unsigned fila;
-}tUbicacion;
+typedef enum {
+    MIRANDO_ABAJO,
+    MIRANDO_IZQUIERDA,
+    MIRANDO_DERECHA,
+    MIRANDO_ARRIBA,
+} eOrientacion;
 
-typedef struct{
-    eImagenes imagen;
+typedef struct {
+    int columna;
+    int fila;
+} tUbicacion;
+
+typedef struct {
+    eImagen imagen;
     tUbicacion ubic;
-    ///puntero a funcion IA
-}tEntidad;
-
-
-///entidades_fantasma_ia();
+    tUbicacion ubicAnterior;
+    eOrientacion orientacion;
+    tTemporizador temporFrame;
+    char frame;
+} tEntidad;
 
 #endif // ENTIDADES_H_INCLUDED

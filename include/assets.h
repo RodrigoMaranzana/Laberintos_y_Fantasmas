@@ -6,33 +6,31 @@
 #include <SDL_mixer.h>
 #include <SDL_ttf.h>
 
-typedef enum{
-    SONIDO_FANTASMA_01,
-    SONIDO_FANTASMA_02,
+typedef enum {
+    //SONIDO_FANTASMA_01,
+    //SONIDO_FANTASMA_02,
     SONIDO_FANTASMA_03,
     SONIDO_JUGADOR_CAMINAR,
-    SONIDO_JUGADOR_MUERTE_01,
-    SONIDO_JUGADOR_MUERTE_02,
-    SONIDO_JUGADOR_PREMIO,
-    SONIDO_JUGADOR_VIDA,
+    //SONIDO_JUGADOR_MUERTE_01,
+    //SONIDO_JUGADOR_MUERTE_02,
+    //SONIDO_JUGADOR_PREMIO,
+    //SONIDO_JUGADOR_VIDA,
     SONIDO_MENU_CONFIRMAR,
     SONIDO_MENU_MOVIMIENTO,
-    SONIDO_MUSICA,
-    SONIDO_PUERTA_SALIDA,
+    //SONIDO_MUSICA,
+    //SONIDO_PUERTA_SALIDA,
     SONIDO_CANTIDAD
-}eSonidos;
+} eSonidos;
 
-typedef enum{
-    IMAGEN_FANTASMA,
+typedef enum {
     IMAGEN_JUGADOR,
-    IMAGEN_PARED_LAD_GRIS,
-    IMAGEN_PISO,
-    IMAGEN_PREMIO,
-    IMAGEN_PUERTA_ENTRADA,
-    IMAGEN_PUERTA_SALIDA,
-    IMAGEN_VIDA,
+    IMAGEN_FANTASMA_01,
+    IMAGEN_FANTASMA_02,
+    IMAGEN_FANTASMA_03,
+    IMAGEN_FANTASMA_04,
+    IMAGEN_TSET_CASTILLO,
     IMAGEN_CANTIDAD
-}eImagenes;
+} eImagen;
 
 int assets_cargar_imagenes(SDL_Renderer *renderer, SDL_Texture **imagenes);
 int assets_cargar_sonidos(Mix_Chunk **sonidos);

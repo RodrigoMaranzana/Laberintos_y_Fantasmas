@@ -5,34 +5,34 @@
 
 #define MENU_NADA_SELEC -1
 
-typedef enum{
+typedef enum {
     OPCION_DESHABILITADA,
     OPCION_HABILITADA,
     OPCION_OCULTA,
-}eOpcionEstado;
+} eOpcionEstado;
 
 typedef void (*tMenuFuncion)(void *datos);
 
 typedef struct {
     tMenuFuncion funcion;
     void* datos;
-}tMenuAccion;
+} tMenuAccion;
 
-typedef struct{
+typedef struct {
     int id;
     SDL_Texture *textura;
     tMenuAccion accion;
     SDL_Point tamTextura;
     eOpcionEstado estado;
-}tMenuOpcion;
+} tMenuOpcion;
 
-typedef struct{
+typedef struct {
     tMenuOpcion* opciones;
     unsigned cantOpc;
     unsigned capOpc;
     int selecOpc;
     SDL_Point ubicacion;
-}tMenu;
+} tMenu;
 
 tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion);
 void menu_destruir(tMenu* menu);

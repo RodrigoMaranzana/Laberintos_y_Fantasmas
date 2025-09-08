@@ -7,14 +7,13 @@ SDL_Texture* texto_crear_textura(SDL_Renderer *renderer, TTF_Font *fuente, const
     SDL_Surface *superficie;
 
     superficie = TTF_RenderText_Blended(fuente, texto, color);
-    if(!superficie)
-    {
+    if (!superficie) {
         printf("ERROR: %s\n", TTF_GetError());
         return NULL;
     }
 
     textura = SDL_CreateTextureFromSurface(renderer, superficie);
-    if(!textura){
+    if (!textura) {
 
         printf("ERROR: %s\n", SDL_GetError());
         return NULL;

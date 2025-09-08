@@ -1,7 +1,7 @@
 #ifndef ERR_H
 #define ERR_H
 
-typedef enum{
+typedef enum {
     // General
     TODO_OK,
     ERR_SIN_MEMORIA,
@@ -26,6 +26,6 @@ typedef enum{
     // Pila
     ERR_PILA_VACIA,
     ERR_PILA_LLENA
-}eRetorno;
+} eRetorno;
 
 #endif //ERR_H

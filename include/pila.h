@@ -2,12 +2,7 @@
 #define PILA_H_INCLUDED
 
 #include <stdlib.h>
-
-typedef struct sNodo{
-    void *dato;
-    unsigned tamDato;
-    struct sNodo *sig;
-}tNodo;
+#include "comun.h"
 typedef tNodo *tPila;
 
 void pila_crear(tPila *pila);

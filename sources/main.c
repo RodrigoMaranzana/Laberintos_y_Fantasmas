@@ -14,14 +14,14 @@ int main(int argc, char* argv[])
     puts("Laberintos y Fantasmas\n");
 
     ret = juego_inicializar(&juego, TITULO_VENTANA);
-    if(ret != TODO_OK){
+    if (ret != TODO_OK) {
 
         puts("Error: Ha fallado la inicializacion del juego");
         return ret;
     }
 
     juego_ejecutar(&juego);
-    if(ret != TODO_OK){
+    if (ret != TODO_OK) {
 
         puts("Error: Ha fallado el juego");
         return ret;

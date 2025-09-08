@@ -2,7 +2,7 @@
 
 int input_tecla_valida(SDL_Keycode sdlKeycode)
 {
-    switch(sdlKeycode){
+    switch (sdlKeycode) {
 
         case SDLK_ESCAPE:
         case SDLK_RETURN:

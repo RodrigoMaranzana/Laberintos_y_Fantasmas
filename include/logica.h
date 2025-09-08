@@ -10,28 +10,28 @@
 #define CANT_COLUMNAS 17
 #define CANT_FILAS 17
 
-typedef enum{
+typedef enum {
     LOGICA_EN_ESPERA,
     LOGICA_JUGANDO,
     LOGICA_FIN_PARTIDA
-}eLogicaEstado;
+} eLogicaEstado;
 
-typedef struct{
+typedef struct {
     unsigned semilla;
     unsigned numero;
-}tRonda;
+} tRonda;
 
-typedef struct{
+typedef struct {
     //tLista *rondas; //Para retroceder y avanzar entre rondas
     tRonda ronda;
     unsigned puntaje;
-}tPartida;
+} tPartida;
 
-typedef struct{
+typedef struct {
     tEscenario escenario;
     tPartida partida;
     eLogicaEstado estado;
-}tLogica;
+} tLogica;
 
 int logica_inicializar(tLogica *logica);
 void logica_destruir(tLogica *logica);

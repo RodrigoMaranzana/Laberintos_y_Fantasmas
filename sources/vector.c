@@ -14,11 +14,10 @@ void _ordenar_seleccion(tVector* vector, Cmp cmp);
 
 int vector_crear(tVector* vector, size_t tamElem)
 {
-	vector->ce = 0;
+    vector->ce = 0;
 
-	vector->vec = malloc(CAP_INI * tamElem);
-	if(!vector->vec)
-    {
+    vector->vec = malloc(CAP_INI * tamElem);
+    if (!vector->vec) {
         vector->cap = 0;
         vector->tamElem = 0;
 
@@ -28,7 +27,7 @@ int vector_crear(tVector* vector, size_t tamElem)
     vector->cap = CAP_INI;
     vector->tamElem = tamElem;
 
-	return TODO_OK;
+    return TODO_OK;
 }
 
 void vector_vaciar(tVector *vector)
@@ -41,10 +40,10 @@ void vector_vaciar(tVector *vector)
 void vector_destruir(tVector* vector)
 {
     free(vector->vec);
-	vector->vec = NULL;
-	vector->cap = 0;
-	vector->ce = 0;
-	vector->tamElem = 0;
+    vector->vec = NULL;
+    vector->cap = 0;
+    vector->ce = 0;
+    vector->tamElem = 0;
 }
 
 int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tamElem)
@@ -52,8 +51,7 @@ int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tam
     size_t tamArch, cantReg;
 
     FILE* arch = fopen(nombreArch, "rb");
-    if(!arch)
-    {
+    if (!arch) {
         return ERR_ARCHIVO;
     }
 
@@ -65,8 +63,7 @@ int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tam
     rewind(arch);
 
     vector->vec = malloc(tamArch);
-    if(!vector->vec)
-    {
+    if (!vector->vec) {
         fclose(arch);
         return ERR_SIN_MEMORIA;
     }
@@ -86,21 +83,19 @@ void vector_recorrer(tVector* vector, Accion accion, void* extra)
     void* ult = vector->vec + ((vector->ce - 1) * vector->tamElem);
     void* i;
 
-    for(i = vector->vec; i <= ult; i+= vector->tamElem)
-    {
+    for (i = vector->vec; i <= ult; i += vector->tamElem) {
         accion(i, extra);
     }
 }
 
 void vector_ordenar(tVector* vector, int metodo, Cmp cmp)
 {
-    switch(metodo)
-    {
+    switch (metodo) {
 //    case BURBUJEO:
 //        break;
-    case SELECCION:
-        _ordenar_seleccion(vector, cmp);
-        break;
+        case SELECCION:
+            _ordenar_seleccion(vector, cmp);
+            break;
 //    case INSERCION:
 //        break;
     }
@@ -110,20 +105,20 @@ void _ordenar_seleccion(tVector* vector, Cmp cmp)
 {
     void *ult, *limiteInf, *menor, *cursor;
     void* aux = malloc(vector->tamElem);
-    if(!aux){
+    if (!aux) {
 
         return;
     }
 
     ult = vector->vec + (vector->ce - 1) * vector->tamElem;
 
-    for(limiteInf = vector->vec; limiteInf < ult; limiteInf += vector->tamElem){
+    for (limiteInf = vector->vec; limiteInf < ult; limiteInf += vector->tamElem) {
 
         menor = limiteInf;
 
-        for(cursor = limiteInf + vector->tamElem; cursor <= ult; cursor += vector->tamElem){
+        for (cursor = limiteInf + vector->tamElem; cursor <= ult; cursor += vector->tamElem) {
 
-            if(cmp(menor, cursor) > 0){
+            if (cmp(menor, cursor) > 0) {
 
                 menor = cursor;
             }
@@ -144,12 +139,12 @@ int vector_ord_buscar(tVector* vector, void* elem, Cmp cmp)
     void* actual = vector->vec;
     void* ult = vector->vec + ((vector->ce - 1) * vector->tamElem);
 
-    while(actual <= ult && cmp(elem, actual) > 0){
+    while (actual <= ult && cmp(elem, actual) > 0) {
 
         actual += vector->tamElem;
     }
 
-    if(actual <= ult && cmp(elem, actual) == 0){
+    if (actual <= ult && cmp(elem, actual) == 0) {
         memcpy(elem, actual, vector->tamElem);
         return (actual - vector->vec) / vector->tamElem;
 
@@ -162,11 +157,11 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
 {
     void *actual, *ult, *posIns;
 
-    if(vector->ce == vector->cap){//vector LLENO
+    if (vector->ce == vector->cap) { //vector LLENO
 
         size_t capNueva = vector->cap * FACTOR_INC;
         void* vecNuevo = realloc(vector->vec, capNueva * vector->tamElem);
-        if(!vecNuevo){
+        if (!vecNuevo) {
 
             return ERR_SIN_MEMORIA;
         }
@@ -178,12 +173,12 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
     actual = vector->vec;
     ult = vector->vec + ((vector->ce - 1) * vector->tamElem);
 
-    while(actual <= ult && cmp(elem, actual) > 0){
+    while (actual <= ult && cmp(elem, actual) > 0) {
 
         actual += vector->tamElem;
     }
 
-    if(actual <= ult && cmp(elem, actual) == 0){
+    if (actual <= ult && cmp(elem, actual) == 0) {
 
         actualizar(actual, elem);
         return TODO_OK;
@@ -191,7 +186,7 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
 
     posIns = actual;
 
-    for(actual = ult; actual >= posIns; actual -= vector->tamElem){
+    for (actual = ult; actual >= posIns; actual -= vector->tamElem) {
 
         memcpy(actual + vector->tamElem, actual, vector->tamElem);
     }
@@ -210,11 +205,11 @@ int vector_insertar_al_final(tVector* vector, void* elem)
     size_t nuevaCap;
     void *vecNue, *posIns;
 
-    if(vector->ce == vector->cap){
+    if (vector->ce == vector->cap) {
 
         nuevaCap = vector->cap * FACTOR_INC;
         vecNue = realloc(vector->vec, nuevaCap * vector->tamElem);
-        if(!vecNue){
+        if (!vecNue) {
 
             return ERR_SIN_MEMORIA;
         }
@@ -239,15 +234,15 @@ void vector_it_crear(tVectorIterador* it, tVector* vector)
 
 void* vector_it_primero(tVectorIterador* it)
 {
-    if(it->vector->ce == 0){
+    if (it->vector->ce == 0) {
 
-       return NULL;
-   }
+        return NULL;
+    }
 
     it->ult = it->vector->vec + ((it->vector->ce - 1) * it->vector->tamElem);
     it->act = it->vector->vec;
 
-   return it->act;
+    return it->act;
 
 }
 
@@ -255,7 +250,7 @@ void* vector_it_siguiente(tVectorIterador* it)
 {
     it->act += it->tamElem;
 
-    if(it->act > it->ult){
+    if (it->act > it->ult) {
 
         return NULL;
     }
@@ -265,7 +260,7 @@ void* vector_it_siguiente(tVectorIterador* it)
 
 int vector_it_fin(tVectorIterador* it)
 {
-    if(it->act <= it->ult){
+    if (it->act <= it->ult) {
 
         return 1;
     }

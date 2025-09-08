@@ -4,19 +4,19 @@
 #include <stdlib.h>
 
 
-typedef struct{
+typedef struct {
     void* vec;
     int ce;
     size_t cap;
     size_t tamElem;
-}tVector;
+} tVector;
 
-typedef struct{
+typedef struct {
     tVector* vector;
     void* act;
     void* ult;
     size_t tamElem;
-}tVectorIterador;
+} tVectorIterador;
 
 //PUNTEROS A FUNCION
 typedef int (*Cmp)(const void* e1, const void* e2);
