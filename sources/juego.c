@@ -166,7 +166,11 @@ int juego_ejecutar(tJuego *juego)
 
                     case LOGICA_JUGANDO:
 
-                        logica_actualizar(&juego->logica, tecla);
+                        if(juego->logica.fantasmaEnMov == NULL){
+
+                            logica_procesar_turno(&juego->logica, tecla);
+                        }
+
                         _juego_sonidos(&juego->logica, juego->sonidos);
                         break;
                     case LOGICA_EN_ESPERA: {
@@ -197,6 +201,14 @@ int juego_ejecutar(tJuego *juego)
                         break;
                 }
             }
+        }
+
+        temporizador_actualizar(&juego->logica.fantasmaMovTempor);
+        if (juego->logica.estado == LOGICA_JUGANDO && temporizador_estado(&juego->logica.fantasmaMovTempor) == TEMPOR_FINALIZADO && juego->logica.fantasmaEnMov != NULL) {
+
+            logica_actualizar(&juego->logica);
+            temporizador_iniciar(&juego->logica.fantasmaMovTempor);
+            //Mix_PlayChannel(-1, * (juego->sonidos + SONIDO_MENU_CONFIRMAR), 0);
         }
 
         _juego_renderizar(juego->renderer, juego->imagenes, &juego->logica, juego->menu);

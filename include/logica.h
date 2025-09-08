@@ -31,11 +31,14 @@ typedef struct {
     tEscenario escenario;
     tPartida partida;
     eLogicaEstado estado;
+    tEntidad *fantasmaEnMov;
+    tTemporizador fantasmaMovTempor;
 } tLogica;
 
 int logica_inicializar(tLogica *logica);
 void logica_destruir(tLogica *logica);
 void logica_calc_resolucion(unsigned cantFilas, unsigned cantColumnas, unsigned *anchoRes, unsigned *altoRes);
-int logica_actualizar(tLogica *logica, SDL_Keycode tecla);
+int logica_actualizar(tLogica *logica);
+void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla);
 
 #endif // LOGICA_H_INCLUDED

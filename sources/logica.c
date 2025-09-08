@@ -11,9 +11,7 @@
 
 #define PIXELES_TILE 48
 
-static void _logica_procesar_turno(tLogica *logica, SDL_Keycode tecla);
 static int logica_ubicacion_valida(const tEscenario *escenario, tUbicacion ubic);
-
 static int _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *fantasma);
 static int _logica_mover_fantasma_dfs(tEscenario *escenario, tEntidad *fantasma);
 static int _logica_es_ubicacion_valida(tEscenario *escenario, unsigned columna, unsigned fila);
@@ -30,6 +28,10 @@ int logica_inicializar(tLogica *logica)
     escenario_crear(&logica->escenario, CANT_COLUMNAS, CANT_FILAS);
     escenario_generar(&logica->escenario);
 
+    logica->fantasmaEnMov = NULL;
+
+    temporizador_inicializar(&logica->fantasmaMovTempor, 0.02f);
+
     logica->estado = LOGICA_EN_ESPERA;
 
     return TODO_OK;
@@ -40,14 +42,34 @@ void logica_destruir(tLogica *logica)
     escenario_destruir(&logica->escenario);
 }
 
-int logica_actualizar(tLogica *logica, SDL_Keycode tecla)
+int logica_actualizar(tLogica *logica)
 {
-    _logica_procesar_turno(logica, tecla);
+    tEntidad *pFantasmaUlt = logica->escenario.fantasmas + (logica->escenario.config.cantFantasmas - 1);
+
+    if(logica->fantasmaEnMov != NULL && logica->fantasmaEnMov <= pFantasmaUlt){
+
+        /// TEST PARA MODERAR LA DIFICULTAD
+        if ((logica->fantasmaEnMov->imagen == IMAGEN_FANTASMA_04 && rand() % 2 == 0)
+            || (logica->fantasmaEnMov->imagen == IMAGEN_FANTASMA_03 && rand() % 4 == 0)
+            || (logica->fantasmaEnMov->imagen == IMAGEN_FANTASMA_02 && rand() % 8 == 0)) {
+
+            _logica_mover_fantasma_bfs(&logica->escenario, logica->fantasmaEnMov);
+        }else{
+
+            _logica_mover_fantasma_dfs(&logica->escenario, logica->fantasmaEnMov);
+        }
+
+        logica->fantasmaEnMov++;
+
+    }else{
+
+        logica->fantasmaEnMov = NULL;
+    }
 
     return TODO_OK;
 }
 
-static void _logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
+void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
 {
     tUbicacion nuevaUbic = logica->escenario.jugador.ubic;
 
@@ -75,7 +97,8 @@ static void _logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
 
     if (logica_ubicacion_valida(&logica->escenario, nuevaUbic) && logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].transitable && !logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad) {
 
-        tEntidad *pFantasma, *pFantasmaUlt = logica->escenario.fantasmas + (logica->escenario.config.cantFantasmas - 1);
+        //tEntidad *pFantasma, *pFantasmaUlt = logica->escenario.fantasmas + (logica->escenario.config.cantFantasmas - 1);
+
 
         logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad = logica->escenario.tablero[logica->escenario.jugador.ubic.fila][logica->escenario.jugador.ubic.columna].entidad;
         logica->escenario.tablero[logica->escenario.jugador.ubic.fila][logica->escenario.jugador.ubic.columna].entidad = NULL;
@@ -83,17 +106,16 @@ static void _logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
         logica->escenario.jugador.ubic.columna = nuevaUbic.columna;
         logica->escenario.jugador.ubic.fila = nuevaUbic.fila;
 
-        for(pFantasma = logica->escenario.fantasmas; pFantasma <= pFantasmaUlt; pFantasma++){
+        //for(pFantasma = logica->escenario.fantasmas; pFantasma <= pFantasmaUlt; pFantasma++){
 
-            /// TEST PARA MODERAR LA DIFICULTAD
-            if ((pFantasma->imagen == IMAGEN_FANTASMA_04 && rand() % 2 == 0) || (pFantasma->imagen == IMAGEN_FANTASMA_03 && rand() % 4 == 0) || (pFantasma->imagen == IMAGEN_FANTASMA_02 && rand() % 8 == 0)) {
+        if(logica->fantasmaEnMov == NULL){
 
-                _logica_mover_fantasma_bfs(&logica->escenario, pFantasma);
-            }else{
-
-                _logica_mover_fantasma_dfs(&logica->escenario, pFantasma);
-            }
+            logica->fantasmaEnMov = logica->escenario.fantasmas;
+            temporizador_iniciar(&logica->fantasmaMovTempor);
         }
+
+
+        //}
     }
 
 }
