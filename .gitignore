@@ -1,2 +1,6 @@
 # Ignora archivos objeto
 obj/
+
+# Ignora archivos layout y depend de Code::Blocks
+*.layout
+*.depend
