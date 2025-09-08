@@ -545,7 +545,7 @@
 	"begin_code.h"
 	"close_code.h"
 
-1757353525 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\assets.c
+1757354977 source:c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\sources\assets.c
 	<stdio.h>
 	"../include/retorno.h"
 	"../include/assets.h"
@@ -1236,8 +1236,8 @@
 	<stdlib.h>
 	<string.h>
 
-1757309038 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\cola.h
+1757356231 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\cola.h
 	"comun.h"
 
-1757309017 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\comun.h
+1757356223 c:\users\rodri\development\algoritmos y estructuras de datos\tp_laberintos_y_fantasmas\laberintos_y_fantasmas\include\comun.h
 
