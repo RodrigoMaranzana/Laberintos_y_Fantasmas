@@ -5,11 +5,10 @@
 #include "../include/temporizador.h"
 #include "../include/pila.h"
 #include "../include/cola.h"
+#include "../include/comun.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#define PIXELES_TILE 48
 
 static int logica_ubicacion_valida(const tEscenario *escenario, tUbicacion ubic);
 static int _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *fantasma);
@@ -29,6 +28,9 @@ int logica_inicializar(tLogica *logica)
     escenario_generar(&logica->escenario);
 
     logica->fantasmaEnMov = NULL;
+
+        ///DEBE LEERSE DEL ARCHIVO CONF
+    logica->escenario.config.cantFantasmas = 4;
 
     temporizador_inicializar(&logica->fantasmaMovTempor, 0.02f);
 

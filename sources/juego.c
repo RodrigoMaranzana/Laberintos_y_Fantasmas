@@ -5,6 +5,7 @@
 #include "../include/retorno.h"
 #include "../include/graficos.h"
 #include "../include/assets.h"
+#include "../include/comun.h"
 
 #define PADDING_MARGEN 64
 
