@@ -59,54 +59,54 @@ static void _escenario_init_tiles(tTile *tiles)
     for (i = TILE_TECHO_0; i <= TILE_TECHO_15; i++) {
         tiles[i].tileTipo = TILE_TIPO_TECHO;
         tiles[i].tileID = i;
-        tiles[i].coords.x = ((i - TILE_TECHO_0) % 4) * 48;
-        tiles[i].coords.y = ((i - TILE_TECHO_0) / 4) * 48;
-        tiles[i].coords.w = 48;
-        tiles[i].coords.h = 48;
+        tiles[i].coords.x = ((i - TILE_TECHO_0) % 4) * PIXELES_TILE;
+        tiles[i].coords.y = ((i - TILE_TECHO_0) / 4) * PIXELES_TILE;
+        tiles[i].coords.w = PIXELES_TILE;
+        tiles[i].coords.h = PIXELES_TILE;
     }
 
     for (i = TILE_PISO_0; i <= TILE_PISO_15; i++) {
         tiles[i].tileTipo = TILE_TIPO_PISO;
         tiles[i].tileID = i;
-        tiles[i].coords.x =  192 + (((i - TILE_PISO_0) % 4) * 48);
-        tiles[i].coords.y = ((i - TILE_PISO_0) / 4) * 48;
-        tiles[i].coords.w = 48;
-        tiles[i].coords.h = 48;
+        tiles[i].coords.x =  192 + (((i - TILE_PISO_0) % 4) * PIXELES_TILE);
+        tiles[i].coords.y = ((i - TILE_PISO_0) / 4) * PIXELES_TILE;
+        tiles[i].coords.w = PIXELES_TILE;
+        tiles[i].coords.h = PIXELES_TILE;
     }
 
     for (i = TILE_PARED_0; i <= TILE_PARED_15; i++) {
         tiles[i].tileTipo = TILE_TIPO_PARED;
         tiles[i].tileID = i;
-        tiles[i].coords.x = ((i - TILE_PARED_0) % 4) * 48;
-        tiles[i].coords.y = 192 + (((i - TILE_PARED_0) / 4) * 48);
-        tiles[i].coords.w = 48;
-        tiles[i].coords.h = 48;
+        tiles[i].coords.x = ((i - TILE_PARED_0) % 4) * PIXELES_TILE;
+        tiles[i].coords.y = 192 + (((i - TILE_PARED_0) / 4) * PIXELES_TILE);
+        tiles[i].coords.w = PIXELES_TILE;
+        tiles[i].coords.h = PIXELES_TILE;
     }
 
     for (i = TILE_PARED_ANIM_0; i <= TILE_PARED_ANIM_3; i++) {
         tiles[i].tileTipo = TILE_TIPO_PARED;
         tiles[i].tileID = i;
         tiles[i].coords.x = 192;
-        tiles[i].coords.y = 192 + ((i - TILE_PARED_ANIM_0) * 48);
-        tiles[i].coords.w = 48;
-        tiles[i].coords.h = 48;
+        tiles[i].coords.y = 192 + ((i - TILE_PARED_ANIM_0) * PIXELES_TILE);
+        tiles[i].coords.w = PIXELES_TILE;
+        tiles[i].coords.h = PIXELES_TILE;
     }
 
     tiles[TILE_PUERTA_ENTRADA_0].tileTipo = TILE_TIPO_PUERTA_ENTRADA;
     tiles[TILE_PUERTA_ENTRADA_0].tileID = TILE_PUERTA_ENTRADA_0;
-    tiles[TILE_PUERTA_ENTRADA_0].coords = (SDL_Rect) {.x = 0, .y = 384, .w = 48, .h = 96};
+    tiles[TILE_PUERTA_ENTRADA_0].coords = (SDL_Rect) {.x = 0, .y = 384, .w = PIXELES_TILE, .h = 2 * PIXELES_TILE};
 
     tiles[TILE_PUERTA_ENTRADA_1].tileTipo = TILE_TIPO_PUERTA_ENTRADA;
     tiles[TILE_PUERTA_ENTRADA_1].tileID = TILE_PUERTA_ENTRADA_1;
-    tiles[TILE_PUERTA_ENTRADA_1].coords = (SDL_Rect) {.x = 96, .y = 384, .w = 48, .h = 96};
+    tiles[TILE_PUERTA_ENTRADA_1].coords = (SDL_Rect) {.x = 96, .y = 384, .w = PIXELES_TILE, .h = 2 * PIXELES_TILE};
 
     tiles[TILE_PUERTA_SALIDA_0].tileTipo = TILE_TIPO_PUERTA_SALIDA;
     tiles[TILE_PUERTA_SALIDA_0].tileID = TILE_PUERTA_SALIDA_0;
-    tiles[TILE_PUERTA_SALIDA_0].coords = (SDL_Rect) {.x = 48, .y = 384, .w = 48, .h = 96};
+    tiles[TILE_PUERTA_SALIDA_0].coords = (SDL_Rect) {.x = 48, .y = 384, .w = PIXELES_TILE, .h = 2 * PIXELES_TILE};
 
     tiles[TILE_PUERTA_SALIDA_1].tileTipo = TILE_TIPO_PUERTA_SALIDA;
     tiles[TILE_PUERTA_SALIDA_1].tileID = TILE_PUERTA_SALIDA_1;
-    tiles[TILE_PUERTA_SALIDA_1].coords = (SDL_Rect) {.x = 144, .y = 384, .w = 48, .h = 96};
+    tiles[TILE_PUERTA_SALIDA_1].coords = (SDL_Rect) {.x = 144, .y = 384, .w = PIXELES_TILE, .h = 2 * PIXELES_TILE};
 
 }
 
@@ -375,6 +375,8 @@ void escenario_destruir(tEscenario *escenario)
 
         matriz_destruir((void**) escenario->tablero, escenario->config.filas);
     }
+
+    free(escenario->fantasmas);
 }
 
 
@@ -390,8 +392,8 @@ void escenario_dibujar(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textur
 
             tileTipo = escenario->tablero[fila][columna].tile->tileTipo;
 
-            rectTileDst.x = columna * 48 + MARGEN_VENTANA/2;
-            rectTileDst.y = fila * 48 + MARGEN_VENTANA/2 + 8;
+            rectTileDst.x = columna * PIXELES_TILE + MARGEN_VENTANA / 2;
+            rectTileDst.y = fila * PIXELES_TILE + (MARGEN_VENTANA / 2) + 8;
             rectTileDst.w = escenario->tablero[fila][columna].tile->coords.w;
             rectTileDst.h = escenario->tablero[fila][columna].tile->coords.h;
 
@@ -402,7 +404,7 @@ void escenario_dibujar(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textur
                 if (escenario->tablero[fila][columna].tile->tileID >= TILE_PARED_ANIM_0
                     && escenario->tablero[fila][columna].tile->tileID <= TILE_PARED_ANIM_3) {
 
-                    rectTileSrc.x += escenario->frame * 48;
+                    rectTileSrc.x += escenario->frame * PIXELES_TILE;
                 }
 
                 graficos_dibujar_textura(*(imagenes + escenario->tileSet), renderer, &rectTileSrc, &rectTileDst);
@@ -411,7 +413,7 @@ void escenario_dibujar(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textur
 
                     mascara = _escenario_calcular_mascara(escenario, columna, fila);
 
-                    rectTileDst.y -= 48;
+                    rectTileDst.y -= PIXELES_TILE;
 
                     graficos_dibujar_textura(*(imagenes + escenario->tileSet), renderer, &escenario->tiles[TILE_TECHO_0 + mascara].coords, &rectTileDst);
                 }
@@ -419,8 +421,8 @@ void escenario_dibujar(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textur
 
             if (tileTipo == TILE_TIPO_PUERTA_ENTRADA || tileTipo == TILE_TIPO_PUERTA_SALIDA) {
 
-                rectTileDst.h = 96;
-                rectTileDst.y -= 48;
+                rectTileDst.h = 2 * PIXELES_TILE;
+                rectTileDst.y -= PIXELES_TILE;
 
                 graficos_dibujar_textura(*(imagenes + escenario->tileSet), renderer, &escenario->tablero[fila][columna].tile->coords, &rectTileDst);
             }
@@ -429,7 +431,6 @@ void escenario_dibujar(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textur
 
                 _escenario_dibujar_entidad(renderer, imagenes, escenario->tablero[fila][columna].entidad);
             }
-
         }
     }
 }
@@ -438,16 +439,15 @@ static void _escenario_dibujar_entidad(SDL_Renderer *renderer, SDL_Texture **ima
 {
     SDL_Rect rectEntidadDst, rectEntidadSrc;
 
-    rectEntidadSrc.x = entidad->frame * 48;
-    rectEntidadSrc.y = entidad->orientacion * 48;
-    rectEntidadSrc.w = 48;
-    rectEntidadSrc.h = 48;
+    rectEntidadSrc.x = entidad->frame * PIXELES_TILE;
+    rectEntidadSrc.y = entidad->orientacion * PIXELES_TILE;
+    rectEntidadSrc.w = PIXELES_TILE;
+    rectEntidadSrc.h = PIXELES_TILE;
 
-    rectEntidadDst.x = entidad->ubic.columna * 48 + MARGEN_VENTANA / 2;
-    rectEntidadDst.y = entidad->ubic.fila * 48 + MARGEN_VENTANA / 2 + 8;
-    rectEntidadDst.w = 48;
-    rectEntidadDst.h = 48;
-
+    rectEntidadDst.x = entidad->ubic.columna * PIXELES_TILE + MARGEN_VENTANA / 2;
+    rectEntidadDst.y = entidad->ubic.fila * PIXELES_TILE + MARGEN_VENTANA / 2 + 8;
+    rectEntidadDst.w = PIXELES_TILE;
+    rectEntidadDst.h = PIXELES_TILE;
 
     graficos_dibujar_textura(*(imagenes + entidad->imagen), renderer, &rectEntidadSrc, &rectEntidadDst);
 }
