@@ -6,6 +6,7 @@
 #include <string.h>
 
 int main() {
+
     if (init_winsock() != 0) {
         printf("Error al inicializar Winsock\n");
         return 1;

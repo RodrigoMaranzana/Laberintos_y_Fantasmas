@@ -25,6 +25,7 @@
 					<Add option="-lSDL2_image" />
 					<Add option="-lSDL2_ttf" />
 					<Add option="-lSDL2_mixer" />
+					<Add library="ws2_32" />
 					<Add directory="libraries/SDL2-2.32.8/x86_64-w64-mingw32/lib" />
 					<Add directory="libraries/SDL2_image-2.8.8/x86_64-w64-mingw32/lib" />
 					<Add directory="libraries/SDL2_mixer-2.8.1/x86_64-w64-mingw32/lib" />
@@ -43,69 +44,103 @@
 					<Add option="-s" />
 				</Linker>
 			</Target>
+			<Target title="Cliente_D">
+				<Option output="bin/Cliente/Laberintos_y_Fantasmas_Cliente" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Cliente/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add directory="libraries/SDL2-2.32.8/x86_64-w64-mingw32/include/SDL2" />
+					<Add directory="libraries/SDL2_image-2.8.8/x86_64-w64-mingw32/include/SDL2" />
+					<Add directory="libraries/SDL2_mixer-2.8.1/x86_64-w64-mingw32/include/SDL2" />
+					<Add directory="libraries/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/SDL2" />
+				</Compiler>
+				<Linker>
+					<Add option="-lmingw32" />
+					<Add option="-lSDL2main" />
+					<Add option="-lSDL2" />
+					<Add option="-lSDL2_image" />
+					<Add option="-lSDL2_ttf" />
+					<Add option="-lSDL2_mixer" />
+					<Add library="ws2_32" />
+					<Add directory="libraries/SDL2-2.32.8/x86_64-w64-mingw32/lib" />
+					<Add directory="libraries/SDL2_image-2.8.8/x86_64-w64-mingw32/lib" />
+					<Add directory="libraries/SDL2_mixer-2.8.1/x86_64-w64-mingw32/lib" />
+					<Add directory="libraries/SDL2_ttf-2.24.0/x86_64-w64-mingw32/lib" />
+				</Linker>
+			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="include/assets.h" />
-		<Unit filename="include/cola.h" />
-		<Unit filename="include/comun.h" />
-		<Unit filename="include/entidad.h" />
-		<Unit filename="include/escenario.h" />
-		<Unit filename="include/graficos.h" />
-		<Unit filename="include/input.h" />
-		<Unit filename="include/juego.h" />
-		<Unit filename="include/logica.h" />
-		<Unit filename="include/matriz.h" />
-		<Unit filename="include/menu.h" />
-		<Unit filename="include/pila.h" />
-		<Unit filename="include/retorno.h" />
-		<Unit filename="include/temporizador.h" />
-		<Unit filename="include/texto.h" />
-		<Unit filename="include/vector.h" />
-		<Unit filename="sources/assets.c">
+		<Unit filename="include/cliente/archivo.h" />
+		<Unit filename="include/cliente/assets.h" />
+		<Unit filename="include/cliente/cliente.h" />
+		<Unit filename="include/cliente/entidad.h" />
+		<Unit filename="include/cliente/escenario.h" />
+		<Unit filename="include/cliente/graficos.h" />
+		<Unit filename="include/cliente/input.h" />
+		<Unit filename="include/cliente/juego.h" />
+		<Unit filename="include/cliente/logica.h" />
+		<Unit filename="include/cliente/menu.h" />
+		<Unit filename="include/cliente/temporizador.h" />
+		<Unit filename="include/cliente/texto.h" />
+		<Unit filename="include/comun/cola.h" />
+		<Unit filename="include/comun/comun.h" />
+		<Unit filename="include/comun/matriz.h" />
+		<Unit filename="include/comun/pila.h" />
+		<Unit filename="include/comun/retorno.h" />
+		<Unit filename="include/comun/vector.h" />
+		<Unit filename="sources/cliente/archivo.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/cola.c">
+		<Unit filename="sources/cliente/assets.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/entidades.c">
+		<Unit filename="sources/cliente/cliente.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/escenario.c">
+		<Unit filename="sources/cliente/entidad.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/graficos.c">
+		<Unit filename="sources/cliente/escenario.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/input.c">
+		<Unit filename="sources/cliente/graficos.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/juego.c">
+		<Unit filename="sources/cliente/input.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/logica.c">
+		<Unit filename="sources/cliente/juego.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/main.c">
+		<Unit filename="sources/cliente/logica.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/matriz.c">
+		<Unit filename="sources/cliente/main_cliente.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/menu.c">
+		<Unit filename="sources/cliente/menu.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/pila.c">
+		<Unit filename="sources/cliente/temporizador.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/temporizador.c">
+		<Unit filename="sources/cliente/texto.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/texto.c">
+		<Unit filename="sources/comun/cola.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="sources/vector.c">
+		<Unit filename="sources/comun/matriz.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/pila.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/vector.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions />
