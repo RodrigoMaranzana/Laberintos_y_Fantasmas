@@ -32,6 +32,8 @@ int logica_inicializar(tLogica *logica)
     ///DEBE LEERSE DEL ARCHIVO CONF
     logica->escenario.confRonda.cantFantasmas = 4;
 
+    cola_crear(&logica->movimientosJugador);
+
     temporizador_inicializar(&logica->fantasmaMovTempor, 0.02f);
 
     logica->estado = LOGICA_EN_ESPERA;
@@ -74,6 +76,7 @@ int logica_actualizar(tLogica *logica)
 void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
 {
     tUbicacion nuevaUbic = logica->escenario.jugador.ubic;
+    tMovimiento mov;
 
     switch (tecla) {
 
@@ -99,6 +102,12 @@ void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
 
     if (logica_ubicacion_valida(&logica->escenario, nuevaUbic) && logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].transitable) {
 
+
+        mov.ubic.fila = nuevaUbic.fila;
+        mov.ubic.columna = nuevaUbic.columna;
+        mov.direccion = logica->escenario.jugador.orientacion;
+
+        cola_encolar(&logica->movimientosJugador, &mov, sizeof(tMovimiento));
 
         if (logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad) {
 
@@ -341,4 +350,33 @@ static int _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *fantasma)
     matriz_destruir((void**)predecesores, escenario->confRonda.filas);
 
     return TODO_OK;
+}
+
+void logica_mostrar_historial_movimientos(tLogica *logica)
+{
+    unsigned paso = 1;
+    tMovimiento mov;
+
+    printf("Tus movimientos realizados:\n");
+    // Vacia la cola original mostrando los movimientos
+    while (cola_vacia(&logica->movimientosJugador) == TODO_OK)
+    {
+        cola_desencolar(&logica->movimientosJugador, &mov, sizeof(tMovimiento));
+        switch (mov.direccion){
+        case MIRANDO_ABAJO:
+            printf("Paso %u: Fila=%d, Columna=%d, Direccion=ABAJO\n", paso++, mov.ubic.fila, mov.ubic.columna);
+            break;
+        case MIRANDO_IZQUIERDA:
+            printf("Paso %u: Fila=%d, Columna=%d, Direccion=IZQUIERDA\n", paso++, mov.ubic.fila, mov.ubic.columna);
+            break;
+        case MIRANDO_DERECHA:
+            printf("Paso %u: Fila=%d, Columna=%d, Direccion=DERECHA\n", paso++, mov.ubic.fila, mov.ubic.columna);
+            break;
+        case MIRANDO_ARRIBA:
+            printf("Paso %u: Fila=%d, Columna=%d, Direccion=ARRIBA\n", paso++, mov.ubic.fila, mov.ubic.columna);
+            break;
+        default:
+            break;
+        }
+    }
 }
