@@ -6,6 +6,7 @@
 #include "../../include/cliente/graficos.h"
 #include "../../include/cliente/assets.h"
 #include "../../include/comun/comun.h"
+#include "../../include/cliente/archivo.h"
 
 #define PADDING_MARGEN 64
 
@@ -27,6 +28,8 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
 {
     int ret = TODO_OK;
     unsigned anchoRes, altoRes;
+    FILE *archConf;
+    tConf conf;
 
     SDL_Texture *texturaAux;
     juego->estado = JUEGO_NO_INICIADO;
@@ -52,8 +55,36 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
         return ERR_SDL_INI;
     }
 
-    logica_calc_resolucion(CANT_COLUMNAS, CANT_FILAS, &anchoRes, &altoRes);
+    archConf = fopen("config.txt", "r+");
+    if (!archConf) {
 
+        archConf = fopen("config.txt", "w+");
+        if (!archConf) {
+
+            return ERR_ARCHIVO;
+        }
+    }
+
+    if (archivo_leer_conf(archConf, &conf) == ERR_CONF) {
+
+        puts("Creando archivo de configuracion por defecto...");
+
+        conf.filas = 17;
+        conf.columnas = 17;
+        conf.vidas_inicio = 3;
+        conf.max_num_fantasmas = 4;
+        conf.max_num_premios = 2;
+        conf.max_vidas_extra = 1;
+
+        archivo_escribir_conf(archConf, &conf);
+    }
+
+    fclose(archConf);
+
+    juego->logica.escenario.confRonda.filas = conf.filas;
+    juego->logica.escenario.confRonda.columnas = conf.columnas;
+
+    logica_calc_resolucion(conf.columnas, conf.filas, &anchoRes, &altoRes);
     juego->anchoRes = anchoRes + PADDING_MARGEN;
     juego->altoRes = altoRes + PADDING_MARGEN;
 
@@ -103,34 +134,26 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
         return ret;
     }
 
-    juego->menu = menu_crear(2, (SDL_Point) {
-        32, 32
-    });
+    juego->menu = menu_crear(2, (SDL_Point){32, 32}, MENU_VERTICAL);
     if (!juego->menu) {
 
         return ERR_MENU;
     }
 
     texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "NUEVA PARTIDA", SDL_COLOR_BLANCO);
-    if (menu_agregar_opcion(juego->menu, M_PRI_NUEVA_PARTIDA, texturaAux, 64, (tMenuAccion) {
-    _juego_iniciar_partida, juego
-}, OPCION_HABILITADA) != TODO_OK) {
+    if (menu_agregar_opcion(juego->menu, M_PRI_NUEVA_PARTIDA, texturaAux, 64, (tMenuAccion) {_juego_iniciar_partida, juego}, OPCION_HABILITADA) != TODO_OK) {
 
         return ERR_MENU;
     }
 
     texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "ESTADISTICAS", SDL_COLOR_BLANCO);
-    if (menu_agregar_opcion(juego->menu, M_PRI_ESTADISTICAS, texturaAux, 64, (tMenuAccion) {
-    _juego_iniciar_partida, juego
-}, OPCION_DESHABILITADA) != TODO_OK) {
+    if (menu_agregar_opcion(juego->menu, M_PRI_ESTADISTICAS, texturaAux, 64, (tMenuAccion) {_juego_iniciar_partida, juego}, OPCION_DESHABILITADA) != TODO_OK) {
 
         return ERR_MENU;
     }
 
     texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "SALIR", SDL_COLOR_BLANCO);
-    if (menu_agregar_opcion(juego->menu, M_PRI_SALIR, texturaAux, 64, (tMenuAccion) {
-    _juego_salir_del_juego, juego
-}, OPCION_HABILITADA) != TODO_OK) {
+    if (menu_agregar_opcion(juego->menu, M_PRI_SALIR, texturaAux, 64, (tMenuAccion) {_juego_salir_del_juego, juego}, OPCION_HABILITADA) != TODO_OK) {
 
         return ERR_MENU;
     }
@@ -267,7 +290,7 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
 
     if (logica->estado == LOGICA_JUGANDO) {
 
-        for (i = 0; i < logica->escenario.config.cantFantasmas; i++) {
+        for (i = 0; i < logica->escenario.confRonda.cantFantasmas; i++) {
 
             temporizador_actualizar(&logica->escenario.fantasmas[i].temporFrame);
             if (temporizador_estado(&logica->escenario.fantasmas[i].temporFrame) == TEMPOR_FINALIZADO) {

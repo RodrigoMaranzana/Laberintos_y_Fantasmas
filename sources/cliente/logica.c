@@ -24,13 +24,13 @@ void logica_calc_resolucion(unsigned cantColumnas, unsigned cantFilas, unsigned 
 
 int logica_inicializar(tLogica *logica)
 {
-    escenario_crear(&logica->escenario, CANT_COLUMNAS, CANT_FILAS);
+    escenario_crear(&logica->escenario, logica->escenario.confRonda.columnas, logica->escenario.confRonda.filas);
     escenario_generar(&logica->escenario);
 
     logica->fantasmaEnMov = NULL;
 
     ///DEBE LEERSE DEL ARCHIVO CONF
-    logica->escenario.config.cantFantasmas = 4;
+    logica->escenario.confRonda.cantFantasmas = 4;
 
     temporizador_inicializar(&logica->fantasmaMovTempor, 0.02f);
 
@@ -46,7 +46,7 @@ void logica_destruir(tLogica *logica)
 
 int logica_actualizar(tLogica *logica)
 {
-    tEntidad *pFantasmaUlt = logica->escenario.fantasmas + (logica->escenario.config.cantFantasmas - 1);
+    tEntidad *pFantasmaUlt = logica->escenario.fantasmas + (logica->escenario.confRonda.cantFantasmas - 1);
 
     if(logica->fantasmaEnMov != NULL && logica->fantasmaEnMov <= pFantasmaUlt){
 
@@ -97,8 +97,14 @@ void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
             break;
     }
 
-    if (logica_ubicacion_valida(&logica->escenario, nuevaUbic) && logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].transitable
-        && !logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad) {
+    if (logica_ubicacion_valida(&logica->escenario, nuevaUbic) && logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].transitable) {
+
+
+        if (logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad) {
+
+            puts("PERDISTE");
+            logica->estado = LOGICA_FIN_PARTIDA;
+        }
 
         logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad = logica->escenario.tablero[logica->escenario.jugador.ubic.fila][logica->escenario.jugador.ubic.columna].entidad;
         logica->escenario.tablero[logica->escenario.jugador.ubic.fila][logica->escenario.jugador.ubic.columna].entidad = NULL;
@@ -117,7 +123,7 @@ void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
 
 static int logica_ubicacion_valida(const tEscenario *escenario, tUbicacion ubic)
 {
-    if (ubic.columna < 0 || ubic.columna >= escenario->config.columnas || ubic.fila < 0 || ubic.fila >= escenario->config.filas) {
+    if (ubic.columna < 0 || ubic.columna >= escenario->confRonda.columnas || ubic.fila < 0 || ubic.fila >= escenario->confRonda.filas) {
 
         return 0;
     }
@@ -128,7 +134,7 @@ static int logica_ubicacion_valida(const tEscenario *escenario, tUbicacion ubic)
 
 static int _logica_es_ubicacion_valida(tEscenario *escenario, unsigned columna, unsigned fila)
 {
-    return (fila < escenario->config.filas && columna < escenario->config.columnas && escenario->tablero[fila][columna].transitable);
+    return (fila < escenario->confRonda.filas && columna < escenario->confRonda.columnas && escenario->tablero[fila][columna].transitable);
 }
 
 static int _logica_mover_fantasma_dfs(tEscenario *escenario, tEntidad *fantasma)
@@ -137,9 +143,9 @@ static int _logica_mover_fantasma_dfs(tEscenario *escenario, tEntidad *fantasma)
     tUbicacion ubicProcesada, ubicVecina, primerMovimiento;
     int dirFila[] = {-1, 0, 1, 0}, dirColumna[] = {0, 1, 0, -1}, jugadorEncontrado = 0, columna, fila;
 
-    for(fila = 0; fila < escenario->config.filas; fila++){
+    for(fila = 0; fila < escenario->confRonda.filas; fila++){
 
-        for(columna = 0; columna < escenario->config.columnas; columna++){
+        for(columna = 0; columna < escenario->confRonda.columnas; columna++){
 
             escenario->tablero[fila][columna].visitada = 0;
         }
@@ -227,7 +233,7 @@ static int _logica_mover_fantasma_dfs(tEscenario *escenario, tEntidad *fantasma)
 
         fantasma->ubicAnterior = fantasma->ubic;
         fantasma->ubic = primerMovimiento;
-        escenario->tablero[fantasma->ubic.fila][fantasma->ubic.columna].entidad = fantasma;
+        escenario->tablero[fantasma->ubic.fila][fantasma->ubic.columna].entidad = fantasma;///
     }
 
     pila_vaciar(&pila);
@@ -241,16 +247,16 @@ static int _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *fantasma)
     tUbicacion ubicProcesada, ubicVecina;
     int dirFila[] = {-1, 0, 1, 0}, dirColumna[] = {0, 1, 0, -1}, jugadorEncontrado = 0, columna, fila;
 
-    tUbicacion **predecesores = (tUbicacion**)matriz_crear((size_t)escenario->config.columnas, (size_t)escenario->config.filas, sizeof(tUbicacion));
+    tUbicacion **predecesores = (tUbicacion**)matriz_crear((size_t)escenario->confRonda.columnas, (size_t)escenario->confRonda.filas, sizeof(tUbicacion));
     if (!predecesores) {
 
         puts("ERROR: No se pudo mover al fantasma");
         return ERR_SIN_MEMORIA;
     }
 
-    for (fila = 0; fila < escenario->config.filas; fila++) {
+    for (fila = 0; fila < escenario->confRonda.filas; fila++) {
 
-        for (columna = 0; columna < escenario->config.columnas; columna++) {
+        for (columna = 0; columna < escenario->confRonda.columnas; columna++) {
 
             predecesores[fila][columna].fila = -1;
             predecesores[fila][columna].columna = -1;
@@ -332,7 +338,7 @@ static int _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *fantasma)
 
     cola_vaciar(&cola);
 
-    matriz_destruir((void**)predecesores, escenario->config.filas);
+    matriz_destruir((void**)predecesores, escenario->confRonda.filas);
 
     return TODO_OK;
 }

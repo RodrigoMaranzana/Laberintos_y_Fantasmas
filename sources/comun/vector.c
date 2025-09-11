@@ -21,13 +21,13 @@ int vector_crear(tVector* vector, size_t tamElem)
         vector->cap = 0;
         vector->tamElem = 0;
 
-        return ERR_SIN_MEMORIA;
+        return VECTOR_SIN_MEM;
     }
 
     vector->cap = CAP_INI;
     vector->tamElem = tamElem;
 
-    return TODO_OK;
+    return VECTOR_TODO_OK;
 }
 
 void vector_vaciar(tVector *vector)
@@ -52,7 +52,7 @@ int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tam
 
     FILE* arch = fopen(nombreArch, "rb");
     if (!arch) {
-        return ERR_ARCHIVO;
+        return VECTOR_ERR_ARCH;
     }
 
     fseek(arch, 0, SEEK_END);
@@ -65,7 +65,7 @@ int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tam
     vector->vec = malloc(tamArch);
     if (!vector->vec) {
         fclose(arch);
-        return ERR_SIN_MEMORIA;
+        return VECTOR_SIN_MEM;
     }
     vector->cap = cantReg;
     vector->ce = cantReg;
@@ -75,7 +75,7 @@ int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tam
 
     fclose(arch);
 
-    return TODO_OK;
+    return VECTOR_TODO_OK;
 }
 
 void vector_recorrer(tVector* vector, Accion accion, void* extra)
@@ -157,13 +157,13 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
 {
     void *actual, *ult, *posIns;
 
-    if (vector->ce == vector->cap) { //vector LLENO
+    if (vector->ce == vector->cap) {
 
         size_t capNueva = vector->cap * FACTOR_INC;
         void* vecNuevo = realloc(vector->vec, capNueva * vector->tamElem);
         if (!vecNuevo) {
 
-            return ERR_SIN_MEMORIA;
+            return VECTOR_SIN_MEM;
         }
 
         vector->cap = capNueva;
@@ -181,7 +181,7 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
     if (actual <= ult && cmp(elem, actual) == 0) {
 
         actualizar(actual, elem);
-        return TODO_OK;
+        return VECTOR_TODO_OK;
     }
 
     posIns = actual;
@@ -191,12 +191,10 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
         memcpy(actual + vector->tamElem, actual, vector->tamElem);
     }
 
-    //inserto el elemento
     memcpy(posIns, elem, vector->tamElem);
-
     vector->ce++;
 
-    return TODO_OK;
+    return VECTOR_TODO_OK;
 }
 
 
@@ -211,7 +209,7 @@ int vector_insertar_al_final(tVector* vector, void* elem)
         vecNue = realloc(vector->vec, nuevaCap * vector->tamElem);
         if (!vecNue) {
 
-            return ERR_SIN_MEMORIA;
+            return VECTOR_SIN_MEM;
         }
 
         vector->vec = vecNue;
@@ -222,7 +220,7 @@ int vector_insertar_al_final(tVector* vector, void* elem)
     memcpy(posIns, elem, vector->tamElem);
     vector->ce++;
 
-    return TODO_OK;
+    return VECTOR_TODO_OK;
 }
 
 void vector_it_crear(tVectorIterador* it, tVector* vector)

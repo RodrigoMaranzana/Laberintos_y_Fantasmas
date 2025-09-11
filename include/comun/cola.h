@@ -1,11 +1,21 @@
 #ifndef COLA_H_INCLUDED
 #define COLA_H_INCLUDED
 
-#include "comun.h"
-#define TODO_OK     0
-#define SIN_MEMORIA 1
-#define COLA_VACIA  2
-#define COLA_LLENA  3
+typedef enum {
+    COLA_TODO_OK,
+    COLA_VACIA,
+    COLA_LLENA,
+    COLA_SIN_MEM
+} eColaRet;
+
+#ifndef TNODO_INCLUDED
+#define TNODO_INCLUDED
+typedef struct sNodo{
+    void *dato;
+    unsigned tamDato;
+    struct sNodo *sig;
+}tNodo;
+#endif
 
 typedef struct
 {

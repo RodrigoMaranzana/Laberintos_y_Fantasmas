@@ -1,11 +1,14 @@
 #include "../../include/cliente/menu.h"
-#include "../../include/comun/retorno.h"
+#include "../../include/comun/comun.h"
 #include "../../include/cliente/graficos.h"
 #include "../../include/cliente/input.h"
 #include <stdlib.h>
 #include <string.h>
 
-tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion)
+#define PADDING_VERTICAL 8
+#define PADDING_HORIZONTAL 16
+
+tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion, eMenuTipo menuTipo)
 {
     tMenu* menu = (tMenu*) malloc(sizeof(tMenu));
     if (!menu) {
@@ -13,7 +16,7 @@ tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion)
         return NULL;
     }
 
-    menu->selecOpc = 0;
+    menu->selecOpc = -1;
 
     menu->opciones = (tMenuOpcion*) malloc(capOpc * sizeof(tMenuOpcion));
     if (!menu->opciones) {
@@ -25,6 +28,7 @@ tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion)
     menu->capOpc = capOpc;
     menu->cantOpc = 0;
     menu->ubicacion = ubicacion;
+    menu->menuTipo = menuTipo;
 
     return menu;
 }
@@ -77,67 +81,100 @@ int menu_agregar_opcion(tMenu *menu, int id, SDL_Texture *textura, unsigned tamA
     pOpciones->accion = accion;
     menu->cantOpc++;
 
+    if (menu->selecOpc == -1) {
+
+        menu->selecOpc = pOpciones->id;
+    }
+
     return TODO_OK;
 }
 
 void menu_siguiente_opcion(tMenu *menu)
 {
-    int encontrado = 0;
+    int i = 0;
+    tMenuOpcion *pOpciones = menu->opciones, *pOpcionesUlt = (menu->opciones + menu->cantOpc - 1);
 
     if (menu->cantOpc == 0) {
 
         return;
     }
 
-    for (int i = 0; !encontrado && i < menu->cantOpc; i++) {
+    while (pOpciones <= pOpcionesUlt && pOpciones->id != menu->selecOpc) {
 
-        menu->selecOpc++;
-        if (menu->selecOpc >= menu->cantOpc) {
-
-            menu->selecOpc = 0;
-        }
-
-        if (menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA) {
-
-            encontrado = 1;
-        }
+        pOpciones++;
     }
+
+    if (pOpciones > pOpcionesUlt) {
+
+        pOpciones = menu->opciones;
+    }
+
+    do {
+
+        pOpciones++;
+        if (pOpciones > pOpcionesUlt) {
+            pOpciones = menu->opciones;
+        }
+        i++;
+
+    } while (pOpciones->estado == OPCION_DESHABILITADA && i < menu->cantOpc);
+
+    menu->selecOpc = pOpciones->id;
 }
 
 void menu_anterior_opcion(tMenu *menu)
 {
-    int encontrado = 0;
+    int i = 0;
+    tMenuOpcion *pOpciones = menu->opciones, *pOpcionesUlt = (menu->opciones + menu->cantOpc - 1);
 
     if (menu->cantOpc == 0) {
 
         return;
     }
 
-    for (int i = 0; !encontrado && i < menu->cantOpc; i++) {
+    while (pOpciones <= pOpcionesUlt && pOpciones->id != menu->selecOpc) {
 
-        menu->selecOpc--;
-        if (menu->selecOpc < 0) {
-
-            menu->selecOpc = menu->cantOpc - 1;
-        }
-
-        if (menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA) {
-
-            encontrado = 1;
-        }
+        pOpciones++;
     }
+
+    if (pOpciones > pOpcionesUlt) {
+        pOpciones = menu->opciones;
+    }
+
+    do {
+
+        pOpciones--;
+        if (pOpciones < menu->opciones) {
+            pOpciones = pOpcionesUlt;
+        }
+        i++;
+
+    } while (pOpciones->estado == OPCION_DESHABILITADA && i < menu->cantOpc);
+
+    menu->selecOpc = pOpciones->id;
 }
 
 tMenuAccion menu_confirmar_opcion(tMenu *menu)
 {
-    if (menu->cantOpc > 0 && menu->selecOpc < menu->cantOpc && menu->opciones[menu->selecOpc].estado == OPCION_HABILITADA) {
+    tMenuOpcion *pOpciones = menu->opciones, *pOpcionesUlt = menu->opciones + menu->cantOpc - 1;
+    tMenuAccion accionNula = {NULL, NULL};
 
-        return menu->opciones[menu->selecOpc].accion;
+    if (menu->cantOpc == 0) {
+
+        return accionNula;
     }
 
-    return (tMenuAccion) {
-        NULL, NULL
-    };
+    while (pOpciones <= pOpcionesUlt && pOpciones->id != menu->selecOpc) {
+
+        pOpciones++;
+    }
+
+    if (pOpciones <= pOpcionesUlt) {
+
+        return pOpciones->accion;
+    }
+
+    return accionNula;
 }
 
 void menu_estado_opcion(tMenu *menu, int id, eOpcionEstado nuevoEstado)
@@ -159,12 +196,11 @@ void menu_dibujar(SDL_Renderer *renderer, tMenu* menu)
 {
     tMenuOpcion *pOpciones, *pOpcionesUlt = (menu->opciones + menu->cantOpc - 1);
     SDL_Rect rectDestino;
-    int padding = 8, i = 0;
 
     rectDestino.x = menu->ubicacion.x;
     rectDestino.y = menu->ubicacion.y;
 
-    for (pOpciones = menu->opciones; pOpciones <= pOpcionesUlt; pOpciones++, i++) {
+    for (pOpciones = menu->opciones; pOpciones <= pOpcionesUlt; pOpciones++) {
 
         if (pOpciones->estado != OPCION_OCULTA) {
 
@@ -173,7 +209,7 @@ void menu_dibujar(SDL_Renderer *renderer, tMenu* menu)
 
             if (pOpciones->estado == OPCION_HABILITADA) {
 
-                if (i == menu->selecOpc) {
+                if (pOpciones->id == menu->selecOpc) {
 
                     SDL_SetTextureColorMod(pOpciones->textura, 255, 255, 0);
                 } else {
@@ -186,7 +222,15 @@ void menu_dibujar(SDL_Renderer *renderer, tMenu* menu)
             }
 
             graficos_dibujar_textura(pOpciones->textura, renderer, NULL, &rectDestino);
-            rectDestino.y += pOpciones->tamTextura.y + padding;
+
+            if (menu->menuTipo == MENU_VERTICAL) {
+
+                rectDestino.y += pOpciones->tamTextura.y + PADDING_VERTICAL;
+            }else {
+
+                rectDestino.x += pOpciones->tamTextura.x + PADDING_HORIZONTAL;
+            }
+
         }
     }
 }

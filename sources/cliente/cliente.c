@@ -1,4 +1,5 @@
 #include "../../include/cliente/cliente.h"
+#include "../../include/comun/comun.h"
 #include <stdio.h>
 #include <string.h>
 

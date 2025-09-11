@@ -6,9 +6,12 @@
 #include "../../include/cliente/entidad.h"
 #include "../../include/cliente/escenario.h"
 
-/// MACROS TEMPORALES
-#define CANT_COLUMNAS 17
-#define CANT_FILAS 17
+#define FILAS_DEF            17
+#define COLUMNAS_DEF         17
+#define VIDAS_INICIO_DEF     3
+#define NUMERO_FANTASMAS_DEF 4
+#define NUMERO_PREMIOS_DEF   2
+#define VIDAS_EXTRA_DEF      1
 
 typedef enum {
     LOGICA_EN_ESPERA,
@@ -22,7 +25,6 @@ typedef struct {
 } tRonda;
 
 typedef struct {
-    //tLista *rondas; //Para retroceder y avanzar entre rondas
     tRonda ronda;
     unsigned puntaje;
 } tPartida;

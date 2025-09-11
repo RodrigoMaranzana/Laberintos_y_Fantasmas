@@ -5,23 +5,31 @@
 #include <string.h>
 #include <ctype.h>
 
+#define MASC_FILAS              0b000001
+#define MASC_COLUMNAS           0b000010
+#define MASC_VIDAS_INI          0b000100
+#define MASC_MAX_NUM_FANTASMAS  0b001000
+#define MASC_MAX_NUM_PREMIOS    0b010000
+#define MASC_MAX_VIDAS_EXTRA    0b100000
+#define CANT_PARAM              0b111111
+
 static int _archivo_parsear_linea_conf(char *buffer, tParam *param);
 
 
 int archivo_leer_conf(FILE* arch, tConf *conf)
 {
     int ret;
-    tParam paramAux;
     char paramValidos = 0;
     char buffer[TAM_LINEA];
 
     while(fgets(buffer, TAM_LINEA, arch))
     {
-        ret = _archivo_parsear_linea_conf(buffer, &paramAux);
+        tParam paramAux;
 
-        if(ret != TODO_OK)
+        ret = _archivo_parsear_linea_conf(buffer, &paramAux);
+        if(ret == ERR_LINEA_LARGA)
         {
-            return ERR_ARCHIVO;
+            return ERR_CONF;
         }
 
         if(strcmp(paramAux.nombre, "FILAS") == 0)
@@ -54,14 +62,12 @@ int archivo_leer_conf(FILE* arch, tConf *conf)
             conf->max_vidas_extra = paramAux.valor;
             paramValidos |= MASC_MAX_VIDAS_EXTRA;
         }
-
     }
 
     if(paramValidos != CANT_PARAM)
     {
-        return ERR_ARCHIVO;
+        return ERR_CONF;
     }
-
 
     return TODO_OK;
 }
@@ -70,7 +76,6 @@ int archivo_leer_conf(FILE* arch, tConf *conf)
 
 static int _archivo_parsear_linea_conf(char *buffer, tParam *param)
 {
-    char* pAux;
     char* cursor = strchr(buffer, '\n');
     if(!cursor)
     {
@@ -79,40 +84,53 @@ static int _archivo_parsear_linea_conf(char *buffer, tParam *param)
     *cursor = '\0';
 
     cursor = strrchr(buffer, ':');
-    pAux = cursor;
+    if (!cursor) {
 
-    while(*pAux != '\0' || !ES_DIGITO(*pAux))
-    {
-        pAux++;
+        return ERR_LINEA_LARGA;
     }
 
-    if(*pAux == '\0')
+    while(*cursor != '\0' && !ES_DIGITO(*cursor))
     {
-        return ERR_ARCHIVO;
+        cursor++;
     }
 
-    sscanf(pAux, "%d", &param->valor);
+    if(*cursor == '\0')
+    {
+        return ERR_LINEA_LARGA;
+    }
 
+    sscanf(cursor, "%d", &param->valor);
     *cursor = '\0';
 
     strncpy(param->nombre, buffer, TAM_NOMBRE);
     param->nombre[TAM_NOMBRE] = '\0';
 
-    pAux = param->nombre;
+    cursor = param->nombre;
 
-    while(*pAux)
-    {
-        if(ES_LETRA(*pAux))
-        {
-            *pAux = toupper(*pAux);
-            pAux++;
+    while(*cursor && (ES_LETRA(*cursor) || *cursor == '_')) {
 
-        }else
-        {
-            *pAux = '\0';
-        }
+        *cursor = toupper(*cursor);
+        cursor++;
     }
 
+    *cursor = '\0';
+
     return TODO_OK;
+}
+
+
+
+int archivo_escribir_conf(FILE* arch, const tConf *conf)
+{
+    int ret;
+
+    ret = fprintf(arch, "FILAS : %d\n", conf->filas);
+    ret = fprintf(arch, "COLUMNAS : %d\n",  conf->columnas);
+    ret = fprintf(arch, "VIDAS_INICIO : %d\n",  conf->vidas_inicio);
+    ret = fprintf(arch, "MAXIMO_NUMERO_FANTASMAS : %d\n",  conf->max_num_fantasmas);
+    ret = fprintf(arch, "MAXIMO_NUMERO_PREMIOS : %d\n",  conf->max_num_premios);
+    ret = fprintf(arch, "MAXIMO_VIDAS_EXTRA : %d\n",  conf->max_vidas_extra);
+
+    return ret >= 0 ? TODO_OK : ERR_ARCHIVO;
 }
 

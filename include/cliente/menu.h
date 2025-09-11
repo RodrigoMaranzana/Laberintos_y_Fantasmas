@@ -11,6 +11,11 @@ typedef enum {
     OPCION_OCULTA,
 } eOpcionEstado;
 
+typedef enum {
+    MENU_VERTICAL,
+    MENU_HORIZONTAL
+} eMenuTipo;
+
 typedef void (*tMenuFuncion)(void *datos);
 
 typedef struct {
@@ -18,7 +23,7 @@ typedef struct {
     void* datos;
 } tMenuAccion;
 
-typedef struct {
+typedef struct sMenuOpcion {
     int id;
     SDL_Texture *textura;
     tMenuAccion accion;
@@ -32,9 +37,10 @@ typedef struct {
     unsigned capOpc;
     int selecOpc;
     SDL_Point ubicacion;
+    eMenuTipo menuTipo;
 } tMenu;
 
-tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion);
+tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion, eMenuTipo menuTipo);
 void menu_destruir(tMenu* menu);
 int menu_agregar_opcion(tMenu *menu, int id, SDL_Texture *textura, unsigned tamAltura, tMenuAccion accion, eOpcionEstado estado);
 void menu_siguiente_opcion(tMenu *menu);

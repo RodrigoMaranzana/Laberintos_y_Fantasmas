@@ -27,17 +27,17 @@ int escenario_crear(tEscenario *escenario, unsigned columnas, unsigned filas)
         return ERR_SIN_MEMORIA;
     }
 
-    escenario->config.cantFantasmas = 4;
+    escenario->confRonda.cantFantasmas = 4;
 
-    escenario->fantasmas = (tEntidad*)malloc(sizeof(tEntidad) * escenario->config.cantFantasmas);
+    escenario->fantasmas = (tEntidad*)malloc(sizeof(tEntidad) * escenario->confRonda.cantFantasmas);
     if (!escenario->fantasmas) {
 
         puts("ERROR: No se pudo crear el escenario");
         return ERR_SIN_MEMORIA;
     }
 
-    escenario->config.columnas = columnas;
-    escenario->config.filas = filas;
+    escenario->confRonda.columnas = columnas;
+    escenario->confRonda.filas = filas;
 
 
     escenario->semilla = time(NULL);
@@ -122,8 +122,8 @@ static void _escenario_generar_laberinto(tEscenario *escenario)
     pila_crear(&pila);
     casTope = &escenario->tablero[1][1];
     casTope->tile = &escenario->tiles[TILE_PISO_0];
+    casTope->transitable = 1;
     pila_apilar(&pila, &casTope, sizeof(tCasilla*));
-
 
     while (pila_vacia(&pila) == TODO_OK) {
 
@@ -136,7 +136,7 @@ static void _escenario_generar_laberinto(tEscenario *escenario)
             columAdya = casTope->columna + offsetX;
             filaAdya = casTope->fila + offsetY;
 
-            if ((columAdya >= 1) && (columAdya < escenario->config.columnas - 1) && (filaAdya >= 1) && (filaAdya < escenario->config.filas - 1)) {
+            if ((columAdya >= 1) && (columAdya < escenario->confRonda.columnas - 1) && (filaAdya >= 1) && (filaAdya < escenario->confRonda.filas - 1)) {
 
                 casAdya = &escenario->tablero[filaAdya][columAdya];
                 if (casAdya->tile->tileTipo == TILE_TIPO_PARED) {
@@ -174,9 +174,9 @@ static void _escenario_postprocesar(tEscenario *escenario)
 {
     int fila, columna;
 
-    for (fila = 1; fila < escenario->config.filas - 1; fila++) {
+    for (fila = 1; fila < escenario->confRonda.filas - 1; fila++) {
 
-        for (columna = 1; columna < escenario->config.columnas - 1; columna++) {
+        for (columna = 1; columna < escenario->confRonda.columnas - 1; columna++) {
 
             if (!(rand() % 7)) {
 
@@ -193,13 +193,13 @@ void escenario_generar(tEscenario *escenario)
     unsigned int semillaPared;
     int indicePared;
 
-    for (fila = 0; fila < escenario->config.filas; fila++) {
+    for (fila = 0; fila < escenario->confRonda.filas; fila++) {
 
-        for (columna = 0; columna < escenario->config.columnas; columna++) {
+        for (columna = 0; columna < escenario->confRonda.columnas; columna++) {
 
             semillaPared = escenario->semilla + columna * 13 + fila * 7;
 
-            if(fila != escenario->config.filas - 1){
+            if(fila != escenario->confRonda.filas - 1){
 
                 indicePared = rand() % 4 ? TILE_PARED_0 + (semillaPared % 16) : TILE_PARED_ANIM_0 + (semillaPared % 4);
             }else{
@@ -219,9 +219,9 @@ void escenario_generar(tEscenario *escenario)
     _escenario_colocar_puertas(escenario);
     _escenario_colocar_fantasmas(escenario);
 
-    for (fila = 0; fila < escenario->config.filas; fila++) {
+    for (fila = 0; fila < escenario->confRonda.filas; fila++) {
 
-        for (columna = 0; columna < escenario->config.columnas; columna++) {
+        for (columna = 0; columna < escenario->confRonda.columnas; columna++) {
 
             if (escenario->tablero[fila][columna].tile->tileTipo == TILE_TIPO_PISO) {
 
@@ -242,12 +242,12 @@ static int _escenario_calcular_mascara(tEscenario *escenario, int columna, int f
         mascara += 1;
     }
 
-    if (columna < escenario->config.columnas - 1 && escenario->tablero[fila][columna + 1].tile->tileTipo == TILE_TIPO_PARED) {
+    if (columna < escenario->confRonda.columnas - 1 && escenario->tablero[fila][columna + 1].tile->tileTipo == TILE_TIPO_PARED) {
 
         mascara += 2;
     }
 
-    if (fila < escenario->config.filas - 1 && escenario->tablero[fila + 1][columna].tile->tileTipo == TILE_TIPO_PARED) {
+    if (fila < escenario->confRonda.filas - 1 && escenario->tablero[fila + 1][columna].tile->tileTipo == TILE_TIPO_PARED) {
 
         mascara += 4;
     }
@@ -287,20 +287,20 @@ static void _escenario_calcular_puerta(tEscenario *escenario, int pared, int *fi
     switch (pared) {
         case 0: /// Pared superior
             *fila = 0;
-            *columna = (rand() % (escenario->config.columnas - 2)) + 1;
+            *columna = (rand() % (escenario->confRonda.columnas - 2)) + 1;
             break;
         case 1: /// Pared inferior
-            *fila = escenario->config.filas - 1;
-            *columna = (rand() % (escenario->config.columnas - 2)) + 1;
+            *fila = escenario->confRonda.filas - 1;
+            *columna = (rand() % (escenario->confRonda.columnas - 2)) + 1;
             break;
         case 2: /// Pared izquierda
             *columna = 0;
-            *fila = (rand() % (escenario->config.filas - 2)) + 1;
+            *fila = (rand() % (escenario->confRonda.filas - 2)) + 1;
             *mascara = 1;
             break;
         case 3: /// Pared derecha
-            *columna = escenario->config.columnas - 1;
-            *fila = (rand() % (escenario->config.filas - 2)) + 1;
+            *columna = escenario->confRonda.columnas - 1;
+            *fila = (rand() % (escenario->confRonda.filas - 2)) + 1;
             *mascara = 1;
             break;
         default:
@@ -345,14 +345,14 @@ static void _escenario_colocar_jugador(tEscenario *escenario, int fila, int colu
 static void _escenario_colocar_fantasmas(tEscenario *escenario)
 {
     int columna, fila;
-    tEntidad *pFantasma, *pFantasmaUlt = escenario->fantasmas + (escenario->config.cantFantasmas - 1);
+    tEntidad *pFantasma, *pFantasmaUlt = escenario->fantasmas + (escenario->confRonda.cantFantasmas - 1);
 
     for (pFantasma = escenario->fantasmas; pFantasma <= pFantasmaUlt; pFantasma++) {
 
         do {
 
-            columna = rand() % escenario->config.columnas;
-            fila = rand() % escenario->config.filas;
+            columna = rand() % escenario->confRonda.columnas;
+            fila = rand() % escenario->confRonda.filas;
 
         } while(escenario->tablero[fila][columna].tile->tileTipo != TILE_TIPO_PISO || escenario->tablero[fila][columna].entidad);
 
@@ -373,7 +373,7 @@ void escenario_destruir(tEscenario *escenario)
 {
     if (escenario->tablero) {
 
-        matriz_destruir((void**) escenario->tablero, escenario->config.filas);
+        matriz_destruir((void**) escenario->tablero, escenario->confRonda.filas);
     }
 
     free(escenario->fantasmas);
@@ -386,9 +386,9 @@ void escenario_dibujar(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textur
     eTileTipo tileTipo;
     SDL_Rect rectTileDst;
 
-    for (fila = 0; fila < escenario->config.filas; fila++) {
+    for (fila = 0; fila < escenario->confRonda.filas; fila++) {
 
-        for (columna = 0; columna < escenario->config.columnas; columna++) {
+        for (columna = 0; columna < escenario->confRonda.columnas; columna++) {
 
             tileTipo = escenario->tablero[fila][columna].tile->tileTipo;
 

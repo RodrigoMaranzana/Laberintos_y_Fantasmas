@@ -6,6 +6,7 @@
 #include "../../include/cliente/assets.h"
 #include "../../include/cliente/graficos.h"
 #include "../../include/cliente/temporizador.h"
+#include "../../include/comun/comun.h"
 
 #define CAPAS_X_CASILLA 2
 #define NO_TRANSITABLE 0
@@ -112,10 +113,10 @@ typedef struct {
     int cantVidasNivel;
     int cantFantasmas;
     int cantPremios;
-}tConfig;
+}tConfRonda;
 
 typedef struct {
-    tConfig config;
+    tConfRonda confRonda;
     tCasilla **tablero;
     tEntidad jugador;
     tEntidad *fantasmas;

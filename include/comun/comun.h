@@ -9,11 +9,24 @@
 #define PIXELES_TILE 48
 #define MARGEN_VENTANA 64
 
+#define IP_SERVIDOR "127.0.0.1"
+#define PUERTO 12345
+#define TAM_BUFFER 1024
 
-typedef struct sNodo{
-    void *dato;
-    unsigned tamDato;
-    struct sNodo *sig;
-}tNodo;
+typedef enum {
+    TODO_OK,
+    ERR_SIN_MEMORIA,
+    ERR_SDL_INI,
+    ERR_VENTANA,
+    ERR_RENDERER,
+    ERR_TEXTURA,
+    ERR_MENU,
+    ERR_ARCHIVO,
+    ERR_CONF,
+    ERR_ARCH_FUENTE,
+    ERR_ARCH_IMAGEN,
+    ERR_ARCH_SONIDO,
+} eRetorno;
+
 
 #endif // COMUN_H_INCLUDED

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../../include/comun/retorno.h"
+#include "../../include/comun/comun.h"
 #include "../../include/cliente/assets.h"
 
 int assets_cargar_imagenes(SDL_Renderer *renderer, SDL_Texture **imagenes)

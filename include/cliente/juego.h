@@ -18,15 +18,17 @@ typedef enum {
 typedef struct {
     SDL_Window *ventana;
     SDL_Renderer *renderer;
-    SDL_Texture **imagenes;
-    Mix_Chunk **sonidos;
-    TTF_Font *fuente;
-    tMenu *menu; //tMenu **menus; // Si se necesita mas de un menu
-    tLogica logica;
-    eJuegoEstado estado;
     const char *tituloVentana;
     unsigned anchoRes;
     unsigned altoRes;
+
+    SDL_Texture **imagenes;
+    Mix_Chunk **sonidos;
+    TTF_Font *fuente;
+
+    tMenu *menu; //tMenu **menus; // Si se necesita mas de un menu
+    tLogica logica;
+    eJuegoEstado estado;
 } tJuego;
 
 int juego_inicializar(tJuego *juego, const char *tituloVentana);

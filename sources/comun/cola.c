@@ -17,14 +17,14 @@ int cola_encolar(tCola *cola, const void *dato, unsigned tamDato)
     tNodo *nodoNue = (tNodo*)malloc(sizeof(tNodo));
     if(!nodoNue)
     {
-        return SIN_MEMORIA;
+        return COLA_SIN_MEM;
     }
 
     nodoNue->dato = malloc(tamDato);
     if(!nodoNue->dato)
     {
         free(nodoNue);
-        return SIN_MEMORIA;
+        return COLA_SIN_MEM;
     }
 
     memcpy(nodoNue->dato, dato, tamDato);

@@ -1,6 +1,9 @@
 #include "../../include/comun/matriz.h"
 #include "../../include/comun/retorno.h"
 
+#define TODO_OK 0
+#define ERR_SIN_MEM 0
+
 void** matriz_crear(size_t columnas, size_t filas, size_t tamElem)
 {
     void** fila;
@@ -22,7 +25,7 @@ void** matriz_crear(size_t columnas, size_t filas, size_t tamElem)
         if (!*fila) {
 
             matriz_destruir(matriz, fila - matriz);
-            estado = ERR_SIN_MEMORIA;
+            estado = ERR_SIN_MEM;
         }
     }
 

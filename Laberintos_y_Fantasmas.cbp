@@ -6,9 +6,9 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Debug">
-				<Option output="bin/Debug/Laberintos_y_Fantasmas" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Debug/" />
+			<Target title="Cliente">
+				<Option output="bin/Cliente/Laberintos_y_Fantasmas_Cliente" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Cliente/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -32,21 +32,9 @@
 					<Add directory="libraries/SDL2_ttf-2.24.0/x86_64-w64-mingw32/lib" />
 				</Linker>
 			</Target>
-			<Target title="Release">
-				<Option output="bin/Release/Laberintos_y_Fantasmas" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Release/" />
-				<Option type="1" />
-				<Option compiler="gcc" />
-				<Compiler>
-					<Add option="-O2" />
-				</Compiler>
-				<Linker>
-					<Add option="-s" />
-				</Linker>
-			</Target>
-			<Target title="Cliente_D">
-				<Option output="bin/Cliente/Laberintos_y_Fantasmas_Cliente" prefix_auto="1" extension_auto="1" />
-				<Option object_output="obj/Cliente/" />
+			<Target title="Servidor">
+				<Option output="bin/Servidor/Laberintos_y_Fantasmas_Servidor" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Servidor/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
@@ -74,62 +62,101 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="include/cliente/archivo.h" />
-		<Unit filename="include/cliente/assets.h" />
-		<Unit filename="include/cliente/cliente.h" />
-		<Unit filename="include/cliente/entidad.h" />
-		<Unit filename="include/cliente/escenario.h" />
-		<Unit filename="include/cliente/graficos.h" />
-		<Unit filename="include/cliente/input.h" />
-		<Unit filename="include/cliente/juego.h" />
-		<Unit filename="include/cliente/logica.h" />
-		<Unit filename="include/cliente/menu.h" />
-		<Unit filename="include/cliente/temporizador.h" />
-		<Unit filename="include/cliente/texto.h" />
+		<Unit filename="include/cliente/archivo.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/assets.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/cliente.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/entidad.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/escenario.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/graficos.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/input.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/juego.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/logica.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/menu.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/temporizador.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/texto.h">
+			<Option target="Cliente" />
+		</Unit>
 		<Unit filename="include/comun/cola.h" />
 		<Unit filename="include/comun/comun.h" />
 		<Unit filename="include/comun/matriz.h" />
 		<Unit filename="include/comun/pila.h" />
-		<Unit filename="include/comun/retorno.h" />
 		<Unit filename="include/comun/vector.h" />
+		<Unit filename="include/servidor/servidor.h">
+			<Option target="Servidor" />
+		</Unit>
 		<Unit filename="sources/cliente/archivo.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/assets.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/cliente.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/entidad.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/escenario.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/graficos.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/input.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/juego.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/logica.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/main_cliente.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/menu.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/temporizador.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/texto.c">
 			<Option compilerVar="CC" />
+			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/comun/cola.c">
 			<Option compilerVar="CC" />
@@ -142,6 +169,14 @@
 		</Unit>
 		<Unit filename="sources/comun/vector.c">
 			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/servidor/main_servidor.c">
+			<Option compilerVar="CC" />
+			<Option target="Servidor" />
+		</Unit>
+		<Unit filename="sources/servidor/servidor.c">
+			<Option compilerVar="CC" />
+			<Option target="Servidor" />
 		</Unit>
 		<Extensions />
 	</Project>

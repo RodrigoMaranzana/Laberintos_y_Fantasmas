@@ -25,14 +25,14 @@ int pila_apilar(tPila *pila, const void *dato, unsigned tamDato)
     tNodo *nodoNuevo = malloc(sizeof(tNodo));
     if (!nodoNuevo) {
 
-        return ERR_SIN_MEMORIA;
+        return PILA_SIN_MEM;
     }
 
     nodoNuevo->dato = malloc(tamDato);
     if (!nodoNuevo->dato) {
 
         free(nodoNuevo);
-        return ERR_SIN_MEMORIA;
+        return PILA_SIN_MEM;
     }
 
     memcpy(nodoNuevo->dato, dato, tamDato);
@@ -41,24 +41,24 @@ int pila_apilar(tPila *pila, const void *dato, unsigned tamDato)
     nodoNuevo->sig = *pila;
     *pila = nodoNuevo;
 
-    return TODO_OK;
+    return PILA_TODO_OK;
 }
 
 int pila_tope(const tPila *pila, void *dato, unsigned tamDato)
 {
     if (*pila == NULL) {
 
-        return ERR_PILA_VACIA;
+        return PILA_VACIA;
     }
 
     memcpy(dato, (*pila)->dato, MIN(tamDato, (*pila)->tamDato));
 
-    return TODO_OK;
+    return PILA_TODO_OK;
 }
 
 int pila_vacia(const tPila *pila)
 {
-    return *pila == NULL ? ERR_PILA_VACIA : TODO_OK;
+    return *pila == NULL ? PILA_VACIA : PILA_TODO_OK;
 }
 
 int pila_desapilar(tPila *pila, void *dato, unsigned tamDato)
@@ -67,7 +67,7 @@ int pila_desapilar(tPila *pila, void *dato, unsigned tamDato)
 
     if (nodoAux == NULL) {
 
-        return ERR_PILA_VACIA;
+        return PILA_VACIA;
     }
 
     *pila = nodoAux->sig;
@@ -77,7 +77,7 @@ int pila_desapilar(tPila *pila, void *dato, unsigned tamDato)
     free(nodoAux->dato);
     free(nodoAux);
 
-    return TODO_OK;
+    return PILA_TODO_OK;
 }
 
 void pila_vaciar(tPila *pila)
