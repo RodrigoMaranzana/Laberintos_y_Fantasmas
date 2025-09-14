@@ -46,6 +46,8 @@ int main(int argc, char* argv[])
         return ret;
     }
 
+    logica_mostrar_historial_movimientos(&juego.logica); //Ya vacia la cola
+
     juego_destruir(&juego);
     cliente_cerrar_conexion(sock);
 
