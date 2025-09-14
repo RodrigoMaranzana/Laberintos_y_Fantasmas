@@ -295,9 +295,9 @@ int juego_ejecutar(tJuego *juego)
                     juego->logica.estado = LOGICA_EN_ESPERA;
                     logica_mostrar_historial_movimientos(&(*juego).logica);
                     menu_estado_opcion(juego->menu, M_PRI_CONTINUAR, OPCION_DESHABILITADA);
-                    break;
+                    break;*/
 
-                default:*/
+                default:
                     break;
                 }
             }
