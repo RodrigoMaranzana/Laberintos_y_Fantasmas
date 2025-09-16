@@ -7,6 +7,7 @@
 #include "../../include/cliente/escenario.h"
 #include "../../include/comun/cola.h"
 
+
 #define FILAS_DEF            17
 #define COLUMNAS_DEF         17
 #define VIDAS_INICIO_DEF     3
@@ -49,6 +50,7 @@ void logica_destruir(tLogica *logica);
 void logica_calc_resolucion(unsigned cantFilas, unsigned cantColumnas, unsigned *anchoRes, unsigned *altoRes);
 int logica_actualizar(tLogica *logica);
 void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla);
+int logica_siguiente_nivel(tLogica *logica);
 
 void logica_mostrar_historial_movimientos(tLogica *logica);
 

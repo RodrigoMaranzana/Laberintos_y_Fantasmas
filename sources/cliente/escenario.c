@@ -262,23 +262,86 @@ static int _escenario_calcular_mascara(tEscenario *escenario, int columna, int f
 
 static void _escenario_colocar_puertas(tEscenario *escenario)
 {
-    int paredEntrada, paredSalida;
-    int fila, columna, mascara;
+    int paredEntrada;
+    int filaEntrada, colEntrada, maskEntrada;
+    int filaSalida, colSalida, maskSalida = 0;
 
     paredEntrada = rand() % 4;
-    _escenario_calcular_puerta(escenario, paredEntrada, &fila, &columna, &mascara);
-    escenario->tablero[fila][columna].tile = &escenario->tiles[TILE_PUERTA_ENTRADA_0 + mascara];
+    _escenario_calcular_puerta(escenario, paredEntrada, &filaEntrada, &colEntrada, &maskEntrada);
+    escenario->tablero[filaEntrada][colEntrada].tile = &escenario->tiles[TILE_PUERTA_ENTRADA_0 + maskEntrada];
 
-    _escenario_colocar_jugador(escenario, fila, columna, paredEntrada);
+    _escenario_colocar_jugador(escenario, filaEntrada, colEntrada, paredEntrada);
 
-    do {
-        paredSalida = rand() % 4;
-    } while (paredSalida == paredEntrada);
+    // salida opuesta a la entrada
+    switch (paredEntrada) {
+        case 0: // entrada arriba -> salida abajo
+            filaSalida = escenario->confRonda.filas - 1;
+            colSalida = escenario->confRonda.columnas - 1 - colEntrada;
+            break;
+        case 1: // entrada abajo -> salida arriba
+            filaSalida = 0;
+            colSalida = escenario->confRonda.columnas - 1 - colEntrada;
+            break;
+        case 2: // entrada izquierda -> salida derecha
+            colSalida = escenario->confRonda.columnas - 1;
+            filaSalida = escenario->confRonda.filas - 1 - filaEntrada;
+            maskSalida = 1;
+            break;
+        case 3: // entrada derecha -> salida izquierda
+            colSalida = 0;
+            filaSalida = escenario->confRonda.filas - 1 - filaEntrada;
+            maskSalida = 1;
+            break;
+        default:
+            filaSalida = 0;
+            colSalida = 1;
+            break;
+    }
 
-    _escenario_calcular_puerta(escenario, paredSalida, &fila, &columna, &mascara);
-    escenario->tablero[fila][columna].tile = &escenario->tiles[TILE_PUERTA_SALIDA_0 + mascara];
-    escenario->tablero[fila][columna].transitable = 1;
+    // evitar esquinas
+    if (filaSalida == 0 || filaSalida == escenario->confRonda.filas - 1)
+    {
+        if (colSalida == 0)
+            colSalida = 1;
+
+        if (colSalida == escenario->confRonda.columnas - 1)
+            colSalida = escenario->confRonda.columnas - 2;
+    }
+    if (colSalida == 0 || colSalida == escenario->confRonda.columnas - 1)
+    {
+        if (filaSalida == 0)
+            filaSalida = 1;
+
+        if (filaSalida == escenario->confRonda.filas - 1)
+            filaSalida = escenario->confRonda.filas - 2;
+    }
+
+    escenario->tablero[filaSalida][colSalida].tile = &escenario->tiles[TILE_PUERTA_SALIDA_0 + maskSalida];
+    escenario->tablero[filaSalida][colSalida].transitable = 1;
+
+    // calcular desplazamiento hacia el interior para abrir la casilla interna justo al lado de la salida, para evitar la generacion de pared enfrente de esta
+    int deltaFila = 0, deltaColumna = 0;
+
+    if (filaSalida == 0)
+        deltaFila = 1; // pared superior
+
+    else if (filaSalida == escenario->confRonda.filas - 1)
+        deltaFila = -1; // pared inferior
+
+    else if (colSalida == 0)
+        deltaColumna = 1; // pared izquierda
+
+    else if (colSalida == escenario->confRonda.columnas - 1)
+        deltaColumna = -1; // pared derecha
+
+    int filaInterior = filaSalida + deltaFila;
+    int colInterior = colSalida + deltaColumna;
+
+    // marcar esa casilla como piso transitable
+    escenario->tablero[filaInterior][colInterior].tile = &escenario->tiles[TILE_PISO_0];
+    escenario->tablero[filaInterior][colInterior].transitable = 1;
 }
+
 
 static void _escenario_calcular_puerta(tEscenario *escenario, int pared, int *fila, int *columna, int *mascara)
 {

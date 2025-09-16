@@ -10,7 +10,9 @@
 
 #define PADDING_MARGEN 64
 
-typedef enum {
+typedef enum
+{
+    M_PRI_CONTINUAR,
     M_PRI_NUEVA_PARTIDA,
     M_PRI_SALIR,
     M_PRI_ESTADISTICAS,
@@ -23,6 +25,7 @@ static void _juego_sonidos(tLogica *logica, Mix_Chunk **sonidos);
 static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tMenu *menu);
 static void _juego_iniciar_partida(void* datos);
 static void _juego_salir_del_juego(void* datos);
+static void _juego_continuar_partida(void* datos);
 
 int juego_inicializar(tJuego *juego, const char *tituloVentana)
 {
@@ -35,37 +38,43 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
     juego->estado = JUEGO_NO_INICIADO;
 
     printf("Iniciando SDL\n");
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != TODO_OK) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != TODO_OK)
+    {
 
         printf("SDL_Init() ERROR: %s\n", SDL_GetError());
         return ERR_SDL_INI;
     }
 
     // Inicializa SDL_mixer
-    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0)
+    {
 
         printf("Mix_OpenAudio() ERROR: %s\n", Mix_GetError());
         SDL_Quit();
         return ERR_SDL_INI;
     }
 
-    if (TTF_Init() < 0) {
+    if (TTF_Init() < 0)
+    {
 
         printf("TTF_Init() ERROR: %s\n", TTF_GetError());
         return ERR_SDL_INI;
     }
 
     archConf = fopen("config.txt", "r+");
-    if (!archConf) {
+    if (!archConf)
+    {
 
         archConf = fopen("config.txt", "w+");
-        if (!archConf) {
+        if (!archConf)
+        {
 
             return ERR_ARCHIVO;
         }
     }
 
-    if (archivo_leer_conf(archConf, &conf) == ERR_CONF) {
+    if (archivo_leer_conf(archConf, &conf) == ERR_CONF)
+    {
 
         puts("Creando archivo de configuracion por defecto...");
 
@@ -96,7 +105,8 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
               tituloVentana
           );
 
-    if (ret != TODO_OK) {
+    if (ret != TODO_OK)
+    {
 
         printf("Error: No se pudo crear la ventana.\n");
         Mix_CloseAudio();
@@ -105,55 +115,86 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
     }
 
     juego->sonidos = malloc(sizeof(Mix_Chunk*) * SONIDO_CANTIDAD);
-    if (!juego->sonidos) {
+    if (!juego->sonidos)
+    {
 
         return ERR_SIN_MEMORIA;
     }
 
     juego->imagenes = malloc(sizeof(SDL_Texture*) * IMAGEN_CANTIDAD);
-    if (!juego->imagenes) {
+    if (!juego->imagenes)
+    {
 
         return ERR_SIN_MEMORIA;
     }
 
     ret = assets_cargar_imagenes(juego->renderer, juego->imagenes);
-    if (ret != TODO_OK) {
+    if (ret != TODO_OK)
+    {
 
         return ret;
     }
 
     ret = assets_cargar_sonidos(juego->sonidos);
-    if (ret != TODO_OK) {
+    if (ret != TODO_OK)
+    {
 
         return ret;
     }
 
     ret = assets_cargar_fuente(&juego->fuente, 64);
-    if (ret != TODO_OK) {
+    if (ret != TODO_OK)
+    {
 
         return ret;
     }
 
-    juego->menu = menu_crear(2, (SDL_Point){32, 32}, MENU_VERTICAL);
-    if (!juego->menu) {
+    juego->menu = menu_crear(2, (SDL_Point)
+    {
+        32, 32
+    }, MENU_VERTICAL);
+    if (!juego->menu)
+    {
 
         return ERR_MENU;
     }
 
-    texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "NUEVA PARTIDA", SDL_COLOR_BLANCO);
-    if (menu_agregar_opcion(juego->menu, M_PRI_NUEVA_PARTIDA, texturaAux, 64, (tMenuAccion) {_juego_iniciar_partida, juego}, OPCION_HABILITADA) != TODO_OK) {
 
+    texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "NUEVA PARTIDA", SDL_COLOR_BLANCO);
+    if (menu_agregar_opcion(juego->menu, M_PRI_NUEVA_PARTIDA, texturaAux, 64, (tMenuAccion)
+{
+    _juego_iniciar_partida, juego
+}, OPCION_HABILITADA) != TODO_OK)
+    {
+
+        return ERR_MENU;
+    }
+
+    texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "CONTINUAR", SDL_COLOR_BLANCO);
+    if (menu_agregar_opcion(juego->menu, M_PRI_CONTINUAR, texturaAux, 64, (tMenuAccion)
+{
+    _juego_continuar_partida, juego
+}, OPCION_DESHABILITADA) != TODO_OK)
+    {
         return ERR_MENU;
     }
 
     texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "ESTADISTICAS", SDL_COLOR_BLANCO);
-    if (menu_agregar_opcion(juego->menu, M_PRI_ESTADISTICAS, texturaAux, 64, (tMenuAccion) {_juego_iniciar_partida, juego}, OPCION_DESHABILITADA) != TODO_OK) {
+    if (menu_agregar_opcion(juego->menu, M_PRI_ESTADISTICAS, texturaAux, 64, (tMenuAccion)
+{
+    _juego_iniciar_partida, juego
+}, OPCION_DESHABILITADA) != TODO_OK)
+    {
 
         return ERR_MENU;
     }
 
     texturaAux = texto_crear_textura(juego->renderer, juego->fuente, "SALIR", SDL_COLOR_BLANCO);
-    if (menu_agregar_opcion(juego->menu, M_PRI_SALIR, texturaAux, 64, (tMenuAccion) {_juego_salir_del_juego, juego}, OPCION_HABILITADA) != TODO_OK) {
+    if (menu_agregar_opcion(juego->menu, M_PRI_SALIR, texturaAux, 64, (tMenuAccion)
+{
+    _juego_salir_del_juego, juego
+}, OPCION_HABILITADA) != TODO_OK)
+    {
 
         return ERR_MENU;
     }
@@ -173,67 +214,104 @@ int juego_ejecutar(tJuego *juego)
 
     logica_inicializar(&juego->logica);
 
-    while (juego->estado == JUEGO_CORRIENDO) {
+    while (juego->estado == JUEGO_CORRIENDO)
+    {
 
-        if (SDL_PollEvent(&evento)) {
 
-            if (evento.type == SDL_QUIT) {
+        if (SDL_PollEvent(&evento))
+        {
+
+            if (evento.type == SDL_QUIT)
+            {
 
                 juego->estado = JUEGO_CERRANDO;
             }
 
-            if (evento.type == SDL_KEYDOWN && input_tecla_valida(evento.key.keysym.sym)) {
+            if (evento.type == SDL_KEYDOWN && input_tecla_valida(evento.key.keysym.sym))
+            {
 
                 tecla = evento.key.keysym.sym;
 
-                switch (juego->logica.estado) {
+                switch (juego->logica.estado)
+                {
 
-                    case LOGICA_JUGANDO:
+                case LOGICA_JUGANDO:
+                    //  pausar el juego
+                    if (tecla == SDLK_ESCAPE)
+                    {
+                        juego->logica.estado = LOGICA_EN_ESPERA;
+                        menu_estado_opcion(juego->menu, M_PRI_CONTINUAR, OPCION_HABILITADA);
 
-                        if(juego->logica.fantasmaEnMov == NULL){
-
-                            logica_procesar_turno(&juego->logica, tecla);
-                        }
-
-                        _juego_sonidos(&juego->logica, juego->sonidos);
-                        break;
-                    case LOGICA_EN_ESPERA: {
-
-                        if (tecla == SDLK_UP) {
-
-                            menu_anterior_opcion(juego->menu);
-                            Mix_PlayChannel(0, * (juego->sonidos + SONIDO_MENU_MOVIMIENTO), 0);
-
-                        } else if (tecla == SDLK_DOWN) {
-
-                            menu_siguiente_opcion(juego->menu);
-                            Mix_PlayChannel(0, * (juego->sonidos + SONIDO_MENU_MOVIMIENTO), 0);
-
-                        } else if (tecla == SDLK_RETURN) {
-
-                            accionProcesada = menu_confirmar_opcion(juego->menu);
-                            Mix_PlayChannel(0, * (juego->sonidos + SONIDO_MENU_CONFIRMAR), 0);
-                        }
-
-                        if (accionProcesada.funcion) {
-
-                            accionProcesada.funcion(accionProcesada.datos);
-                        }
+                        juego->menu->selecOpc = M_PRI_CONTINUAR;
+                        Mix_PlayChannel(0, * (juego->sonidos + SONIDO_MENU_MOVIMIENTO), 0);
                         break;
                     }
-                    default:
-                        break;
+                    if(juego->logica.fantasmaEnMov == NULL )
+                    {
+                        logica_procesar_turno(&juego->logica, tecla);
+                        if (juego->logica.estado == LOGICA_FIN_PARTIDA) //esto es por si perdes a medio procesar un turno
+                        {
+                            menu_estado_opcion(juego->menu, M_PRI_CONTINUAR, OPCION_DESHABILITADA);
+                            juego->menu->selecOpc = M_PRI_NUEVA_PARTIDA;
+                            logica_mostrar_historial_movimientos(&(*juego).logica);
+                            juego->logica.estado = LOGICA_EN_ESPERA;
+                            break;
+                        }
+                    }
+
+                    _juego_sonidos(&juego->logica, juego->sonidos);
+                    break;
+                case LOGICA_EN_ESPERA:
+                    if (tecla == SDLK_UP)
+                    {
+                        menu_anterior_opcion(juego->menu);
+                        Mix_PlayChannel(0, * (juego->sonidos + SONIDO_MENU_MOVIMIENTO), 0);
+
+                    }
+                    else if (tecla == SDLK_DOWN)
+                    {
+
+                        menu_siguiente_opcion(juego->menu);
+                        Mix_PlayChannel(0, * (juego->sonidos + SONIDO_MENU_MOVIMIENTO), 0);
+
+                    }
+                    else if (tecla == SDLK_RETURN)
+                    {
+
+                        accionProcesada = menu_confirmar_opcion(juego->menu);
+                        Mix_PlayChannel(0, * (juego->sonidos + SONIDO_MENU_CONFIRMAR), 0);
+                    }
+
+                    if (accionProcesada.funcion)
+                    {
+
+                        accionProcesada.funcion(accionProcesada.datos);
+                        accionProcesada.funcion = NULL;
+                        accionProcesada.datos = NULL;
+                    }
+                    break;
+
+              /*  case LOGICA_FIN_PARTIDA:
+                    juego->logica.estado = LOGICA_EN_ESPERA;
+                    logica_mostrar_historial_movimientos(&(*juego).logica);
+                    menu_estado_opcion(juego->menu, M_PRI_CONTINUAR, OPCION_DESHABILITADA);
+                    break;*/
+
+                default:
+                    break;
                 }
             }
         }
 
         temporizador_actualizar(&juego->logica.fantasmaMovTempor);
-        if (juego->logica.estado == LOGICA_JUGANDO && temporizador_estado(&juego->logica.fantasmaMovTempor) == TEMPOR_FINALIZADO && juego->logica.fantasmaEnMov != NULL) {
+        if (juego->logica.estado == LOGICA_JUGANDO && temporizador_estado(&juego->logica.fantasmaMovTempor) == TEMPOR_FINALIZADO && juego->logica.fantasmaEnMov != NULL)
+        {
 
             logica_actualizar(&juego->logica);
             temporizador_iniciar(&juego->logica.fantasmaMovTempor);
 
-            if (!Mix_Playing(0)) {
+            if (!Mix_Playing(0))
+            {
 
                 Mix_FadeInChannel(0, *(juego->sonidos + SONIDO_JUGADOR_MOV), 0, 300);
 
@@ -274,7 +352,8 @@ void juego_destruir(tJuego *juego)
 static void _juego_sonidos(tLogica *logica, Mix_Chunk **sonidos)
 {
     /// Test
-    if (Mix_Playing(0) == 0) {
+    if (Mix_Playing(0) == 0)
+    {
 
         //Mix_PlayChannel(0, *(sonidos + SONIDO_FANTASMA_01), 0);
     }
@@ -288,12 +367,15 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
 
-    if (logica->estado == LOGICA_JUGANDO) {
+    if (logica->estado == LOGICA_JUGANDO)
+    {
 
-        for (i = 0; i < logica->escenario.confRonda.cantFantasmas; i++) {
+        for (i = 0; i < logica->escenario.confRonda.cantFantasmas; i++)
+        {
 
             temporizador_actualizar(&logica->escenario.fantasmas[i].temporFrame);
-            if (temporizador_estado(&logica->escenario.fantasmas[i].temporFrame) == TEMPOR_FINALIZADO) {
+            if (temporizador_estado(&logica->escenario.fantasmas[i].temporFrame) == TEMPOR_FINALIZADO)
+            {
 
                 logica->escenario.fantasmas[i].frame = (logica->escenario.fantasmas[i].frame + 1) % 4;
                 temporizador_iniciar(&logica->escenario.fantasmas[i].temporFrame);
@@ -301,21 +383,25 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
         }
 
         temporizador_actualizar(&logica->escenario.jugador.temporFrame);
-        if (temporizador_estado(&logica->escenario.jugador.temporFrame) == TEMPOR_FINALIZADO) {
+        if (temporizador_estado(&logica->escenario.jugador.temporFrame) == TEMPOR_FINALIZADO)
+        {
 
             logica->escenario.jugador.frame = (logica->escenario.jugador.frame + 1) % 4;
             temporizador_iniciar(&logica->escenario.jugador.temporFrame);
         }
 
         temporizador_actualizar(&logica->escenario.temporFrame);
-        if (temporizador_estado(&logica->escenario.temporFrame) == TEMPOR_FINALIZADO) {
+        if (temporizador_estado(&logica->escenario.temporFrame) == TEMPOR_FINALIZADO)
+        {
 
             logica->escenario.frame = (logica->escenario.frame + 1) % 4;
             temporizador_iniciar(&logica->escenario.temporFrame);
         }
 
         escenario_dibujar(renderer, &logica->escenario, imagenes);
-    } else {
+    }
+    else
+    {
 
         menu_dibujar(renderer, menu);
     }
@@ -324,14 +410,16 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
 static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana)
 {
     *ventana = SDL_CreateWindow(tituloVentana, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, anchoRes, altoRes, SDL_WINDOW_SHOWN);
-    if (!*ventana) {
+    if (!*ventana)
+    {
 
         printf("Error: %s\n", SDL_GetError());
         return ERR_VENTANA;
     }
 
     *renderer = SDL_CreateRenderer(*ventana, -1, SDL_RENDERER_ACCELERATED);
-    if (!*renderer) {
+    if (!*renderer)
+    {
 
         SDL_DestroyWindow(*ventana);
         printf("Error: %s\n", SDL_GetError());
@@ -347,7 +435,15 @@ static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, u
 static void _juego_iniciar_partida(void* datos)
 {
     tJuego *juego = (tJuego*) datos;
-    puts("Iniciando partida\n");
+
+    // Mostrar historial de movimientos de la partida anterior (vacía la cola)
+    logica_mostrar_historial_movimientos(&juego->logica);
+
+    puts("\nIniciando partida\n");
+    // Reiniciar partida desde cero
+    juego->logica.partida.ronda.numero = 1;
+    juego->logica.partida.puntaje = 0;
+    logica_siguiente_nivel(&juego->logica);
 
     juego->logica.estado = LOGICA_JUGANDO;
 }
@@ -358,4 +454,12 @@ static void _juego_salir_del_juego(void* datos)
     puts("Saliendo\n");
 
     juego->estado = JUEGO_CERRANDO;
+}
+
+static void _juego_continuar_partida(void* datos)
+{
+    tJuego *juego = (tJuego*) datos;
+    puts("Continuar partida\n");
+
+    juego->logica.estado = LOGICA_JUGANDO;
 }
