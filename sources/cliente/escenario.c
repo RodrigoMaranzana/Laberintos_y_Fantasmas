@@ -298,24 +298,6 @@ static void _escenario_colocar_puertas(tEscenario *escenario)
             break;
     }
 
-    // evitar esquinas
-    if (filaSalida == 0 || filaSalida == escenario->confRonda.filas - 1)
-    {
-        if (colSalida == 0)
-            colSalida = 1;
-
-        if (colSalida == escenario->confRonda.columnas - 1)
-            colSalida = escenario->confRonda.columnas - 2;
-    }
-    if (colSalida == 0 || colSalida == escenario->confRonda.columnas - 1)
-    {
-        if (filaSalida == 0)
-            filaSalida = 1;
-
-        if (filaSalida == escenario->confRonda.filas - 1)
-            filaSalida = escenario->confRonda.filas - 2;
-    }
-
     escenario->tablero[filaSalida][colSalida].tile = &escenario->tiles[TILE_PUERTA_SALIDA_0 + maskSalida];
     escenario->tablero[filaSalida][colSalida].transitable = 1;
 
