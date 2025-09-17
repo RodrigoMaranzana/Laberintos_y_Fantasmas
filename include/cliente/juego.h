@@ -6,6 +6,7 @@
 #include "../../include/cliente/logica.h"
 #include "../../include/cliente/texto.h"
 #include "../../include/cliente/menu.h"
+#include "../../include/cliente/cliente.h"
 
 #define SDL_COLOR_BLANCO ((SDL_Color){255, 255, 255, 255})
 
@@ -29,6 +30,8 @@ typedef struct {
     tMenu *menu; //tMenu **menus; // Si se necesita mas de un menu
     tLogica logica;
     eJuegoEstado estado;
+
+    SOCKET sock;
 } tJuego;
 
 int juego_inicializar(tJuego *juego, const char *tituloVentana);
