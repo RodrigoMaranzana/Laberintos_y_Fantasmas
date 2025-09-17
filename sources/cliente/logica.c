@@ -385,7 +385,7 @@ void logica_mostrar_historial_movimientos(tLogica *logica)
             printf("Paso %u: Fila=%d, Columna=%d, Direccion=ARRIBA\n", paso++, mov.ubic.fila, mov.ubic.columna);
             break;
         default:
-            puts("\n Nivel Completado:\n");
+            puts("\n Nivel Completado\n");
             break;
         }
     }
