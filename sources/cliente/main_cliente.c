@@ -20,8 +20,8 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    SOCKET sock = cliente_conectar_servidor(IP_SERVIDOR, PUERTO);
-    if (sock == INVALID_SOCKET) {
+    juego.sock = cliente_conectar_servidor(IP_SERVIDOR, PUERTO);
+    if (juego.sock == INVALID_SOCKET) {
 
         puts("Error: No se pudo conectar al servidor");
         puts("Iniciando el juego en modo Offline..\n");
@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     }
 
     juego_destruir(&juego);
-    cliente_cerrar_conexion(sock);
+    cliente_cerrar_conexion(juego.sock);
 
     return ret;
 }

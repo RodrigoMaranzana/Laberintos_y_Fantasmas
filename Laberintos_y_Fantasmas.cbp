@@ -39,23 +39,9 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-g" />
-					<Add directory="libraries/SDL2-2.32.8/x86_64-w64-mingw32/include/SDL2" />
-					<Add directory="libraries/SDL2_image-2.8.8/x86_64-w64-mingw32/include/SDL2" />
-					<Add directory="libraries/SDL2_mixer-2.8.1/x86_64-w64-mingw32/include/SDL2" />
-					<Add directory="libraries/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/SDL2" />
 				</Compiler>
 				<Linker>
-					<Add option="-lmingw32" />
-					<Add option="-lSDL2main" />
-					<Add option="-lSDL2" />
-					<Add option="-lSDL2_image" />
-					<Add option="-lSDL2_ttf" />
-					<Add option="-lSDL2_mixer" />
 					<Add library="ws2_32" />
-					<Add directory="libraries/SDL2-2.32.8/x86_64-w64-mingw32/lib" />
-					<Add directory="libraries/SDL2_image-2.8.8/x86_64-w64-mingw32/lib" />
-					<Add directory="libraries/SDL2_mixer-2.8.1/x86_64-w64-mingw32/lib" />
-					<Add directory="libraries/SDL2_ttf-2.24.0/x86_64-w64-mingw32/lib" />
 				</Linker>
 			</Target>
 		</Build>
@@ -98,11 +84,16 @@
 		<Unit filename="include/cliente/texto.h">
 			<Option target="Cliente" />
 		</Unit>
+		<Unit filename="include/comun/arbol.h" />
 		<Unit filename="include/comun/cola.h" />
 		<Unit filename="include/comun/comun.h" />
+		<Unit filename="include/comun/lista.h" />
 		<Unit filename="include/comun/matriz.h" />
 		<Unit filename="include/comun/pila.h" />
 		<Unit filename="include/comun/vector.h" />
+		<Unit filename="include/servidor/bdatos.h">
+			<Option target="Servidor" />
+		</Unit>
 		<Unit filename="include/servidor/servidor.h">
 			<Option target="Servidor" />
 		</Unit>
@@ -158,7 +149,13 @@
 			<Option compilerVar="CC" />
 			<Option target="Cliente" />
 		</Unit>
+		<Unit filename="sources/comun/arbol.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="sources/comun/cola.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/lista.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/comun/matriz.c">
@@ -169,6 +166,10 @@
 		</Unit>
 		<Unit filename="sources/comun/vector.c">
 			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/servidor/bdatos.c">
+			<Option compilerVar="CC" />
+			<Option target="Servidor" />
 		</Unit>
 		<Unit filename="sources/servidor/main_servidor.c">
 			<Option compilerVar="CC" />

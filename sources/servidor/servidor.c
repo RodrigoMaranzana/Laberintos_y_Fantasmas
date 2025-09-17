@@ -4,36 +4,7 @@
 #include <string.h>
 #include <ctype.h>
 
-// Funciones auxiliares
-static void to_upper(char *str)
-{
-    for (int i = 0; str[i]; i++)
-    {
-        str[i] = toupper((unsigned char)str[i]);
-    }
-}
-
-static void to_lower(char *str)
-{
-    for (int i = 0; str[i]; i++)
-    {
-        str[i] = tolower((unsigned char)str[i]);
-    }
-}
-
-static void reverse(char *str)
-{
-    int len = strlen(str);
-    for (int i = 0; i < len / 2; i++)
-    {
-        char temp = str[i];
-        str[i] = str[len - 1 - i];
-        str[len - 1 - i] = temp;
-    }
-}
-
-
-int servidor_inicializar()
+int servidor_inicializar(tBDatos *bDatos)
 {
     WSADATA wsa;
     int retorno;
@@ -42,7 +13,10 @@ int servidor_inicializar()
     if (retorno) {
 
         printf("WSAStartup() %d\n", retorno);
+        return retorno;
     }
+
+    retorno = bdatos_iniciar(bDatos);
 
     return retorno;
 }
@@ -57,14 +31,12 @@ SOCKET servidor_crear_socket()
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(PUERTO);
 
-    if (bind(s, (struct sockaddr *)&server_addr, sizeof(server_addr)) == SOCKET_ERROR)
-    {
+    if (bind(s, (struct sockaddr *)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
         closesocket(s);
         return INVALID_SOCKET;
     }
 
-    if (listen(s, 1) == SOCKET_ERROR)
-    {
+    if (listen(s, 1) == SOCKET_ERROR) {
         closesocket(s);
         return INVALID_SOCKET;
     }
@@ -72,42 +44,76 @@ SOCKET servidor_crear_socket()
     return s;
 }
 
-void servidor_procesar_solicitud(const char *request, char *response)
+void servidor_procesar_solicitud(tBDatos *bDatos, const char *solicitud, char *respuesta)
 {
-    char operation[16], text[TAM_BUFFER];
-    sscanf(request, "%15s %[^\n]", operation, text);
+    int retorno = TODO_OK;
+    char comando[TAM_COMANDO_MAX], buffer[TAM_BUFFER];
+    sscanf(solicitud, "%[^|]|%[^\n]", comando, buffer);
 
-    if (strcmp(operation, "MAYUS") == 0)
-    {
-        to_upper(text);
-        snprintf(response, TAM_BUFFER, "%s", text);
-    }
-    else if (strcmp(operation, "MINUS") == 0)
-    {
-        to_lower(text);
-        snprintf(response, TAM_BUFFER, "%s", text);
-    }
-    else if (strcmp(operation, "INV") == 0)
-    {
-        reverse(text);
-        snprintf(response, TAM_BUFFER, "%s", text);
-    }
-    else
-    {
-        snprintf(response, TAM_BUFFER, "Operacion no valida");
+    if (strcmp(comando, SOLICITUD_INI_SESION) == 0) {
+
+        tJugador jugador;
+
+        puts(SOLICITUD_INI_SESION);
+
+        strncpy(jugador.usuario, buffer, TAM_USUARIO);
+        *(jugador.usuario + TAM_USUARIO - 1) = '\0';
+
+        printf("Usuario que intenta iniciar sesion: %s\n", jugador.usuario);
+
+        if (bdatos_buscar(bDatos, &jugador) == TODO_OK) {
+
+            bDatos->jugadorSesion = jugador;
+            printf("%s inició sesion correctamente\n", jugador.usuario);
+
+        } else {
+
+            jugador.offset = -1;
+            retorno = bdatos_insertar_jugador(bDatos, &jugador);
+            printf("%s es un jugador nuevo.\n\nBienvenido.\n\n", jugador.usuario);
+        }
+
+        snprintf(respuesta, TAM_BUFFER, "%s", retorno == TODO_OK ? RESPUESTA_OK : RESPUESTA_ERROR);
+
+    } else if (strcmp(comando, SOLICITUD_INS_PARTIDA) == 0) {
+
+        if (!*bDatos->jugadorSesion.usuario) {
+
+            snprintf(respuesta, TAM_BUFFER, "%s", RESPUESTA_ERROR);
+            return;
+        }
+
+        tPartida partida;
+
+        puts(SOLICITUD_INS_PARTIDA);
+
+        sscanf(buffer, "%d|%d|%d", &partida.puntaje, &partida.numRonda, &partida.cantMovsJugador);
+        partida.offsetSig = -1;
+
+        retorno = bdatos_insertar_partida(bDatos, &partida);
+
+        snprintf(respuesta, TAM_BUFFER, "%s", retorno == TODO_OK ? RESPUESTA_OK : RESPUESTA_ERROR);
+
+    } else {
+
+        puts(RESPUESTA_SOLIC_INVALIDA);
+
+        snprintf(respuesta, TAM_BUFFER, RESPUESTA_SOLIC_INVALIDA);
     }
 }
 
 void servidor_iniciar()
 {
-    if (servidor_inicializar() != 0) {
+    tBDatos bDatos;
+
+    if (servidor_inicializar(&bDatos) != 0) {
 
         puts("Error: No se pudo inicializar Winsock");
         return;
     }
 
-    SOCKET server_socket = servidor_crear_socket();
-    if (server_socket == INVALID_SOCKET) {
+    SOCKET serverSocket = servidor_crear_socket();
+    if (serverSocket == INVALID_SOCKET) {
 
         puts("Error: No se pudo crear el socket del servidor");
         WSACleanup();
@@ -119,11 +125,11 @@ void servidor_iniciar()
     struct sockaddr_in client_addr;
     int client_addr_size = sizeof(client_addr);
 
-    SOCKET client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_addr_size);
-    if (client_socket == INVALID_SOCKET) {
+    SOCKET clientSocket = accept(serverSocket, (struct sockaddr *)&client_addr, &client_addr_size);
+    if (clientSocket == INVALID_SOCKET) {
 
         printf("Error en accept()\n");
-        closesocket(server_socket);
+        closesocket(serverSocket);
         WSACleanup();
         return;
     }
@@ -134,17 +140,21 @@ void servidor_iniciar()
     char response[TAM_BUFFER];
     int bytes_received;
 
-    while ((bytes_received = recv(client_socket, buffer, TAM_BUFFER - 1, 0)) > 0) {
+    while ((bytes_received = recv(clientSocket, buffer, TAM_BUFFER - 1, 0)) > 0) {
 
         buffer[bytes_received] = '\0';
         printf("Recibido: %s\n", buffer);
-        servidor_procesar_solicitud(buffer, response);
-        send(client_socket, response, strlen(response), 0);
+        servidor_procesar_solicitud(&bDatos, buffer, response);
+        send(clientSocket, response, strlen(response), 0);
         printf("Enviado:  %s\n", response);
     }
 
     printf("Conexion cerrada.\n");
-    closesocket(client_socket);
-    closesocket(server_socket);
+    closesocket(clientSocket);
+    closesocket(serverSocket);
     WSACleanup();
+    bdatos_cerrar(&bDatos);
 }
+
+
+
