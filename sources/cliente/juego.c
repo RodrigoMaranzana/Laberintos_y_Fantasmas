@@ -170,6 +170,7 @@ int juego_ejecutar(tJuego *juego)
     tMenuAccion accionProcesada = {NULL, NULL};
     SDL_Keycode tecla;
     SDL_Event evento;
+    char solicitud[TAM_BUFFER], respuesta[TAM_BUFFER];
 
     logica_inicializar(&juego->logica);
 
@@ -213,6 +214,11 @@ int juego_ejecutar(tJuego *juego)
 
                             accionProcesada = menu_confirmar_opcion(juego->menu);
                             Mix_PlayChannel(0, * (juego->sonidos + SONIDO_MENU_CONFIRMAR), 0);
+
+                            /// TEST
+                            snprintf(solicitud, TAM_BUFFER, "%s|%s", SOLICITUD_INI_SESION, "JOSE");
+                            cliente_enviar_solicitud(juego->sock, solicitud, respuesta);
+                            printf("Respuesta del servidor recibida: %s\n", respuesta);
                         }
 
                         if (accionProcesada.funcion) {
