@@ -5,6 +5,8 @@
 #include "../../include/cliente/input.h"
 #include "../../include/cliente/entidad.h"
 #include "../../include/cliente/escenario.h"
+#include "../../include/comun/cola.h"
+
 
 #define FILAS_DEF            17
 #define COLUMNAS_DEF         17
@@ -29,12 +31,18 @@ typedef struct {
     unsigned puntaje;
 } tPartida;
 
+typedef struct{
+    tUbicacion ubic;
+    char direccion;
+} tMovimiento;
+
 typedef struct {
     tEscenario escenario;
     tPartida partida;
     eLogicaEstado estado;
     tEntidad *fantasmaEnMov;
     tTemporizador fantasmaMovTempor;
+    tCola movimientosJugador; // Cola para historial de movimientos
 } tLogica;
 
 int logica_inicializar(tLogica *logica);
@@ -42,5 +50,8 @@ void logica_destruir(tLogica *logica);
 void logica_calc_resolucion(unsigned cantFilas, unsigned cantColumnas, unsigned *anchoRes, unsigned *altoRes);
 int logica_actualizar(tLogica *logica);
 void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla);
+int logica_siguiente_nivel(tLogica *logica);
+
+void logica_mostrar_historial_movimientos(tLogica *logica);
 
 #endif // LOGICA_H_INCLUDED

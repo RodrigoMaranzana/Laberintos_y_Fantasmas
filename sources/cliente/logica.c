@@ -6,6 +6,7 @@
 #include "../../include/comun/pila.h"
 #include "../../include/comun/cola.h"
 #include "../../include/comun/comun.h"
+#include "../../include/cliente/juego.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -31,6 +32,8 @@ int logica_inicializar(tLogica *logica)
 
     ///DEBE LEERSE DEL ARCHIVO CONF
     logica->escenario.confRonda.cantFantasmas = 4;
+
+    cola_crear(&logica->movimientosJugador);
 
     temporizador_inicializar(&logica->fantasmaMovTempor, 0.02f);
 
@@ -74,6 +77,7 @@ int logica_actualizar(tLogica *logica)
 void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
 {
     tUbicacion nuevaUbic = logica->escenario.jugador.ubic;
+    tMovimiento mov;
 
     switch (tecla) {
 
@@ -94,16 +98,22 @@ void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
             logica->escenario.jugador.orientacion = MIRANDO_DERECHA;
             break;
         default:
+            return;//este return evita de forma rapida que al tocar la tecla ENTER
             break;
     }
 
     if (logica_ubicacion_valida(&logica->escenario, nuevaUbic) && logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].transitable) {
 
 
-        if (logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad) {
+        mov.ubic.fila = nuevaUbic.fila;
+        mov.ubic.columna = nuevaUbic.columna;
+        mov.direccion = logica->escenario.jugador.orientacion;
 
-            puts("PERDISTE");
-            logica->estado = LOGICA_FIN_PARTIDA;
+        cola_encolar(&logica->movimientosJugador, &mov, sizeof(tMovimiento));
+
+        if (logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad) {
+                puts("PERDISTE");
+                logica->estado = LOGICA_FIN_PARTIDA;
         }
 
         logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].entidad = logica->escenario.tablero[logica->escenario.jugador.ubic.fila][logica->escenario.jugador.ubic.columna].entidad;
@@ -112,10 +122,17 @@ void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
         logica->escenario.jugador.ubic.columna = nuevaUbic.columna;
         logica->escenario.jugador.ubic.fila = nuevaUbic.fila;
 
+
         if(logica->fantasmaEnMov == NULL){
 
             logica->fantasmaEnMov = logica->escenario.fantasmas;
             temporizador_iniciar(&logica->fantasmaMovTempor);
+        }
+
+        if (logica->escenario.tablero[nuevaUbic.fila][nuevaUbic.columna].tile->tileTipo == TILE_TIPO_PUERTA_SALIDA) {
+            mov.direccion = 4; // ganaste
+            cola_encolar(&logica->movimientosJugador, &mov, sizeof(tMovimiento));
+            logica_siguiente_nivel(logica);
         }
     }
 
@@ -130,7 +147,6 @@ static int logica_ubicacion_valida(const tEscenario *escenario, tUbicacion ubic)
 
     return 1;
 }
-
 
 static int _logica_es_ubicacion_valida(tEscenario *escenario, unsigned columna, unsigned fila)
 {
@@ -339,6 +355,59 @@ static int _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *fantasma)
     cola_vaciar(&cola);
 
     matriz_destruir((void**)predecesores, escenario->confRonda.filas);
+
+    return TODO_OK;
+}
+
+void logica_mostrar_historial_movimientos(tLogica *logica)
+{
+    unsigned paso = 1;
+    tMovimiento mov;
+
+    if(!cola_vacia(&logica->movimientosJugador))
+        printf("Tus movimientos realizados:\n");
+
+    // Vacia la cola original mostrando los movimientos
+    while (cola_vacia(&logica->movimientosJugador) == TODO_OK)
+    {
+        cola_desencolar(&logica->movimientosJugador, &mov, sizeof(tMovimiento));
+        switch (mov.direccion){
+        case MIRANDO_ABAJO:
+            printf("Paso %u: Fila=%d, Columna=%d, Direccion=ABAJO\n", paso++, mov.ubic.fila, mov.ubic.columna);
+            break;
+        case MIRANDO_IZQUIERDA:
+            printf("Paso %u: Fila=%d, Columna=%d, Direccion=IZQUIERDA\n", paso++, mov.ubic.fila, mov.ubic.columna);
+            break;
+        case MIRANDO_DERECHA:
+            printf("Paso %u: Fila=%d, Columna=%d, Direccion=DERECHA\n", paso++, mov.ubic.fila, mov.ubic.columna);
+            break;
+        case MIRANDO_ARRIBA:
+            printf("Paso %u: Fila=%d, Columna=%d, Direccion=ARRIBA\n", paso++, mov.ubic.fila, mov.ubic.columna);
+            break;
+        default:
+            puts("\n Nivel Completado:\n");
+            break;
+        }
+    }
+}
+
+int logica_siguiente_nivel(tLogica *logica)
+{
+    logica->partida.ronda.numero++;
+
+    escenario_destruir(&logica->escenario);
+
+    escenario_crear(&logica->escenario,
+                    logica->escenario.confRonda.columnas,
+                    logica->escenario.confRonda.filas);
+
+    escenario_generar(&logica->escenario);
+
+    // Reiniciar ciclo de movimiento de fantasmas
+    logica->fantasmaEnMov = NULL;
+    temporizador_inicializar(&logica->fantasmaMovTempor, 0.02f);
+
+    logica->estado = LOGICA_JUGANDO;
 
     return TODO_OK;
 }

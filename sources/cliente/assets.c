@@ -110,4 +110,3 @@ void assets_destruir_fuente(TTF_Font *fuente)
     TTF_CloseFont(fuente);
     fuente = NULL;
 }
-
