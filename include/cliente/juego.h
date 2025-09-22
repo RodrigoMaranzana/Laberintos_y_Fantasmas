@@ -7,6 +7,10 @@
 #include "../../include/cliente/texto.h"
 #include "../../include/cliente/menu.h"
 #include "../../include/cliente/cliente.h"
+#include "../../include/cliente/widget.h"
+#include "../../include/cliente/ventana.h"
+
+#define TECLA_VALIDA(k)( k == SDLK_ESCAPE || k == SDLK_RETURN || k == SDLK_BACKSPACE || k == SDLK_UP || k == SDLK_DOWN || k == SDLK_LEFT || k == SDLK_RIGHT ? 1 : 0)
 
 #define SDL_COLOR_BLANCO ((SDL_Color){255, 255, 255, 255})
 
@@ -16,18 +20,39 @@ typedef enum {
     JUEGO_CERRANDO
 } eJuegoEstado;
 
+typedef enum {
+    FUENTE_TAM_32,
+    FUENTE_TAM_48,
+    FUENTE_TAM_64,
+    FUENTE_CANTIDAD,
+}eFuenteTam;
+
+typedef enum {
+    HUD_WIDGET_VIDAS,
+    HUD_WIDGETS_PREMIOS,
+    HUD_WIDGETS_RONDA,
+    HUD_WIDGETS_CANTIDAD
+} eWidgetsHud;
+
+typedef struct {
+    tWidget *widgets[HUD_WIDGETS_CANTIDAD];
+}tHud;
+
 typedef struct {
     SDL_Window *ventana;
     SDL_Renderer *renderer;
-    const char *tituloVentana;
     unsigned anchoRes;
     unsigned altoRes;
 
     SDL_Texture **imagenes;
     Mix_Chunk **sonidos;
-    TTF_Font *fuente;
+    TTF_Font *fuentes[FUENTE_CANTIDAD];
 
-    tMenu *menu; //tMenu **menus; // Si se necesita mas de un menu
+    tHud hud;
+    tVentana *ventanaMenuPausa;
+    tVentana *ventanaUsername;
+
+    char usuario[TAM_USUARIO];
     tLogica logica;
     eJuegoEstado estado;
 

@@ -32,7 +32,8 @@ typedef struct sMenuOpcion {
 } tMenuOpcion;
 
 typedef struct {
-    tMenuOpcion* opciones;
+    SDL_Renderer *renderer;
+    tMenuOpcion *opciones;
     unsigned cantOpc;
     unsigned capOpc;
     int selecOpc;
@@ -40,13 +41,13 @@ typedef struct {
     eMenuTipo menuTipo;
 } tMenu;
 
-tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion, eMenuTipo menuTipo);
+tMenu* menu_crear(SDL_Renderer *renderer, unsigned capOpc, SDL_Point ubicacion, eMenuTipo menuTipo);
 void menu_destruir(tMenu* menu);
 int menu_agregar_opcion(tMenu *menu, int id, SDL_Texture *textura, unsigned tamAltura, tMenuAccion accion, eOpcionEstado estado);
 void menu_siguiente_opcion(tMenu *menu);
 void menu_anterior_opcion(tMenu *menu);
 tMenuAccion menu_confirmar_opcion(tMenu *menu);
 void menu_estado_opcion(tMenu *menu, int id, eOpcionEstado nuevoEstado);
-void menu_dibujar(SDL_Renderer *renderer, tMenu* menu);
+void menu_dibujar(tMenu* menu);
 
 #endif // MENU_H_INCLUDED

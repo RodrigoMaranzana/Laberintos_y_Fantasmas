@@ -1,5 +1,4 @@
 #include "../../include/cliente/archivo.h"
-#include "../../include/comun/retorno.h"
 #include "../../include/comun/comun.h"
 
 #include <string.h>
@@ -72,7 +71,24 @@ int archivo_leer_conf(FILE* arch, tConf *conf)
     return TODO_OK;
 }
 
+int archivo_escribir_conf(FILE* arch, const tConf *conf)
+{
+    int ret;
 
+    ret = fprintf(arch, "FILAS : %d\n", conf->filas);
+    ret = fprintf(arch, "COLUMNAS : %d\n",  conf->columnas);
+    ret = fprintf(arch, "VIDAS_INICIO : %d\n",  conf->vidas_inicio);
+    ret = fprintf(arch, "MAXIMO_NUMERO_FANTASMAS : %d\n",  conf->max_num_fantasmas);
+    ret = fprintf(arch, "MAXIMO_NUMERO_PREMIOS : %d\n",  conf->max_num_premios);
+    ret = fprintf(arch, "MAXIMO_VIDAS_EXTRA : %d\n",  conf->max_vidas_extra);
+
+    return ret >= 0 ? TODO_OK : ERR_ARCHIVO;
+}
+
+
+/*************************
+    FUNCIONES ESTATICAS
+*************************/
 
 static int _archivo_parsear_linea_conf(char *buffer, tParam *param)
 {
@@ -117,20 +133,3 @@ static int _archivo_parsear_linea_conf(char *buffer, tParam *param)
 
     return TODO_OK;
 }
-
-
-
-int archivo_escribir_conf(FILE* arch, const tConf *conf)
-{
-    int ret;
-
-    ret = fprintf(arch, "FILAS : %d\n", conf->filas);
-    ret = fprintf(arch, "COLUMNAS : %d\n",  conf->columnas);
-    ret = fprintf(arch, "VIDAS_INICIO : %d\n",  conf->vidas_inicio);
-    ret = fprintf(arch, "MAXIMO_NUMERO_FANTASMAS : %d\n",  conf->max_num_fantasmas);
-    ret = fprintf(arch, "MAXIMO_NUMERO_PREMIOS : %d\n",  conf->max_num_premios);
-    ret = fprintf(arch, "MAXIMO_VIDAS_EXTRA : %d\n",  conf->max_vidas_extra);
-
-    return ret >= 0 ? TODO_OK : ERR_ARCHIVO;
-}
-

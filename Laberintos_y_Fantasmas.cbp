@@ -57,16 +57,13 @@
 		<Unit filename="include/cliente/cliente.h">
 			<Option target="Cliente" />
 		</Unit>
-		<Unit filename="include/cliente/entidad.h">
+		<Unit filename="include/cliente/dibujado.h">
 			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="include/cliente/escenario.h">
 			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="include/cliente/graficos.h">
-			<Option target="Cliente" />
-		</Unit>
-		<Unit filename="include/cliente/input.h">
 			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="include/cliente/juego.h">
@@ -82,6 +79,12 @@
 			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="include/cliente/texto.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/ventana.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="include/cliente/widget.h">
 			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="include/comun/arbol.h" />
@@ -109,7 +112,7 @@
 			<Option compilerVar="CC" />
 			<Option target="Cliente" />
 		</Unit>
-		<Unit filename="sources/cliente/entidad.c">
+		<Unit filename="sources/cliente/dibujado.c">
 			<Option compilerVar="CC" />
 			<Option target="Cliente" />
 		</Unit>
@@ -118,10 +121,6 @@
 			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/graficos.c">
-			<Option compilerVar="CC" />
-			<Option target="Cliente" />
-		</Unit>
-		<Unit filename="sources/cliente/input.c">
 			<Option compilerVar="CC" />
 			<Option target="Cliente" />
 		</Unit>
@@ -146,6 +145,17 @@
 			<Option target="Cliente" />
 		</Unit>
 		<Unit filename="sources/cliente/texto.c">
+			<Option compilerVar="CC" />
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="sources/cliente/ventana.c">
+			<Option compilerVar="CC" />
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="sources/cliente/ventana.h">
+			<Option target="Cliente" />
+		</Unit>
+		<Unit filename="sources/cliente/widget.c">
 			<Option compilerVar="CC" />
 			<Option target="Cliente" />
 		</Unit>

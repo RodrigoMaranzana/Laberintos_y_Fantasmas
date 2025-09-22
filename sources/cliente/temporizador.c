@@ -2,13 +2,13 @@
 #include <SDL.h>
 #include <stdlib.h>
 
-void temporizador_inicializar(tTemporizador *tempor, float duracion)
+void temporizador_inicializar(tTempor *tempor, float duracion)
 {
     tempor->duracion = duracion;
     tempor->estado = TEMPOR_INACTIVO;
 }
 
-void temporizador_actualizar(tTemporizador* tempor)
+void temporizador_actualizar(tTempor* tempor)
 {
     unsigned tiempoActual;
     float deltaTiempo;
@@ -34,26 +34,26 @@ void temporizador_actualizar(tTemporizador* tempor)
     }
 }
 
-eTemporEstado temporizador_estado(const tTemporizador* temporizador)
+eTemporEstado temporizador_estado(const tTempor* temporizador)
 {
     return temporizador->estado;
 }
 
-void temporizador_iniciar(tTemporizador* temporizador)
+void temporizador_iniciar(tTempor* temporizador)
 {
     temporizador->estado = TEMPOR_ACTIVO;
     temporizador->transcurrido = 0.0f;
     temporizador->tiempoAnterior = SDL_GetTicks();
 }
 
-void temporizador_pausar(tTemporizador* temporizador)
+void temporizador_pausar(tTempor* temporizador)
 {
     if (temporizador->estado == TEMPOR_ACTIVO) {
         temporizador->estado = TEMPOR_INACTIVO;
     }
 }
 
-void temporizador_reanudar(tTemporizador* temporizador)
+void temporizador_reanudar(tTempor* temporizador)
 {
     if (temporizador->estado == TEMPOR_INACTIVO) {
         temporizador->estado = TEMPOR_ACTIVO;

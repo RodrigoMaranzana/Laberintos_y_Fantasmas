@@ -13,6 +13,8 @@ int assets_cargar_imagenes(SDL_Renderer *renderer, SDL_Texture **imagenes)
         [IMAGEN_FANTASMA_03]    = "assets/img/fantasma_03.png",
         [IMAGEN_FANTASMA_04]    = "assets/img/fantasma_04.png",
         [IMAGEN_TSET_CASTILLO]  = "assets/img/tileset_castillo.png",
+        [IMAGEN_ICO_VIDAS]      = "assets/img/contador_vidas.png",
+        [IMAGEN_ICO_PREMIOS]    = "assets/img/contador_premios.png",
     };
     char **pPaths = paths;
 

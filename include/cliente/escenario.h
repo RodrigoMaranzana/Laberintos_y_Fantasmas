@@ -2,7 +2,6 @@
 #define ESCENARIO_H_INCLUDED
 
 #include <SDL.h>
-#include "../../include/cliente/entidad.h"
 #include "../../include/cliente/assets.h"
 #include "../../include/cliente/graficos.h"
 #include "../../include/cliente/temporizador.h"
@@ -12,8 +11,6 @@
 #define NO_TRANSITABLE 0
 #define TRANSITABLE 1
 
-#define MIN(a,b)( (a) < (b) ? (a) : (b) )
-#define MAX(a,b)( (a) > (b) ? (a) : (b) )
 
 typedef void (*tile_funcion)(void *datos);
 
@@ -91,6 +88,35 @@ typedef enum {
     TILE_TIPO_CANTIDAD,
 } eTileTipo;
 
+typedef enum {
+    PARED_NINGUNA,
+    PARED_SUPERIOR,
+    PARED_INFERIOR,
+    PARED_IZQUIERDA,
+    PARED_DERECHA
+} eParedLimite;
+
+typedef enum {
+    ENTIDAD_JUGADOR,
+    ENTIDAD_FANTASMA_AMARILLO,
+    ENTIDAD_FANTASMA_AZUL,
+    ENTIDAD_FANTASMA_ROSA,
+    ENTIDAD_FANTASMA_ROJO,
+} eEntidadTipo;
+
+typedef enum {
+    ENTIDAD_CON_VIDA,
+    ENTIDAD_SIN_VIDA,
+    ENTIDAD_ATURDIDA,
+} eEntidadEstado;
+
+typedef enum {
+    MIRANDO_ABAJO,
+    MIRANDO_IZQUIERDA,
+    MIRANDO_DERECHA,
+    MIRANDO_ARRIBA,
+} eOrientacion;
+
 typedef struct {
     eTileTipo tileTipo;
     eTileID tileID;
@@ -100,37 +126,47 @@ typedef struct {
 typedef struct {
     int columna;
     int fila;
+} tUbicacion;
+
+typedef struct {
+    eImagen imagen;
+    eEntidadTipo tipo;
+    tUbicacion ubic;
+    tUbicacion ubicAnterior;
+    eOrientacion orientacion;
+    tTempor temporFrame;
+    tTempor temporEstado;
+    eEntidadEstado estado;
+    char frame;
+} tEntidad;
+
+typedef struct {
+    int columna;
+    int fila;
     tTile *tile;
     tEntidad *entidad;
+    char ocupada;
     char transitable;
     char visitada;
 } tCasilla;
 
 typedef struct {
-    int columnas;
-    int filas;
-    int cantVidasInicial;
-    int cantVidasNivel;
-    int cantFantasmas;
-    int cantPremios;
-}tConfRonda;
-
-typedef struct {
-    tConfRonda confRonda;
     tCasilla **tablero;
-    tEntidad jugador;
-    tEntidad *fantasmas;
+    int cantColumnas;
+    int cantFilas;
+    tUbicacion ubicPEntrada;
+    tUbicacion ubicPSalida;
     eImagen tileSet;
     tTile tiles[TILE_CANTIDAD];
-    long semilla;
-    tTemporizador temporFrame;
     char frame;
+    tTempor temporFrame;
 } tEscenario;
 
-
 int escenario_crear(tEscenario *escenario, unsigned columnas, unsigned filas);
-void escenario_generar(tEscenario *escenario);
+void escenario_generar(tEscenario *escenario, long semilla);
 void escenario_destruir(tEscenario *escenario);
-void escenario_dibujar(SDL_Renderer *renderer, tEscenario *escenario, SDL_Texture **imagenes);
+int escenario_calcular_mascara(tEscenario *escenario, int columna, int fila);
+eParedLimite escenario_ubic_es_pared_limite(tEscenario *escenario, tUbicacion ubic);
+
 
 #endif // ESCENARIO_H_INCLUDED

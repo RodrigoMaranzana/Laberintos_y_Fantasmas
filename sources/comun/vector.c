@@ -1,5 +1,4 @@
 #include "../../include/comun/vector.h"
-#include "../../include/comun/retorno.h"
 
 #include <string.h>
 #include <stdio.h>
