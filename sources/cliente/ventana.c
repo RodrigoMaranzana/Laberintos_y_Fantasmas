@@ -72,11 +72,11 @@ void ventana_cerrar(tVentana *ventana)
 
 void ventana_dibujar(tVentana *ventana)
 {
-    SDL_Rect area = _ventana_dibujar(ventana);
-
     if (!ventana->abierta) {
         return;
     }
+
+    SDL_Rect area = _ventana_dibujar(ventana);
 
     SDL_RenderSetViewport(ventana->renderer, &area);
 

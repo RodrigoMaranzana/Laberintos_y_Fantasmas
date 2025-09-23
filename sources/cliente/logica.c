@@ -37,8 +37,8 @@ int logica_inicializar(tLogica *logica)
     if (archivo_leer_conf(archConf, &confArch) == ERR_CONF || confArch.columnas < 8 || confArch.filas < 8 || confArch.max_num_fantasmas < 1) {
         puts("Creando archivo de configuracion por defecto...");
 
-        confArch.columnas = 17;
-        confArch.filas = 17;
+        confArch.columnas = 12;
+        confArch.filas = 8;
         confArch.vidas_inicio = 3;
         confArch.max_num_fantasmas = 4;
         confArch.max_num_premios = 2;
@@ -66,7 +66,7 @@ int logica_inicializar(tLogica *logica)
 
     escenario_crear(&logica->escenario, logica->config.columnas, logica->config.filas);
 
-    logica->estado = LOGICA_EN_ESPERA;
+    logica->estado = LOGICA_EN_LOGIN;
 
     return TODO_OK;
 }

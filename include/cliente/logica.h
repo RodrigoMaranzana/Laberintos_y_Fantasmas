@@ -14,6 +14,7 @@ typedef enum {
     LOGICA_EN_ESPERA,
     LOGICA_JUGANDO,
     LOGICA_EN_PAUSA,
+    LOGICA_EN_LOGIN,
     LOGICA_FIN_PARTIDA
 } eLogicaEstado;
 

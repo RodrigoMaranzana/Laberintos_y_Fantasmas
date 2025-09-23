@@ -31,8 +31,8 @@ int bdatos_crear(tBDatos *bDatos);
 int bdatos_iniciar(tBDatos *bDatos);
 int bdatos_insertar_jugador(tBDatos *bDatos, tJugador *jugador);
 int bdatos_insertar_partida(tBDatos *bDatos, const tPartida *partida);
-int bdatos_buscar(const tBDatos *bDatos, tJugador *jugador)
-;int bdatos_cerrar(tBDatos *bDatos);
+int bdatos_buscar(const tBDatos *bDatos, tJugador *jugador);
+int bdatos_cerrar(tBDatos *bDatos);
 int bdatos_cargar_idx_en_arbol(tBDatos *bDatos);
 
 #endif // BDATOS_H_INCLUDED

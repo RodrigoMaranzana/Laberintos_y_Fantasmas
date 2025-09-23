@@ -30,10 +30,11 @@ typedef struct {
     TTF_Font **fuentes;
     tWidget *campoTexto;
     char *usuario;
+    eLogicaEstado *estadoLogica;
 } tDatosUsuario;
 
 static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
-static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tVentana *ventanaMenu, tHud *hud);
+static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tVentana *ventanaMenu, tVentana *ventanaUsername, tHud *hud);
 static void _juego_iniciar_partida(void* datos);
 static void _juego_salir_del_juego(void* datos);
 static void _juego_continuar_partida(void* datos);
@@ -153,11 +154,10 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
     datosUsername->fuentes = juego->fuentes;
     datosUsername->campoTexto = NULL;
     datosUsername->usuario = juego->usuario;
+    datosUsername->estadoLogica = &juego->logica.estado;
 
-    /// TEST
     juego->ventanaUsername =  ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_usuario_crear, _juego_ventana_usuario_actualizar, _juego_ventana_usuario_dibujar, _juego_ventana_usuario_destruir, datosUsername}, dimsVentana, (SDL_Color){162, 200, 200, 255}, 1);
     ventana_abrir(juego->ventanaUsername);
-    /// TEST
 
     juego->estado = JUEGO_CORRIENDO;
     printf("Juego iniciado con exito.\n");
@@ -221,9 +221,13 @@ int juego_ejecutar(tJuego *juego)
                 }
             }
 
-            if (juego->logica.estado == LOGICA_EN_ESPERA) {
+            if (juego->logica.estado == LOGICA_EN_LOGIN) {
 
                 ventana_actualizar(juego->ventanaUsername, &evento);
+                if (juego->logica.estado == LOGICA_EN_ESPERA) {
+
+                    ventana_cerrar(juego->ventanaUsername);
+                }
             }
         }
 
@@ -232,12 +236,7 @@ int juego_ejecutar(tJuego *juego)
             _juego_actualizar_hud(&juego->hud, juego->renderer, &juego->logica);
         }
 
-        _juego_renderizar(juego->renderer, juego->imagenes, &juego->logica, juego->ventanaMenuPausa, &juego->hud);
-
-        /// TEST
-        ventana_dibujar(juego->ventanaUsername);
-        SDL_RenderPresent(juego->renderer);
-        /// TEST
+        _juego_renderizar(juego->renderer, juego->imagenes, &juego->logica, juego->ventanaMenuPausa, juego->ventanaUsername, &juego->hud);
 
         SDL_Delay(16);
     }
@@ -310,7 +309,7 @@ static void _juego_dibujar_hud(tHud *hud, SDL_Renderer *renderer)
     }
 }
 
-static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tVentana *ventanaMenu, tHud *hud)
+static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tVentana *ventanaMenu, tVentana *ventanaUsername, tHud *hud)
 {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
@@ -320,6 +319,7 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
         _juego_dibujar_hud(hud, renderer);
     } else {
         ventana_dibujar(ventanaMenu);
+        ventana_dibujar(ventanaUsername);
     }
 
     SDL_RenderPresent(renderer);
@@ -453,9 +453,6 @@ static void _juego_ventana_menu_actualizar(SDL_Event *evento, void *datos)
 
         accionProcesada.funcion(accionProcesada.datos);
     }
-
-
-
 }
 
 static void _juego_ventana_menu_dibujar(void *datos)
@@ -511,6 +508,9 @@ static void _juego_ventana_usuario_actualizar(SDL_Event *evento, void *datos)
             datosUsuario->usuario[longitud - 1] = '\0';
         }
         widget_modificar_valor(datosUsuario->campoTexto, datosUsuario->usuario);
+    } else if (evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN) {
+
+        *datosUsuario->estadoLogica = LOGICA_EN_ESPERA;
     }
 }
 

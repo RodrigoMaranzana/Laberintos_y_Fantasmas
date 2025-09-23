@@ -152,9 +152,6 @@
 			<Option compilerVar="CC" />
 			<Option target="Cliente" />
 		</Unit>
-		<Unit filename="sources/cliente/ventana.h">
-			<Option target="Cliente" />
-		</Unit>
 		<Unit filename="sources/cliente/widget.c">
 			<Option compilerVar="CC" />
 			<Option target="Cliente" />
