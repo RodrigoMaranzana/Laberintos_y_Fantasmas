@@ -24,6 +24,7 @@ typedef struct {
     int cantFantasmas;
     int cantVidasExtra;
     int cantVidasActual;
+    long semillaRonda;
 } tRonda;
 
 typedef struct{
@@ -42,6 +43,8 @@ typedef struct {
 }tConfig;
 
 typedef struct {
+    long semillaMaestra;
+
     tEscenario escenario;
     tEntidad jugador;
     tEntidad *fantasmas;

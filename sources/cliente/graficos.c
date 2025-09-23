@@ -29,6 +29,7 @@ void graficos_dibujar_textura(SDL_Texture *textura, SDL_Renderer *renderer, SDL_
     if (efecto) {
         SDL_SetTextureAlphaMod(textura, 255);
         SDL_SetTextureColorMod(textura, 255, 255, 255);
+        SDL_SetTextureBlendMode(textura, SDL_BLENDMODE_BLEND);
     }
 }
 

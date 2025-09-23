@@ -24,7 +24,7 @@ void temporizador_actualizar(tTempor* tempor)
         return;
     }
 
-    deltaTiempo = (tiempoActual - tempor->tiempoAnterior) / 1000.0f;
+    deltaTiempo = (float)(tiempoActual - tempor->tiempoAnterior) / 1000.0f;
     tempor->transcurrido += deltaTiempo;
     tempor->tiempoAnterior = tiempoActual;
 
@@ -56,6 +56,7 @@ void temporizador_pausar(tTempor* temporizador)
 void temporizador_reanudar(tTempor* temporizador)
 {
     if (temporizador->estado == TEMPOR_INACTIVO) {
+        temporizador->tiempoAnterior = SDL_GetTicks();
         temporizador->estado = TEMPOR_ACTIVO;
     }
 }

@@ -9,7 +9,7 @@ typedef enum {
 
 typedef struct {
     float duracion;
-    float tiempoAnterior;
+    unsigned tiempoAnterior;
     float transcurrido;
     eTemporEstado estado;
 } tTempor;

@@ -17,11 +17,9 @@ typedef enum {
 typedef struct {
     tLogica *logica;
     eJuegoEstado *estadoJuego;
-
     SDL_Renderer *renderer;
     Mix_Chunk **sonidos;
     TTF_Font **fuentes;
-
     tMenu* menu;
 } tDatosMenuPausa;
 
@@ -248,9 +246,6 @@ void juego_destruir(tJuego *juego)
 {
     int i;
 
-    SDL_DestroyRenderer(juego->renderer);
-    SDL_DestroyWindow(juego->ventana);
-
     assets_destuir_imagenes(juego->imagenes);
     assets_destuir_sonidos(juego->sonidos);
 
@@ -274,8 +269,10 @@ void juego_destruir(tJuego *juego)
         ventana_destruir(juego->ventanaUsername);
     }
 
-
     logica_destruir(&juego->logica);
+
+    SDL_DestroyRenderer(juego->renderer);
+    SDL_DestroyWindow(juego->ventana);
 
     IMG_Quit();
     TTF_Quit();
@@ -473,13 +470,6 @@ static void _juego_ventana_menu_destruir(void *datos)
 
     free(datosMenuPausa);
 }
-
-
-
-
-
-
-
 
 
 static int _juego_ventana_usuario_crear(void *datos)

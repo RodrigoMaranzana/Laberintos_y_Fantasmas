@@ -89,6 +89,12 @@ typedef enum {
 } eTileTipo;
 
 typedef enum {
+    EXTRA_NINGUNO,
+    EXTRA_VIDA,
+    EXTRA_PREMIO,
+} eExtra;
+
+typedef enum {
     PARED_NINGUNA,
     PARED_SUPERIOR,
     PARED_INFERIOR,
@@ -108,6 +114,7 @@ typedef enum {
     ENTIDAD_CON_VIDA,
     ENTIDAD_SIN_VIDA,
     ENTIDAD_ATURDIDA,
+    ENTIDAD_POTENCIADA,
 } eEntidadEstado;
 
 typedef enum {
@@ -145,9 +152,10 @@ typedef struct {
     int fila;
     tTile *tile;
     tEntidad *entidad;
-    char ocupada;
+    eExtra extra;
     char transitable;
     char visitada;
+    tUbicacion anteriorBFS;
 } tCasilla;
 
 typedef struct {
@@ -158,12 +166,12 @@ typedef struct {
     tUbicacion ubicPSalida;
     eImagen tileSet;
     tTile tiles[TILE_CANTIDAD];
-    char frame;
     tTempor temporFrame;
+    char frame;
 } tEscenario;
 
 int escenario_crear(tEscenario *escenario, unsigned columnas, unsigned filas);
-void escenario_generar(tEscenario *escenario, long semilla);
+void escenario_generar(tEscenario *escenario);
 void escenario_destruir(tEscenario *escenario);
 int escenario_calcular_mascara(tEscenario *escenario, int columna, int fila);
 eParedLimite escenario_ubic_es_pared_limite(tEscenario *escenario, tUbicacion ubic);

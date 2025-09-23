@@ -1,10 +1,12 @@
 #include "../../include/cliente/dibujado.h"
 #include "../../include/cliente/temporizador.h"
 
+#include <math.h>
+
 static void _dibujado_jugador_aturdido(SDL_Texture *textura);
 static void _dibujado_fantasma_aturdido(SDL_Texture *textura);
 static void _dibujado_entidad(SDL_Renderer *renderer, SDL_Texture **imagenes, tEntidad *entidad);
-
+static void _dibujado_jugador_potenciado(SDL_Texture *textura);
 
 void dibujado_escenario(SDL_Renderer *renderer, tEscenario *escenario, SDL_Texture **imagenes)
 {
@@ -60,6 +62,20 @@ void dibujado_escenario(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textu
                 graficos_dibujar_textura(*(imagenes + escenario->tileSet), renderer, &escenario->tablero[fila][columna].tile->coords, &rectTileDst, NULL);
             }
 
+            switch (escenario->tablero[fila][columna].extra) {
+
+                case EXTRA_PREMIO: {
+                    graficos_dibujar_textura(*(imagenes + IMAGEN_PREMIO), renderer, NULL, &rectTileDst, NULL);
+                    break;
+                }
+                case EXTRA_VIDA: {
+                    graficos_dibujar_textura(*(imagenes + IMAGEN_VIDA), renderer, NULL, &rectTileDst, NULL);
+                    break;
+                }
+                default:
+                    break;
+            }
+
             if (escenario->tablero[fila][columna].entidad) {
 
                 _dibujado_entidad(renderer, imagenes, escenario->tablero[fila][columna].entidad);
@@ -76,6 +92,20 @@ void dibujado_escenario(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textu
 static void _dibujado_jugador_aturdido(SDL_Texture *textura)
 {
     SDL_SetTextureColorMod(textura, 255, 100, 100);
+}
+
+static void _dibujado_jugador_potenciado(SDL_Texture *textura)
+{
+    char r, g, b;
+    unsigned tick = SDL_GetTicks();
+    float tiempo = tick * 0.005f;
+
+    r = (char)(128 + (255 * (sin(tiempo + 1) + 1) / 2));
+    g = (char)(128 + (255 * (sin(tiempo + 2) + 1) / 2));
+    b = (char)(128 + (255 * (sin(tiempo + 4) + 1) / 2));
+
+    SDL_SetTextureColorMod(textura, r, g, b);
+    SDL_SetTextureBlendMode(textura, SDL_BLENDMODE_ADD);
 }
 
 static void _dibujado_fantasma_aturdido(SDL_Texture *textura)
@@ -95,6 +125,13 @@ static void _dibujado_entidad(SDL_Renderer *renderer, SDL_Texture **imagenes, tE
 
             efecto = entidad->tipo == ENTIDAD_JUGADOR ? _dibujado_jugador_aturdido : _dibujado_fantasma_aturdido;
         }
+    } else if (entidad->estado == ENTIDAD_POTENCIADA) {
+
+        if ((SDL_GetTicks() / 128) % 2 == 0) {
+
+            efecto = entidad->tipo == ENTIDAD_JUGADOR ? _dibujado_jugador_potenciado : _dibujado_fantasma_aturdido;
+        }
+
     } else if (entidad->estado == ENTIDAD_SIN_VIDA) {
 
         return;

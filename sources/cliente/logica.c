@@ -7,11 +7,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 static int logica_ubicacion_valida(const tEscenario *escenario, tUbicacion ubic);
 static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *jugador, tEntidad *fantasma);
 static tUbicacion _logica_mover_fantasma_dfs(tEscenario *escenario, tEntidad *jugador, tEntidad *fantasma);
-static int _logica_es_ubicacion_valida(tEscenario *escenario, unsigned columna, unsigned fila);
 static void _logica_colocar_fantasmas(tLogica *logica);
 static void _logica_colocar_jugador(tLogica *logica);
 
@@ -25,29 +25,38 @@ int logica_inicializar(tLogica *logica)
 {
     tConf confArch;
     FILE *archConf;
+    int reescribir = 0;
 
     archConf = fopen("config.txt", "r+");
     if (!archConf) {
-        archConf = fopen("config.txt", "w+");
+        reescribir = 1;
+    } else {
+
+        if (archivo_leer_conf(archConf, &confArch) == ERR_CONF || confArch.columnas < 8 || confArch.filas < 8 || confArch.max_num_fantasmas < 1) {
+
+            reescribir = 1;
+        }
+        fclose(archConf);
+    }
+
+    if (reescribir) {
+        puts("Creando archivo de configuracion por defecto...");
+
+        archConf = fopen("config.txt", "w");
         if (!archConf) {
             return ERR_ARCHIVO;
         }
-    }
 
-    if (archivo_leer_conf(archConf, &confArch) == ERR_CONF || confArch.columnas < 8 || confArch.filas < 8 || confArch.max_num_fantasmas < 1) {
-        puts("Creando archivo de configuracion por defecto...");
-
-        confArch.columnas = 12;
-        confArch.filas = 8;
+        confArch.columnas = 11;
+        confArch.filas = 11;
         confArch.vidas_inicio = 3;
         confArch.max_num_fantasmas = 4;
         confArch.max_num_premios = 2;
         confArch.max_vidas_extra = 1;
 
         archivo_escribir_conf(archConf, &confArch);
+        fclose(archConf);
     }
-
-    fclose(archConf);
 
     logica->config.filas = confArch.filas;
     logica->config.columnas = confArch.columnas;
@@ -179,7 +188,7 @@ void logica_actualizar(tLogica *logica)
     tEntidad *jugador = &logica->jugador;
     tEntidad *fantasma, *fantasmaUlt;
 
-    if (jugador->estado == ENTIDAD_ATURDIDA) {
+    if (jugador->estado == ENTIDAD_ATURDIDA || jugador->estado == ENTIDAD_POTENCIADA) {
         jugador->frame = 0;
         temporizador_actualizar(&jugador->temporEstado);
         if (jugador->estado != ENTIDAD_SIN_VIDA && temporizador_estado(&jugador->temporEstado) == TEMPOR_FINALIZADO) {
@@ -280,6 +289,26 @@ int logica_procesar_movimientos(tLogica *logica)
             entidadEnMov->ubic = ubicNueva;
             entidadEnMov->orientacion = mov.direccion;
 
+            if (entidadEnMov->tipo == ENTIDAD_JUGADOR) {
+
+                switch (logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].extra) {
+                    case EXTRA_PREMIO: {
+                        logica->puntajeTotal++;
+                        logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].extra = EXTRA_NINGUNO;
+                        break;
+                    }
+                    case EXTRA_VIDA: {
+                        logica->ronda.cantVidasActual++;
+                        logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].extra = EXTRA_NINGUNO;
+                        logica->jugador.estado = ENTIDAD_POTENCIADA;
+                        temporizador_iniciar(&logica->jugador.temporEstado);
+                        break;
+                    }
+                    default:
+                        break;
+                }
+            }
+
             if (entidadEnMov->tipo == ENTIDAD_JUGADOR && logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].tile->tileTipo == TILE_TIPO_PUERTA_SALIDA) {
 
                 mov.direccion = 4;
@@ -303,10 +332,11 @@ void logica_mostrar_historial_movs(tLogica *logica)
     unsigned movNro = 1;
     tMovimiento mov;
 
-    if(!cola_vacia(&logica->movsJugador))
-        printf("Tus movimientos realizados:\n");
+    if(!cola_vacia(&logica->movsJugador)){
 
-    // Vacia la cola original mostrando los movimientos
+        printf("Tus movimientos realizados:\n");
+    }
+
     while (cola_vacia(&logica->movsJugador) == TODO_OK) {
 
         cola_desencolar(&logica->movsJugador, &mov, sizeof(tMovimiento));
@@ -332,16 +362,27 @@ void logica_mostrar_historial_movs(tLogica *logica)
 
 int logica_iniciar_juego(tLogica *logica)
 {
-    logica->ronda.cantFantasmas = 1 + (rand() % logica->config.maxFantasmas);
-    escenario_generar(&logica->escenario, rand());
-    _logica_colocar_jugador(logica);
-    _logica_colocar_fantasmas(logica);
+    /// TEST SEMILLA MAESTRA
+    ///logica->semillaMaestra = 1758654106;
+    ///
 
-    logica->estado = LOGICA_JUGANDO;
+    logica->semillaMaestra = time(NULL);
+    printf("La semilla maestra de esta partida es: %ld\n", logica->semillaMaestra);
+
     logica->ronda.numRonda = 1;
     logica->ronda.cantPremios = 0;
     logica->ronda.cantVidasActual = logica->config.vidasInicio;
     logica->puntajeTotal = 0;
+
+    logica->ronda.semillaRonda = logica->semillaMaestra + logica->ronda.numRonda;
+    srand(logica->ronda.semillaRonda);
+
+    logica->ronda.cantFantasmas = 1 + (rand() % logica->config.maxFantasmas);
+    escenario_generar(&logica->escenario);
+    _logica_colocar_jugador(logica);
+    _logica_colocar_fantasmas(logica);
+
+    logica->estado = LOGICA_JUGANDO;
 
     return TODO_OK;
 }
@@ -352,20 +393,24 @@ int logica_nueva_ronda(tLogica *logica)
 
     cola_vaciar(&logica->movimientos);
 
-    logica->ronda.cantFantasmas = 1 + (rand() % logica->config.maxFantasmas);
-    escenario_generar(&logica->escenario, rand());
+    logica->ronda.numRonda++;
+    logica->ronda.semillaRonda = logica->semillaMaestra + logica->ronda.numRonda;
+    srand(logica->ronda.semillaRonda);
+
+    logica->ronda.cantFantasmas = 1 + (rand()  % logica->config.maxFantasmas);
+    escenario_generar(&logica->escenario);
     _logica_colocar_jugador(logica);
     _logica_colocar_fantasmas(logica);
 
-    logica->ronda.numRonda++;
+
     return TODO_OK;
 }
 
 void logica_fin_juego(tLogica *logica)
 {
     puts("FIN DEL JUEGO");
-    printf("Ronda maxima alcanzada: %d"
-           "Puntaje obtenido: %d"
+    printf("Ronda maxima alcanzada: %d "
+           "Puntaje obtenido: %d\n"
            ,logica->ronda.numRonda
            ,logica->puntajeTotal
            );
@@ -440,6 +485,7 @@ static void _logica_colocar_fantasmas(tLogica *logica)
         fantasma->frame = rand() % 4;
         fantasma->ubic.columna = columna;
         fantasma->ubic.fila = fila;
+        fantasma->ubicAnterior = fantasma->ubic;
         fantasma->imagen = IMAGEN_FANTASMA_01 + iFantasma;
         fantasma->tipo = ENTIDAD_FANTASMA_AMARILLO + iFantasma;
         fantasma->estado = ENTIDAD_CON_VIDA;
@@ -451,10 +497,6 @@ static void _logica_colocar_fantasmas(tLogica *logica)
     }
 }
 
-static int _logica_es_ubicacion_valida(tEscenario *escenario, unsigned columna, unsigned fila)
-{
-    return (fila < escenario->cantFilas && columna < escenario->cantColumnas && escenario->tablero[fila][columna].transitable);
-}
 
 static int logica_ubicacion_valida(const tEscenario *escenario, tUbicacion ubic)
 {
@@ -503,7 +545,7 @@ static tUbicacion _logica_mover_fantasma_dfs(tEscenario *escenario, tEntidad *ju
             ubicVecina.columna = ubicProcesada.columna + dirColumna[i];
 
             noVuelveAtras = (ubicVecina.fila != fantasma->ubicAnterior.fila || ubicVecina.columna != fantasma->ubicAnterior.columna);
-            esUbicacionValida = _logica_es_ubicacion_valida(escenario, ubicVecina.columna, ubicVecina.fila);
+            esUbicacionValida = logica_ubicacion_valida(escenario, ubicVecina);
 
             if (esUbicacionValida) {
 
@@ -551,19 +593,12 @@ static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *ju
     tUbicacion primerMovimiento = {-1,-1};
     int dirFila[] = {-1, 0, 1, 0}, dirColumna[] = {0, 1, 0, -1}, jugadorEncontrado = 0, columna, fila;
 
-    tUbicacion **predecesores = (tUbicacion**)matriz_crear((size_t)escenario->cantColumnas, (size_t)escenario->cantFilas, sizeof(tUbicacion));
-    if (!predecesores) {
-
-        puts("ERROR: No se pudo mover al fantasma");
-        return primerMovimiento;
-    }
-
     for (fila = 0; fila < escenario->cantFilas; fila++) {
 
         for (columna = 0; columna < escenario->cantColumnas; columna++) {
 
-            predecesores[fila][columna].fila = -1;
-            predecesores[fila][columna].columna = -1;
+            escenario->tablero[fila][columna].anteriorBFS.fila = -1;
+            escenario->tablero[fila][columna].anteriorBFS.columna = -1;
 
             escenario->tablero[fila][columna].visitada = 0;
         }
@@ -572,8 +607,9 @@ static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *ju
     cola_crear(&cola);
 
     ubicProcesada = fantasma->ubic;
-    predecesores[ubicProcesada.fila][ubicProcesada.columna].columna = -2;
-    predecesores[ubicProcesada.fila][ubicProcesada.columna].fila = -2;
+    escenario->tablero[ubicProcesada.fila][ubicProcesada.columna].anteriorBFS.columna = -2;
+    escenario->tablero[ubicProcesada.fila][ubicProcesada.columna].anteriorBFS.fila = -2;
+    escenario->tablero[ubicProcesada.fila][ubicProcesada.columna].visitada = 1;
 
     cola_encolar(&cola, &ubicProcesada, sizeof(tUbicacion));
 
@@ -590,10 +626,10 @@ static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *ju
             ubicVecina.fila = ubicProcesada.fila + dirFila[i];
             ubicVecina.columna = ubicProcesada.columna + dirColumna[i];
 
-            if(_logica_es_ubicacion_valida(escenario, ubicVecina.columna, ubicVecina.fila) && !escenario->tablero[ubicVecina.fila][ubicVecina.columna].visitada
+            if(logica_ubicacion_valida(escenario, ubicVecina) && !escenario->tablero[ubicVecina.fila][ubicVecina.columna].visitada
                && (escenario->tablero[ubicVecina.fila][ubicVecina.columna].entidad == NULL || escenario->tablero[ubicVecina.fila][ubicVecina.columna].entidad == jugador)){
 
-                predecesores[ubicVecina.fila][ubicVecina.columna] = ubicProcesada;
+                escenario->tablero[ubicVecina.fila][ubicVecina.columna].anteriorBFS = ubicProcesada;
                 escenario->tablero[ubicVecina.fila][ubicVecina.columna].visitada = 1;
                 cola_encolar(&cola, &ubicVecina, sizeof(tUbicacion));
             }
@@ -605,23 +641,21 @@ static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *ju
         char raizEncontrada = 0;
         primerMovimiento = jugador->ubic;
 
-        while (!raizEncontrada && (predecesores[primerMovimiento.fila][primerMovimiento.columna].fila != fantasma->ubic.fila
-               || predecesores[primerMovimiento.fila][primerMovimiento.columna].columna != fantasma->ubic.columna)) {
+        while (!raizEncontrada && (escenario->tablero[primerMovimiento.fila][primerMovimiento.columna].anteriorBFS.fila != fantasma->ubic.fila
+               || escenario->tablero[primerMovimiento.fila][primerMovimiento.columna].anteriorBFS.columna != fantasma->ubic.columna)) {
 
-            if (predecesores[primerMovimiento.fila][primerMovimiento.columna].fila == -2) {
+            if (escenario->tablero[primerMovimiento.fila][primerMovimiento.columna].anteriorBFS.fila == -2) {
 
                 raizEncontrada = 1;
             }
 
             if (!raizEncontrada) {
-                primerMovimiento = predecesores[primerMovimiento.fila][primerMovimiento.columna];
+                primerMovimiento = escenario->tablero[primerMovimiento.fila][primerMovimiento.columna].anteriorBFS;
             }
         }
     }
 
     cola_vaciar(&cola);
-
-    matriz_destruir((void**)predecesores, escenario->cantFilas);
 
     return primerMovimiento;
 }
