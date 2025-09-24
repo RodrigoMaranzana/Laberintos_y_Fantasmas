@@ -1,5 +1,4 @@
 #include "../../include/comun/matriz.h"
-#include "../../include/comun/retorno.h"
 
 #define TODO_OK 0
 #define ERR_SIN_MEM 0

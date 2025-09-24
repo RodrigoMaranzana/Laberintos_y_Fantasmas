@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MIN(a,b)((a) < (b) ? (a) : (b))
-
 void cola_crear(tCola *cola)
 {
     cola->pri = NULL;
@@ -106,5 +104,4 @@ void cola_vaciar(tCola *cola)
         free(nodoElim);
     }
     cola->ult = NULL;
-
 }

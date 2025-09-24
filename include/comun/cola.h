@@ -17,11 +17,10 @@ typedef struct sNodo{
 }tNodo;
 #endif
 
-typedef struct
-{
+typedef struct {
     tNodo *pri;
     tNodo *ult;
-}tCola;
+} tCola;
 
 void cola_crear(tCola *cola);
 int cola_encolar(tCola *cola, const void *dato, unsigned tamDato);

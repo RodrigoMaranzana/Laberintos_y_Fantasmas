@@ -1,6 +1,5 @@
 #include <string.h>
 #include "../../include/comun/pila.h"
-#include "../../include/comun/retorno.h"
 
 #define MIN(a,b)((a) < (b) ? (a) : (b))
 

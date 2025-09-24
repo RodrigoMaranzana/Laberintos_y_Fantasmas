@@ -9,16 +9,16 @@ typedef enum {
 
 typedef struct {
     float duracion;
-    float tiempoAnterior;
+    unsigned tiempoAnterior;
     float transcurrido;
     eTemporEstado estado;
-} tTemporizador;
+} tTempor;
 
-void temporizador_inicializar(tTemporizador *tempor, float duracion);
-void temporizador_actualizar(tTemporizador* tempor);
-eTemporEstado temporizador_estado(const tTemporizador* tempor);
-void temporizador_iniciar(tTemporizador* tempor);
-void temporizador_pausar(tTemporizador* tempor);
-void temporizador_reanudar(tTemporizador* tempor);
+void temporizador_inicializar(tTempor *tempor, float duracion);
+void temporizador_actualizar(tTempor* tempor);
+eTemporEstado temporizador_estado(const tTempor* tempor);
+void temporizador_iniciar(tTempor* tempor);
+void temporizador_pausar(tTempor* tempor);
+void temporizador_reanudar(tTempor* tempor);
 
 #endif // TEMPORIZADOR_H_INCLUDED

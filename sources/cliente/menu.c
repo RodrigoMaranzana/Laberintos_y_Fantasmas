@@ -1,14 +1,13 @@
 #include "../../include/cliente/menu.h"
 #include "../../include/comun/comun.h"
 #include "../../include/cliente/graficos.h"
-#include "../../include/cliente/input.h"
 #include <stdlib.h>
 #include <string.h>
 
 #define PADDING_VERTICAL 8
 #define PADDING_HORIZONTAL 16
 
-tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion, eMenuTipo menuTipo)
+tMenu* menu_crear(SDL_Renderer *renderer, unsigned capOpc, SDL_Point ubicacion, eMenuTipo menuTipo)
 {
     tMenu* menu = (tMenu*) malloc(sizeof(tMenu));
     if (!menu) {
@@ -29,6 +28,7 @@ tMenu* menu_crear(unsigned capOpc, SDL_Point ubicacion, eMenuTipo menuTipo)
     menu->cantOpc = 0;
     menu->ubicacion = ubicacion;
     menu->menuTipo = menuTipo;
+    menu->renderer = renderer;
 
     return menu;
 }
@@ -117,7 +117,7 @@ void menu_siguiente_opcion(tMenu *menu)
         }
         i++;
 
-    } while (pOpciones->estado == OPCION_DESHABILITADA && i < menu->cantOpc);
+    } while ((pOpciones->estado == OPCION_DESHABILITADA || pOpciones->estado == OPCION_OCULTA) && i < menu->cantOpc);
 
     menu->selecOpc = pOpciones->id;
 }
@@ -149,7 +149,7 @@ void menu_anterior_opcion(tMenu *menu)
         }
         i++;
 
-    } while (pOpciones->estado == OPCION_DESHABILITADA && i < menu->cantOpc);
+    } while ((pOpciones->estado == OPCION_DESHABILITADA || pOpciones->estado == OPCION_OCULTA) && i < menu->cantOpc);
 
     menu->selecOpc = pOpciones->id;
 }
@@ -192,7 +192,7 @@ void menu_estado_opcion(tMenu *menu, int id, eOpcionEstado nuevoEstado)
     }
 }
 
-void menu_dibujar(SDL_Renderer *renderer, tMenu* menu)
+void menu_dibujar(tMenu* menu)
 {
     tMenuOpcion *pOpciones, *pOpcionesUlt = (menu->opciones + menu->cantOpc - 1);
     SDL_Rect rectDestino;
@@ -221,7 +221,7 @@ void menu_dibujar(SDL_Renderer *renderer, tMenu* menu)
                 SDL_SetTextureColorMod(pOpciones->textura, 128, 128, 128);
             }
 
-            graficos_dibujar_textura(pOpciones->textura, renderer, NULL, &rectDestino);
+            graficos_dibujar_textura(pOpciones->textura, menu->renderer, NULL, &rectDestino, NULL);
 
             if (menu->menuTipo == MENU_VERTICAL) {
 

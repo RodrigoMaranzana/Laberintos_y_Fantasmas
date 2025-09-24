@@ -1,12 +1,7 @@
 #ifndef LOGICA_H_INCLUDED
 #define LOGICA_H_INCLUDED
-#include <SDL.h>
-#include <SDL_mixer.h>
-#include "../../include/cliente/input.h"
-#include "../../include/cliente/entidad.h"
 #include "../../include/cliente/escenario.h"
 #include "../../include/comun/cola.h"
-
 
 #define FILAS_DEF            17
 #define COLUMNAS_DEF         17
@@ -18,40 +13,72 @@
 typedef enum {
     LOGICA_EN_ESPERA,
     LOGICA_JUGANDO,
+    LOGICA_EN_PAUSA,
+    LOGICA_EN_LOGIN,
     LOGICA_FIN_PARTIDA
 } eLogicaEstado;
 
 typedef struct {
-    unsigned semilla;
-    unsigned numero;
+    int numRonda;
+    int cantPremios;
+    int cantFantasmas;
+    int cantVidasExtra;
+    int cantVidasActual;
+    long semillaRonda;
 } tRonda;
-
-typedef struct {
-    tRonda ronda;
-    unsigned puntaje;
-} tPartida;
 
 typedef struct{
     tUbicacion ubic;
     char direccion;
+    tEntidad* entidad;
 } tMovimiento;
 
 typedef struct {
+    int columnas;
+    int filas;
+    int vidasInicio;
+    int maxVidasExtra;
+    int maxFantasmas;
+    int maxPremios;
+}tConfig;
+
+typedef struct {
+    long semillaMaestra;
+
     tEscenario escenario;
-    tPartida partida;
+    tEntidad jugador;
+    tEntidad *fantasmas;
+
+    int puntajeTotal;
+
+    tConfig config;
+    tRonda ronda;
     eLogicaEstado estado;
-    tEntidad *fantasmaEnMov;
-    tTemporizador fantasmaMovTempor;
-    tCola movimientosJugador; // Cola para historial de movimientos
+
+    tCola movsJugador;
+    tCola movimientos;
 } tLogica;
 
 int logica_inicializar(tLogica *logica);
 void logica_destruir(tLogica *logica);
-void logica_calc_resolucion(unsigned cantFilas, unsigned cantColumnas, unsigned *anchoRes, unsigned *altoRes);
-int logica_actualizar(tLogica *logica);
+void logica_calc_min_res(tLogica *logica, unsigned *anchoRes, unsigned *altoRes);
 void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla);
-int logica_siguiente_nivel(tLogica *logica);
+int logica_procesar_movimientos(tLogica *logica);
+int logica_iniciar_juego(tLogica *logica);
+int logica_nueva_ronda(tLogica *logica);
+void logica_fin_juego(tLogica *logica);
+void logica_mostrar_historial_movs(tLogica *logica);
+void logica_actualizar(tLogica *logica);
 
-void logica_mostrar_historial_movimientos(tLogica *logica);
+
+
+
+
+
+
+
+
+
+
 
 #endif // LOGICA_H_INCLUDED
