@@ -1,7 +1,6 @@
 #ifndef BDATOS_H_INCLUDED
 #define BDATOS_H_INCLUDED
 #include <stdio.h>
-#include "..\..\include\comun\lista.h"
 #include "..\..\include\comun\arbol.h"
 #include "..\..\include\comun\comun.h"
 

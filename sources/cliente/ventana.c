@@ -1,5 +1,4 @@
 #include "../../include/cliente/ventana.h"
-#include "../../include/cliente/texto.h"
 
 #include <math.h>
 #include <string.h>

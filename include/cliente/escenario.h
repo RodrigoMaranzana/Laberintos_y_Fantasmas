@@ -3,7 +3,6 @@
 
 #include <SDL.h>
 #include "../../include/cliente/assets.h"
-#include "../../include/cliente/graficos.h"
 #include "../../include/cliente/temporizador.h"
 #include "../../include/comun/comun.h"
 

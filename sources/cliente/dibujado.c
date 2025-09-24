@@ -1,5 +1,6 @@
 #include "../../include/cliente/dibujado.h"
 #include "../../include/cliente/temporizador.h"
+#include "../../include/cliente/graficos.h"
 
 #include <math.h>
 

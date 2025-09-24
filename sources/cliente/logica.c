@@ -293,7 +293,7 @@ int logica_procesar_movimientos(tLogica *logica)
 
                 switch (logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].extra) {
                     case EXTRA_PREMIO: {
-                        logica->puntajeTotal++;
+                        logica->ronda.cantPremios++;
                         logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].extra = EXTRA_NINGUNO;
                         break;
                     }
