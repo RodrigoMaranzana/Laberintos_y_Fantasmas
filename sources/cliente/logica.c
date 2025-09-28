@@ -382,6 +382,8 @@ int logica_iniciar_juego(tLogica *logica)
     _logica_colocar_jugador(logica);
     _logica_colocar_fantasmas(logica);
 
+    archivo_escribir_escenario(&logica->escenario, logica->ronda.numRonda, logica->ronda.semillaRonda);
+
     logica->estado = LOGICA_JUGANDO;
 
     return TODO_OK;
@@ -402,6 +404,7 @@ int logica_nueva_ronda(tLogica *logica)
     _logica_colocar_jugador(logica);
     _logica_colocar_fantasmas(logica);
 
+    archivo_escribir_escenario(&logica->escenario, logica->ronda.numRonda, logica->ronda.semillaRonda);
 
     return TODO_OK;
 }
