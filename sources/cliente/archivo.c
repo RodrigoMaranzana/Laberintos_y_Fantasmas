@@ -14,7 +14,6 @@
 
 static int _archivo_parsear_linea_conf(char *buffer, tParam *param);
 
-
 int archivo_leer_conf(FILE* arch, tConf *conf)
 {
     int ret;
@@ -85,6 +84,56 @@ int archivo_escribir_conf(FILE* arch, const tConf *conf)
     return ret >= 0 ? TODO_OK : ERR_ARCHIVO;
 }
 
+int archivo_escribir_escenario(tEscenario *escenario, int numRonda, long semillaRonda)
+{
+    int fila, columna, c;
+    char nombreArch[TAM_NOMBRE_ARCH];
+
+    sprintf(nombreArch, "Ronda-%d_%ld.txt", numRonda, semillaRonda);
+    FILE *arch = fopen(nombreArch, "w");
+    if (!arch){
+        return ERR_ARCHIVO;
+    }
+
+    for (fila = 0; fila < escenario->cantFilas; fila++)
+    {
+        for (columna = 0; columna < escenario->cantColumnas; columna++)
+        {
+            if (escenario->tablero[fila][columna].tile->tileTipo == TILE_TIPO_PARED) {
+                c = '#';
+
+            }else if (escenario->tablero[fila][columna].tile->tileTipo == TILE_TIPO_PUERTA_ENTRADA) {
+                c = 'E';
+
+            }else if (escenario->tablero[fila][columna].tile->tileTipo == TILE_TIPO_PUERTA_SALIDA) {
+                c = 'S';
+
+            }else if (escenario->tablero[fila][columna].entidad
+                     && escenario->tablero[fila][columna].entidad->tipo != ENTIDAD_JUGADOR) {
+                c = 'F';
+
+
+            }else if (escenario->tablero[fila][columna].extra) {
+                if (escenario->tablero[fila][columna].extra == EXTRA_VIDA) {
+                    c = 'V';
+                }else{
+                    c = 'P';
+                }
+
+            }else {
+                c = '.';
+            }
+
+            fputc(c,arch);
+        }
+
+         fputc('\n',arch);
+
+    }
+
+    fclose(arch);
+    return TODO_OK;
+}
 
 /*************************
     FUNCIONES ESTATICAS
