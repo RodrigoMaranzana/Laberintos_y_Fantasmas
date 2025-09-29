@@ -1,0 +1,653 @@
+# depslib dependency file v1.0
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\archivo.c
+	"../../include/cliente/archivo.h"
+	"../../include/comun/comun.h"
+	<string.h>
+	<ctype.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\archivo.h
+	<stdio.h>
+	"../../include/cliente/escenario.h"
+
+1759170955 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\escenario.h
+	<SDL.h>
+	"../../include/cliente/assets.h"
+	"../../include/cliente/temporizador.h"
+	"../../include/comun/comun.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl.h
+	"SDL_main.h"
+	"SDL_stdinc.h"
+	"SDL_assert.h"
+	"SDL_atomic.h"
+	"SDL_audio.h"
+	"SDL_clipboard.h"
+	"SDL_cpuinfo.h"
+	"SDL_endian.h"
+	"SDL_error.h"
+	"SDL_events.h"
+	"SDL_filesystem.h"
+	"SDL_gamecontroller.h"
+	"SDL_guid.h"
+	"SDL_haptic.h"
+	"SDL_hidapi.h"
+	"SDL_hints.h"
+	"SDL_joystick.h"
+	"SDL_loadso.h"
+	"SDL_log.h"
+	"SDL_messagebox.h"
+	"SDL_metal.h"
+	"SDL_mutex.h"
+	"SDL_power.h"
+	"SDL_render.h"
+	"SDL_rwops.h"
+	"SDL_sensor.h"
+	"SDL_shape.h"
+	"SDL_system.h"
+	"SDL_thread.h"
+	"SDL_timer.h"
+	"SDL_version.h"
+	"SDL_video.h"
+	"SDL_locale.h"
+	"SDL_misc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_main.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_stdinc.h
+	"SDL_config.h"
+	<sys/types.h>
+	<stdio.h>
+	<stdlib.h>
+	<stddef.h>
+	<stdarg.h>
+	<stdlib.h>
+	<malloc.h>
+	<stddef.h>
+	<stdarg.h>
+	<memory.h>
+	<string.h>
+	<strings.h>
+	<wchar.h>
+	<inttypes.h>
+	<stdint.h>
+	<ctype.h>
+	<math.h>
+	<float.h>
+	<alloca.h>
+	<malloc.h>
+	<malloc.h>
+	<malloc.h>
+	<stdlib.h>
+	<sal.h>
+	"begin_code.h"
+	<stdlib.h>
+	<string.h>
+	<stdio.h>
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config.h
+	"SDL_platform.h"
+	"SDL_config_windows.h"
+	"SDL_config_winrt.h"
+	"SDL_config_wingdk.h"
+	"SDL_config_xbox.h"
+	"SDL_config_macosx.h"
+	"SDL_config_iphoneos.h"
+	"SDL_config_android.h"
+	"SDL_config_os2.h"
+	"SDL_config_emscripten.h"
+	"SDL_config_ngage.h"
+	"SDL_config_minimal.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_platform.h
+	<AvailabilityMacros.h>
+	<TargetConditionals.h>
+	<TargetConditionals.h>
+	<winapifamily.h>
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\begin_code.h
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\close_code.h
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_windows.h
+	"SDL_platform.h"
+	<winsdkver.h>
+	<sdkddkver.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_winrt.h
+	"SDL_platform.h"
+	<sdkddkver.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_wingdk.h
+	"SDL_platform.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_xbox.h
+	"SDL_platform.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_macosx.h
+	"SDL_platform.h"
+	<AvailabilityMacros.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_iphoneos.h
+	"SDL_platform.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_android.h
+	"SDL_platform.h"
+	<stdarg.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_os2.h
+	"SDL_platform.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_emscripten.h
+	"SDL_platform.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_ngage.h
+	"SDL_platform.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_config_minimal.h
+	"SDL_platform.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_assert.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	<signal.h>
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_atomic.h
+	"SDL_stdinc.h"
+	"SDL_platform.h"
+	"begin_code.h"
+	<sys/cpuinline.h>
+	<mbarrier.h>
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_audio.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_endian.h"
+	"SDL_mutex.h"
+	"SDL_thread.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_error.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_endian.h
+	"SDL_stdinc.h"
+	<intrin.h>
+	<endian.h>
+	<sys/byteorder.h>
+	<endian.h>
+	<sys/endian.h>
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_mutex.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_thread.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_atomic.h"
+	"SDL_mutex.h"
+	<process.h>
+	<process.h>
+	<stdlib.h>
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_rwops.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_clipboard.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_cpuinfo.h
+	"SDL_stdinc.h"
+	<intrin.h>
+	<intrin.h>
+	<arm_neon.h>
+	<altivec.h>
+	<arm_neon.h>
+	<armintr.h>
+	<arm_neon.h>
+	<arm64intr.h>
+	<arm64_neon.h>
+	<mm3dnow.h>
+	<lsxintrin.h>
+	<lasxintrin.h>
+	<immintrin.h>
+	<mmintrin.h>
+	<xmmintrin.h>
+	<emmintrin.h>
+	<pmmintrin.h>
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_events.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_keyboard.h"
+	"SDL_mouse.h"
+	"SDL_joystick.h"
+	"SDL_gamecontroller.h"
+	"SDL_quit.h"
+	"SDL_gesture.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_video.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_surface.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_pixels.h
+	"SDL_stdinc.h"
+	"SDL_endian.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_rect.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_pixels.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_surface.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_blendmode.h"
+	"SDL_rwops.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_blendmode.h
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_keyboard.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_keycode.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_keycode.h
+	"SDL_stdinc.h"
+	"SDL_scancode.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_scancode.h
+	"SDL_stdinc.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_mouse.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_joystick.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_guid.h"
+	"SDL_mutex.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_guid.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_gamecontroller.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_rwops.h"
+	"SDL_sensor.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_sensor.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_quit.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_gesture.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"SDL_touch.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_touch.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_filesystem.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_haptic.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"SDL_joystick.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_hidapi.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_hints.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_loadso.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_log.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_messagebox.h
+	"SDL_stdinc.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_metal.h
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_power.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_render.h
+	"SDL_stdinc.h"
+	"SDL_rect.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_shape.h
+	"SDL_stdinc.h"
+	"SDL_pixels.h"
+	"SDL_rect.h"
+	"SDL_surface.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_system.h
+	"SDL_stdinc.h"
+	"SDL_keyboard.h"
+	"SDL_render.h"
+	"SDL_video.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_timer.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_version.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_locale.h
+	"SDL_stdinc.h"
+	"SDL_error.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2-2.32.8\x86_64-w64-mingw32\include\sdl2\sdl_misc.h
+	"SDL_stdinc.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\assets.h
+	<SDL.h>
+	<SDL_image.h>
+	<SDL_mixer.h>
+	<SDL_ttf.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2_image-2.8.8\x86_64-w64-mingw32\include\sdl2\sdl_image.h
+	"SDL.h"
+	"SDL_version.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2_mixer-2.8.1\x86_64-w64-mingw32\include\sdl2\sdl_mixer.h
+	"SDL_stdinc.h"
+	"SDL_rwops.h"
+	"SDL_audio.h"
+	"SDL_endian.h"
+	"SDL_version.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\libraries\sdl2_ttf-2.24.0\x86_64-w64-mingw32\include\sdl2\sdl_ttf.h
+	"SDL.h"
+	"begin_code.h"
+	"close_code.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\temporizador.h
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\comun\comun.h
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\assets.c
+	<stdio.h>
+	"../../include/comun/comun.h"
+	"../../include/cliente/assets.h"
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\cliente.c
+	"../../include/cliente/cliente.h"
+	"../../include/comun/comun.h"
+	<stdio.h>
+	<string.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\cliente.h
+	<winsock2.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\dibujado.c
+	"../../include/cliente/dibujado.h"
+	"../../include/cliente/temporizador.h"
+	"../../include/cliente/graficos.h"
+	<math.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\dibujado.h
+	"../../include/cliente/escenario.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\graficos.h
+	<SDL.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\escenario.c
+	"../../include/cliente/escenario.h"
+	"../../include/comun/matriz.h"
+	"../../include/comun/pila.h"
+	<stdlib.h>
+	<stdio.h>
+	<time.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\comun\matriz.h
+	<stdlib.h>
+	<string.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\comun\pila.h
+	<stdlib.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\graficos.c
+	<stdio.h>
+	"../../include/cliente/graficos.h"
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\juego.c
+	"../../include/cliente/juego.h"
+	"../../include/cliente/assets.h"
+	"../../include/comun/comun.h"
+	"../../include/cliente/dibujado.h"
+	<stdio.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\juego.h
+	<SDL.h>
+	<SDL_mixer.h>
+	"../../include/cliente/logica.h"
+	"../../include/cliente/texto.h"
+	"../../include/cliente/menu.h"
+	"../../include/cliente/cliente.h"
+	"../../include/cliente/widget.h"
+	"../../include/cliente/ventana.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\logica.h
+	"../../include/cliente/escenario.h"
+	"../../include/comun/cola.h"
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\comun\cola.h
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\texto.h
+	<SDL.h>
+	<SDL_ttf.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\menu.h
+	<SDL.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\widget.h
+	<SDL.h>
+	<SDL_ttf.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\cliente\ventana.h
+	<SDL.h>
+
+1759171277 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\logica.c
+	"../../include/cliente/logica.h"
+	"../../include/cliente/archivo.h"
+	"../../include/comun/matriz.h"
+	"../../include/cliente/temporizador.h"
+	"../../include/comun/pila.h"
+	<stdlib.h>
+	<stdio.h>
+	<string.h>
+	<time.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\main_cliente.c
+	<stdio.h>
+	<stdlib.h>
+	"../../include/cliente/juego.h"
+	"../../include/cliente/logica.h"
+	"../../include/cliente/cliente.h"
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\menu.c
+	"../../include/cliente/menu.h"
+	"../../include/comun/comun.h"
+	"../../include/cliente/graficos.h"
+	<stdlib.h>
+	<string.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\temporizador.c
+	"../../include/cliente/temporizador.h"
+	<SDL.h>
+	<stdlib.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\texto.c
+	"../../include/cliente/texto.h"
+	"../../include/comun/comun.h"
+	<stdio.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\ventana.c
+	"../../include/cliente/ventana.h"
+	<math.h>
+	<string.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\cliente\widget.c
+	"../../include/cliente/widget.h"
+	"../../include/cliente/graficos.h"
+	"../../include/cliente/texto.h"
+	<string.h>
+	<stdio.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\comun\arbol.c
+	"..\..\include\comun\arbol.h"
+	<stdlib.h>
+	<string.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\comun\arbol.h
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\comun\cola.c
+	"../../include/comun/cola.h"
+	"../../include/comun/comun.h"
+	<stdlib.h>
+	<string.h>
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\comun\lista.c
+	"../../include/comun/lista.h"
+	<stdlib.h>
+	<string.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\comun\lista.h
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\comun\matriz.c
+	"../../include/comun/matriz.h"
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\comun\pila.c
+	<string.h>
+	"../../include/comun/pila.h"
+
+1759019455 source:c:\users\nico\desktop\laberintos_y_fantasmas-main\sources\comun\vector.c
+	"../../include/comun/vector.h"
+	<string.h>
+	<stdio.h>
+
+1759019455 c:\users\nico\desktop\laberintos_y_fantasmas-main\include\comun\vector.h
+	<stdlib.h>
+
