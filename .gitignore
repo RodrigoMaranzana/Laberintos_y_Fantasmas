@@ -4,4 +4,5 @@ obj/
 # Ignora archivos layout y depend de Code::Blocks
 *.layout
 *.depend
-bin/Debug/Laberintos_y_Fantasmas.exe
+*.txt
+*.exe
