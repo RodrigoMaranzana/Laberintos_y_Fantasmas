@@ -30,7 +30,7 @@ int escenario_crear(tEscenario *escenario, unsigned columnas, unsigned filas)
     return TODO_OK;
 }
 
-eParedLimite escenario_ubic_es_pared_limite(tEscenario *escenario, tUbicacion ubic)
+eParedLimite escenario_ubic_es_pared_limite(const tEscenario *escenario, tUbicacion ubic)
 {
     if (ubic.fila == 0) {
         return PARED_SUPERIOR;
@@ -120,21 +120,13 @@ int escenario_calcular_mascara(tEscenario *escenario, int columna, int fila)
 {
     int mascara = 0;
 
-    if (fila > 0 && escenario->tablero[fila - 1][columna].tile->tileTipo == TILE_TIPO_PARED) {
-        mascara += 1;
-    }
+    if (fila > 0 && escenario->tablero[fila - 1][columna].tile->tileTipo == TILE_TIPO_PARED) mascara += 1;
 
-    if (columna < escenario->cantColumnas - 1 && escenario->tablero[fila][columna + 1].tile->tileTipo == TILE_TIPO_PARED) {
-        mascara += 2;
-    }
+    if (columna < escenario->cantColumnas - 1 && escenario->tablero[fila][columna + 1].tile->tileTipo == TILE_TIPO_PARED) mascara += 2;
 
-    if (fila < escenario->cantFilas - 1 && escenario->tablero[fila + 1][columna].tile->tileTipo == TILE_TIPO_PARED) {
-        mascara += 4;
-    }
+    if (fila < escenario->cantFilas - 1 && escenario->tablero[fila + 1][columna].tile->tileTipo == TILE_TIPO_PARED) mascara += 4;
 
-    if (columna > 0 && escenario->tablero[fila][columna - 1].tile->tileTipo == TILE_TIPO_PARED) {
-        mascara += 8;
-    }
+    if (columna > 0 && escenario->tablero[fila][columna - 1].tile->tileTipo == TILE_TIPO_PARED) mascara += 8;
 
     return mascara;
 }
@@ -222,9 +214,30 @@ static void _escenario_postprocesar(tEscenario *escenario)
         for (columna = 1; columna < escenario->cantColumnas - 1; columna++) {
 
             if (!(rand() % 7)) {
-
                 escenario->tablero[fila][columna].tile = &escenario->tiles[TILE_PISO_0];
                 escenario->tablero[fila][columna].transitable = 1;
+            }
+        }
+    }
+
+    if (escenario->cantFilas % 2 == 0) {
+
+        for (columna = 1; columna < escenario->cantColumnas - 1; columna++) {
+
+            if ((rand() % 6) < 5) {
+                escenario->tablero[escenario->cantFilas - 2][columna].tile = &escenario->tiles[TILE_PISO_0];
+                escenario->tablero[escenario->cantFilas - 2][columna].transitable = 1;
+            }
+        }
+    }
+
+    if (escenario->cantColumnas % 2 == 0) {
+
+        for (fila = 1; fila < escenario->cantFilas - 1; fila++) {
+
+            if ((rand() % 6) < 5) {
+                escenario->tablero[fila][escenario->cantColumnas - 2].tile = &escenario->tiles[TILE_PISO_0];
+                escenario->tablero[fila][escenario->cantColumnas - 2].transitable = 1;
             }
         }
     }
@@ -232,7 +245,7 @@ static void _escenario_postprocesar(tEscenario *escenario)
 
 static void _escenario_colocar_puertas(tEscenario *escenario)
 {
-    tCasilla puerta;
+    tCasilla puerta = {0};
     int pared;
     int paredesPosibles[4] = {PARED_SUPERIOR, PARED_INFERIOR, PARED_IZQUIERDA, PARED_DERECHA};
 
@@ -262,47 +275,6 @@ static void _escenario_colocar_puertas(tEscenario *escenario)
     escenario->ubicPSalida.fila = puerta.fila;
 
     _escenario_despejar_puerta(escenario, escenario->ubicPSalida, pared);
-}
-
-static void _escenario_despejar_puerta(tEscenario *escenario, tUbicacion ubicPuerta, int pared)
-{
-    int fila, columna;
-    tUbicacion ubicInterior = ubicPuerta;
-
-    switch (pared) {
-        case PARED_SUPERIOR:
-            ubicInterior.fila++;
-            break;
-        case PARED_INFERIOR:
-            ubicInterior.fila--;
-            break;
-        case PARED_IZQUIERDA:
-            ubicInterior.columna++;
-            break;
-        case PARED_DERECHA:
-            ubicInterior.columna--;
-            break;
-    }
-
-    for (fila = ubicInterior.fila - 1; fila <= ubicInterior.fila + 1; fila++) {
-
-        for (columna = ubicInterior.columna - 1; columna <= ubicInterior.columna + 1; columna++) {
-
-            _escenario_liberar_casilla(escenario, fila, columna);
-        }
-    }
-}
-
-static void _escenario_liberar_casilla(tEscenario *escenario, int fila, int columna)
-{
-    if (fila <= 0 || fila >= escenario->cantFilas - 1 || columna <= 0 || columna >= escenario->cantColumnas - 1) {
-        return;
-    }
-
-    escenario->tablero[fila][columna].tile = &escenario->tiles[TILE_PISO_0];
-    escenario->tablero[fila][columna].transitable = 1;
-    escenario->tablero[fila][columna].entidad = NULL;
-    escenario->tablero[fila][columna].extra = EXTRA_NINGUNO;
 }
 
 static void _escenario_calcular_puerta(tCasilla *puerta, tTile *tiles, int esEntrada, int pared, int cantFilas, int cantColumnas)
@@ -340,10 +312,51 @@ static void _escenario_calcular_puerta(tCasilla *puerta, tTile *tiles, int esEnt
     puerta->transitable = esEntrada ? 0 : 1;
 }
 
+static void _escenario_despejar_puerta(tEscenario *escenario, tUbicacion ubicPuerta, int pared)
+{
+    int fila, columna;
+    tUbicacion ubicInterior = ubicPuerta;
+
+    switch (pared) {
+        case PARED_SUPERIOR:
+            ++ubicInterior.fila;
+            break;
+        case PARED_INFERIOR:
+            --ubicInterior.fila;
+            break;
+        case PARED_IZQUIERDA:
+            ++ubicInterior.columna;
+            break;
+        case PARED_DERECHA:
+            --ubicInterior.columna;
+            break;
+    }
+
+    for (fila = ubicInterior.fila - 1; fila <= ubicInterior.fila + 1; ++fila) {
+
+        for (columna = ubicInterior.columna - 1; columna <= ubicInterior.columna + 1; ++columna) {
+
+            _escenario_liberar_casilla(escenario, fila, columna);
+        }
+    }
+}
+
+static void _escenario_liberar_casilla(tEscenario *escenario, int fila, int columna)
+{
+    if (fila <= 0 || fila >= escenario->cantFilas - 1 || columna <= 0 || columna >= escenario->cantColumnas - 1) {
+        return;
+    }
+
+    escenario->tablero[fila][columna].tile = &escenario->tiles[TILE_PISO_0];
+    escenario->tablero[fila][columna].transitable = 1;
+    escenario->tablero[fila][columna].entidad = NULL;
+    escenario->tablero[fila][columna].extra = EXTRA_NINGUNO;
+}
+
 static void _escenario_init_tiles(tTile *tiles)
 {
     int i;
-    for (i = TILE_TECHO_0; i <= TILE_TECHO_15; i++) {
+    for (i = TILE_TECHO_0; i <= TILE_TECHO_15; ++i) {
         tiles[i].tileTipo = TILE_TIPO_TECHO;
         tiles[i].tileID = i;
         tiles[i].coords.x = ((i - TILE_TECHO_0) % 4) * PIXELES_TILE;
@@ -352,7 +365,7 @@ static void _escenario_init_tiles(tTile *tiles)
         tiles[i].coords.h = PIXELES_TILE;
     }
 
-    for (i = TILE_PISO_0; i <= TILE_PISO_15; i++) {
+    for (i = TILE_PISO_0; i <= TILE_PISO_15; ++i) {
         tiles[i].tileTipo = TILE_TIPO_PISO;
         tiles[i].tileID = i;
         tiles[i].coords.x =  192 + (((i - TILE_PISO_0) % 4) * PIXELES_TILE);
@@ -361,7 +374,7 @@ static void _escenario_init_tiles(tTile *tiles)
         tiles[i].coords.h = PIXELES_TILE;
     }
 
-    for (i = TILE_PARED_0; i <= TILE_PARED_15; i++) {
+    for (i = TILE_PARED_0; i <= TILE_PARED_15; ++i) {
         tiles[i].tileTipo = TILE_TIPO_PARED;
         tiles[i].tileID = i;
         tiles[i].coords.x = ((i - TILE_PARED_0) % 4) * PIXELES_TILE;
@@ -394,5 +407,4 @@ static void _escenario_init_tiles(tTile *tiles)
     tiles[TILE_PUERTA_SALIDA_1].tileTipo = TILE_TIPO_PUERTA_SALIDA;
     tiles[TILE_PUERTA_SALIDA_1].tileID = TILE_PUERTA_SALIDA_1;
     tiles[TILE_PUERTA_SALIDA_1].coords = (SDL_Rect) {.x = 144, .y = 384, .w = PIXELES_TILE, .h = 2 * PIXELES_TILE};
-
 }

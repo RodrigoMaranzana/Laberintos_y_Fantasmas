@@ -10,6 +10,7 @@ int main(int argc, char* argv[])
 {
     eRetorno ret = TODO_OK;
     tJuego juego;
+    char buffer[TAM_BUFFER];
 
     puts("Laberintos y Fantasmas\n");
 
@@ -25,6 +26,16 @@ int main(int argc, char* argv[])
     }else{
         puts("Conectado al servidor.\n");
     }
+
+    /// TEST
+    printf("Solicitud del cliente: %s\n", "CREAR TABLA jugadores (idJugador ENTERO PK AI, username TEXTO(16), record ENTERO, cantPartidas ENTERO)");
+    cliente_enviar_solicitud(juego.sock, "CREAR TABLA jugadores (idJugador ENTERO PK AI, username TEXTO(16), record ENTERO, cantPartidas ENTERO)", buffer);
+    printf("Respuesta del servidor: %s\n", buffer);
+
+    printf("Solicitud del cliente: %s\n", "ABRIR TABLA jugadores");
+    cliente_enviar_solicitud(juego.sock, "ABRIR TABLA jugadores", buffer);
+    printf("Respuesta del servidor: %s\n", buffer);
+    /// TEST
 
     ret = juego_inicializar(&juego, TITULO_VENTANA);
     if (ret != TODO_OK) {

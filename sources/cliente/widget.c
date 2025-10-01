@@ -16,6 +16,7 @@ typedef enum {
     WIDGET_BOTON_TEXTO,
     WIDGET_CONTADOR,
     WIDGET_GRAFICO_BARRAS,
+    WIDGET_TEXTO,
 }eWidgetTipo;
 
 struct sWidget {
@@ -86,15 +87,16 @@ static void _widget_boton_destruir(tWidget *widget);
 static int _widget_contador_actualizar(tWidget *widget);
 static void _widget_contador_dibujar(tWidget *widget);
 
+static int _widget_texto_actualizar(tWidget *widget);
+static void _widget_texto_dibujar(tWidget *widget);
+
 
 tWidget* widget_crear_campo_texto(SDL_Renderer *renderer, SDL_Point coords, TTF_Font *fuente, SDL_Color cTexto, SDL_Color cFondo, char visible)
 {
     tCampoTexto *campoTexto;
 
     tWidget *widget = _widget_crear_base(renderer, coords, fuente, NULL, cTexto, WIDGET_CAMPO_TEXTO, visible);
-    if (!widget) {
-        return NULL;
-    }
+    if (!widget) return NULL;
 
     widget->actualizar = _widget_campo_texto_actualizar;
     widget->dibujar = _widget_campo_texto_dibujar;
@@ -157,9 +159,33 @@ tWidget* widget_crear_contador(SDL_Renderer *renderer, SDL_Point coords, SDL_Tex
     return widget;
 }
 
+tWidget* widget_crear_texto(SDL_Renderer *renderer, const char *texto, SDL_Point coords, TTF_Font *fuente, SDL_Color cTexto, SDL_Color cFondo, char visible)
+{
+    tTexto *textoW;
+
+    tWidget *widget = _widget_crear_base(renderer, coords, fuente, texto, cTexto, WIDGET_TEXTO, visible);
+    if (!widget) return NULL;
+
+    widget->actualizar = _widget_texto_actualizar;
+    widget->dibujar = _widget_texto_dibujar;
+    widget->destruir = NULL;
+
+    textoW = (tTexto*)widget->datos;
+    *textoW->buffer = '\0';
+    textoW->cFondo = cFondo;
+    textoW->modificado = 0;
+
+    return widget;
+}
+
 void widget_modificar_visibilidad(tWidget *widget, char visible)
 {
     widget->visible = visible;
+}
+
+void widget_alternar_visibilidad(tWidget *widget)
+{
+    widget->visible = !widget->visible;
 }
 
 //void widget_obtener_valor(tWidget *widget, void *valor, unsigned tamValor)
@@ -200,11 +226,22 @@ int widget_modificar_valor(tWidget *widget, void *valor)
             break;
         }
         case WIDGET_CONTADOR: {
-            tContador* contador = (tContador*)widget->datos;
+            tContador *contador = (tContador*)widget->datos;
             int nuevoValor = *(int*)valor;
 
             if (contador->valor != nuevoValor) {
                 contador->valor = nuevoValor;
+                modificado = 1;
+            }
+            break;
+        }
+        case WIDGET_TEXTO: {
+            tTexto *texto = (tTexto*)widget->datos;
+            const char *nuevoTexto = (const char*)valor;
+
+            if (strcmp(texto->buffer, nuevoTexto) != 0) {
+                strncpy(texto->buffer, nuevoTexto, TAM_TEXTO - 1);
+                texto->buffer[TAM_TEXTO - 1] = '\0';
                 modificado = 1;
             }
             break;
@@ -226,13 +263,18 @@ void widget_destruir(tWidget *widget)
         widget->destruir(widget);
     }
 
-    SDL_DestroyTexture(widget->texTexto);
+    if (widget->texTexto) {
+        SDL_DestroyTexture(widget->texTexto);
+    }
+
     free(widget->datos);
     free(widget);
 }
 
 void widget_dibujar(tWidget *widget)
 {
+    if (!widget->visible) return;
+
     widget->dibujar(widget);
 }
 
@@ -262,6 +304,9 @@ static tWidget* _widget_crear_base(SDL_Renderer *renderer, SDL_Point coords, TTF
             break;
         case WIDGET_GRAFICO_BARRAS:
             widget->datos = malloc(sizeof(tGraficoBarras));
+            break;
+        case WIDGET_TEXTO:
+            widget->datos = malloc(sizeof(tTexto));
             break;
         default:
             widget->datos = NULL;
@@ -371,6 +416,60 @@ static void _widget_campo_texto_dibujar(tWidget *widget)
     }
 }
 
+static int _widget_texto_actualizar(tWidget *widget)
+{
+    SDL_Point tamTexto;
+    tTexto *texto = (tTexto*)widget->datos;
+
+    if (widget->texTexto != NULL) {
+
+        SDL_DestroyTexture(widget->texTexto);
+        widget->texTexto = NULL;
+    }
+
+    if (strlen(texto->buffer)) {
+
+        widget->texTexto = texto_crear_textura(widget->renderer, widget->fuente, texto->buffer, widget->cTexto);
+    }
+
+    texto_obtener_tam(widget->fuente, texto->buffer, &tamTexto);
+    widget->rectTexto.w = tamTexto.x;
+    widget->rectTexto.h = tamTexto.y;
+
+    return 0;
+}
+
+static void _widget_texto_dibujar(tWidget *widget)
+{
+    int anchoTexTexto, altoTexTexto;
+    SDL_Rect rectDestinoTexto, rectDestinoFondo;
+    tTexto *texto = (tTexto*)widget->datos;
+
+    if (widget->texTexto) {
+        SDL_QueryTexture(widget->texTexto, NULL, NULL, &anchoTexTexto, &altoTexTexto);
+    } else {
+        anchoTexTexto = 0;
+        altoTexTexto = TTF_FontHeight(widget->fuente);
+    }
+
+    rectDestinoFondo.w = anchoTexTexto + (altoTexTexto * 2);
+    rectDestinoFondo.h = (int)(altoTexTexto * 1.5);
+
+    rectDestinoFondo.x = widget->coords.x - (rectDestinoFondo.w / 2);
+    rectDestinoFondo.y = widget->coords.y - (rectDestinoFondo.h / 2);
+
+    rectDestinoTexto.x = rectDestinoFondo.x + altoTexTexto;
+    rectDestinoTexto.y = rectDestinoFondo.y + (rectDestinoFondo.h - altoTexTexto) / 2;
+    rectDestinoTexto.w = anchoTexTexto;
+    rectDestinoTexto.h = altoTexTexto;
+
+    graficos_dibujar_relleno(widget->renderer, rectDestinoFondo, texto->cFondo);
+
+    if (widget->texTexto) {
+
+        graficos_dibujar_textura(widget->texTexto, widget->renderer, NULL, &rectDestinoTexto, NULL);
+    }
+}
 
 static int _widget_boton_actualizar(tWidget *widget)
 {

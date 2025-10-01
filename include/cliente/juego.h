@@ -31,6 +31,7 @@ typedef enum {
     HUD_WIDGET_VIDAS,
     HUD_WIDGETS_PREMIOS,
     HUD_WIDGETS_RONDA,
+    HUD_WIDGETS_TEXTO,
     HUD_WIDGETS_CANTIDAD
 } eWidgetsHud;
 

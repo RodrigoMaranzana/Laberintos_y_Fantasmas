@@ -36,7 +36,7 @@ int lista_insertar_final(tLista *lista, const void *dato, unsigned tamDato)
     }
 
     nodoNuevo->dato = malloc(tamDato);
-    if(!nodoNuevo) {
+    if(!nodoNuevo->dato) {
 
         free(nodoNuevo);
         return LISTA_SIN_MEM;
@@ -60,7 +60,7 @@ int lista_insertar_comienzo(tLista *lista, const void *dato, unsigned tamDato)
     }
 
     nodoNuevo->dato = malloc(tamDato);
-    if(!nodoNuevo) {
+    if(!nodoNuevo->dato) {
 
         free(nodoNuevo);
         return LISTA_SIN_MEM;

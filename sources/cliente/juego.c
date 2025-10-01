@@ -5,6 +5,17 @@
 
 #include <stdio.h>
 
+#define FUENTE_TAM_MIN 32
+#define FUENTE_INCREMENTO 16
+#define HUD_X 16
+#define HUD_VIDAS_Y 16
+#define HUD_PREMIOS_Y 96
+#define HUD_RONDA_Y 160
+#define VENTANA_MENU_PAUSA_ANCHO 384
+#define VENTANA_MENU_PAUSA_ALTO 512
+#define VENTANA_USERNAME_ANCHO 340
+#define VENTANA_USERNAME_ALTO 128
+
 typedef enum {
     M_PRI_NUEVA_PARTIDA,
     M_PRI_CONTINUAR,
@@ -36,7 +47,11 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
 static void _juego_iniciar_partida(void* datos);
 static void _juego_salir_del_juego(void* datos);
 static void _juego_continuar_partida(void* datos);
-static int _juego_actualizar_hud(tHud *hud, SDL_Renderer *renderer, tLogica *logica);
+static int _juego_actualizar_hud(tHud *hud, tLogica *logica);
+static int _juego_crear_hud(tJuego *juego);
+static int _juego_cargar_assets(tJuego *juego);
+static void _juego_manejar_input(tJuego *juego, SDL_Keycode tecla);
+static void _juego_manejar_eventos(tJuego *juego);
 
 static int _juego_ventana_menu_crear(void *datos);
 static void _juego_ventana_menu_actualizar(SDL_Event *evento, void *datos);
@@ -48,14 +63,11 @@ static void _juego_ventana_usuario_actualizar(SDL_Event *evento, void *datos);
 static void _juego_ventana_usuario_dibujar(void *datos);
 static void _juego_ventana_usuario_destruir(void *datos);
 
-
 int juego_inicializar(tJuego *juego, const char *tituloVentana)
 {
-    int i, rendererW = 0, rendererH = 0, ret = TODO_OK;
-    SDL_Rect dimsVentana;
-    tDatosMenuPausa *datosMenuPausa;
-    tDatosUsuario *datosUsername;
+    int ret = TODO_OK;
 
+    memset(juego, 0, sizeof(tJuego));
     juego->estado = JUEGO_NO_INICIADO;
     printf("Iniciando SDL\n");
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != TODO_OK) {
@@ -74,20 +86,15 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
         return ERR_SDL_INI;
     }
 
-    juego->sonidos = malloc(sizeof(Mix_Chunk*) * SONIDO_CANTIDAD);
-    if (!juego->sonidos) {
-        return ERR_SIN_MEMORIA;
-    }
-
-    juego->imagenes = malloc(sizeof(SDL_Texture*) * IMAGEN_CANTIDAD);
-    if (!juego->imagenes) {
-        return ERR_SIN_MEMORIA;
+    if (IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG) {
+        printf("IMG_Init() ERROR: %s\n", IMG_GetError());
+        ret = ERR_SDL_INI;
     }
 
     logica_inicializar(&juego->logica);
     logica_calc_min_res(&juego->logica, &juego->anchoRes, &juego->altoRes);
-    juego->anchoRes += PADDING_MARGEN;
-    juego->altoRes += PADDING_MARGEN;
+    juego->anchoRes += PADDING_MARGEN * 2;
+    juego->altoRes += PADDING_MARGEN * 2;
 
     if (_juego_crear_ventana(&juego->ventana, &juego->renderer, juego->anchoRes, juego->altoRes, tituloVentana) != TODO_OK) {
         printf("Error: No se pudo crear la ventana.\n");
@@ -96,66 +103,8 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
         return ERR_VENTANA;
     }
 
-    if ((ret = assets_cargar_imagenes(juego->renderer, juego->imagenes)) != TODO_OK) {
-        return ret;
-    }
-
-    if ((ret = assets_cargar_sonidos(juego->sonidos)) != TODO_OK) {
-        return ret;
-    }
-
-    for (i = 0; i < FUENTE_CANTIDAD; i++) {
-
-        if ((ret = assets_cargar_fuente(&juego->fuentes[i], 32 + (16 * i)) != TODO_OK)) {
-            return ret;
-        }
-    }
-
-    juego->hud.widgets[HUD_WIDGET_VIDAS] = widget_crear_contador(juego->renderer, (SDL_Point){16,16}, juego->imagenes[IMAGEN_ICO_VIDAS], juego->fuentes[FUENTE_TAM_48], SDL_COLOR_BLANCO, juego->logica.ronda.cantVidasActual, 1);
-    juego->hud.widgets[HUD_WIDGETS_PREMIOS] = widget_crear_contador(juego->renderer, (SDL_Point){16,96}, juego->imagenes[IMAGEN_ICO_PREMIOS], juego->fuentes[FUENTE_TAM_48], SDL_COLOR_BLANCO, juego->logica.ronda.cantPremios, 1);
-    juego->hud.widgets[HUD_WIDGETS_RONDA] = widget_crear_contador(juego->renderer, (SDL_Point){24,160}, NULL, juego->fuentes[FUENTE_TAM_64], SDL_COLOR_BLANCO, juego->logica.ronda.numRonda, 1);
-
-    SDL_GetRendererOutputSize(juego->renderer, &rendererW, &rendererH);
-    dimsVentana.x = (rendererW - 384) / 2;
-    dimsVentana.y = (rendererH - 512) / 2;
-    dimsVentana.w = 384;
-    dimsVentana.h = 512;
-
-    datosMenuPausa = malloc(sizeof(tDatosMenuPausa));
-    if (!datosMenuPausa) {
-        return ERR_SIN_MEMORIA;
-    }
-
-    datosMenuPausa->fuentes = juego->fuentes;
-    datosMenuPausa->sonidos = juego->sonidos;
-    datosMenuPausa->logica = &juego->logica;
-    datosMenuPausa->estadoJuego = &juego->estado;
-    datosMenuPausa->menu = NULL;
-    datosMenuPausa->renderer = juego->renderer;
-
-    juego->ventanaMenuPausa =  ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_menu_crear, _juego_ventana_menu_actualizar, _juego_ventana_menu_dibujar, _juego_ventana_menu_destruir, datosMenuPausa}, dimsVentana, (SDL_Color){200, 162, 200, 255}, 1);;
-
-    dimsVentana.x = (rendererW - 340) / 2;
-    dimsVentana.y = (rendererH - 128) / 2;
-    dimsVentana.w = 340;
-    dimsVentana.h = 128;
-
-    ventana_abrir(juego->ventanaMenuPausa);
-
-    datosUsername = malloc(sizeof(tDatosUsuario));
-    if (!datosUsername) {
-        return ERR_SIN_MEMORIA;
-    }
-
-    *juego->usuario = '\0';
-    datosUsername->renderer = juego->renderer;
-    datosUsername->fuentes = juego->fuentes;
-    datosUsername->campoTexto = NULL;
-    datosUsername->usuario = juego->usuario;
-    datosUsername->estadoLogica = &juego->logica.estado;
-
-    juego->ventanaUsername =  ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_usuario_crear, _juego_ventana_usuario_actualizar, _juego_ventana_usuario_dibujar, _juego_ventana_usuario_destruir, datosUsername}, dimsVentana, (SDL_Color){162, 200, 200, 255}, 1);
-    ventana_abrir(juego->ventanaUsername);
+    if ((ret = _juego_cargar_assets(juego)) != TODO_OK) return ret;
+    if ((ret = _juego_crear_hud(juego)) != TODO_OK) return ret;
 
     juego->estado = JUEGO_CORRIENDO;
     printf("Juego iniciado con exito.\n");
@@ -166,72 +115,15 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
 int juego_ejecutar(tJuego *juego)
 {
     eRetorno ret = TODO_OK;
-    SDL_Keycode tecla;
-    SDL_Event evento;
 
     while (juego->estado == JUEGO_CORRIENDO) {
 
-        if (SDL_PollEvent(&evento)) {
-
-            if (evento.type == SDL_QUIT) {
-
-                juego->estado = JUEGO_CERRANDO;
-            }
-
-            if (evento.type == SDL_KEYDOWN && TECLA_VALIDA(evento.key.keysym.sym)) {
-
-                tecla = evento.key.keysym.sym;
-
-                switch (juego->logica.estado) {
-
-                    case LOGICA_JUGANDO:
-
-                        if (tecla == SDLK_ESCAPE) {
-
-                            ventana_abrir(juego->ventanaMenuPausa);
-                            juego->logica.estado = LOGICA_EN_PAUSA;
-                            ventana_actualizar(juego->ventanaMenuPausa, &evento);
-                            Mix_PlayChannel(0, * (juego->sonidos + SONIDO_MENU_MOVIMIENTO), 0);
-
-                        } else if(juego->logica.jugador.estado == ENTIDAD_CON_VIDA){
-
-                            logica_procesar_turno(&juego->logica, tecla);
-                            logica_procesar_movimientos(&juego->logica);
-
-                            if (juego->logica.estado == LOGICA_FIN_PARTIDA) {
-
-                                ventana_actualizar(juego->ventanaMenuPausa, &evento);
-                                juego->logica.estado = LOGICA_EN_ESPERA;
-                                logica_mostrar_historial_movs(&juego->logica);
-                            }
-                        }
-                        break;
-
-                    case LOGICA_FIN_PARTIDA:
-                        /* CAIDA */
-                    case LOGICA_EN_ESPERA:
-                        /* CAIDA */
-                    case LOGICA_EN_PAUSA:
-                        ventana_actualizar(juego->ventanaMenuPausa, &evento);
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            if (juego->logica.estado == LOGICA_EN_LOGIN) {
-
-                ventana_actualizar(juego->ventanaUsername, &evento);
-                if (juego->logica.estado == LOGICA_EN_ESPERA) {
-
-                    ventana_cerrar(juego->ventanaUsername);
-                }
-            }
-        }
+        _juego_manejar_eventos(juego);
 
         if (juego->logica.estado == LOGICA_JUGANDO) {
+
             logica_actualizar(&juego->logica);
-            _juego_actualizar_hud(&juego->hud, juego->renderer, &juego->logica);
+            _juego_actualizar_hud(&juego->hud, &juego->logica);
         }
 
         _juego_renderizar(juego->renderer, juego->imagenes, &juego->logica, juego->ventanaMenuPausa, juego->ventanaUsername, &juego->hud);
@@ -250,29 +142,25 @@ void juego_destruir(tJuego *juego)
     assets_destuir_sonidos(juego->sonidos);
 
     for (i = 0; i < FUENTE_CANTIDAD; i++){
-
         assets_destruir_fuente(juego->fuentes[i]);
     }
 
     for (i = 0; i < HUD_WIDGETS_CANTIDAD; i++) {
-
         widget_destruir(juego->hud.widgets[i]);
     }
 
-    if (juego->ventanaMenuPausa) {
+    if (juego->ventanaMenuPausa) ventana_destruir(juego->ventanaMenuPausa);
 
-        ventana_destruir(juego->ventanaMenuPausa);
-    }
-
-    if (juego->ventanaUsername) {
-
-        ventana_destruir(juego->ventanaUsername);
-    }
+    if (juego->ventanaUsername) ventana_destruir(juego->ventanaUsername);
 
     logica_destruir(&juego->logica);
 
-    SDL_DestroyRenderer(juego->renderer);
-    SDL_DestroyWindow(juego->ventana);
+    if (juego->renderer) {
+        SDL_DestroyRenderer(juego->renderer);
+    }
+    if (juego->ventana) {
+        SDL_DestroyWindow(juego->ventana);
+    }
 
     IMG_Quit();
     TTF_Quit();
@@ -287,11 +175,88 @@ void juego_destruir(tJuego *juego)
     FUNCIONES ESTATICAS
 *************************/
 
-static int _juego_actualizar_hud(tHud *hud, SDL_Renderer *renderer, tLogica *logica)
+static void _juego_manejar_eventos(tJuego *juego)
+{
+    SDL_Event evento;
+    SDL_Keycode tecla;
+
+    while (SDL_PollEvent(&evento)) {
+
+        if (evento.type == SDL_QUIT) {
+
+            juego->estado = JUEGO_CERRANDO;
+            return;
+        }
+        switch (juego->logica.estado) {
+            case LOGICA_EN_LOGIN:
+                ventana_actualizar(juego->ventanaUsername, &evento);
+                if (juego->logica.estado == LOGICA_EN_ESPERA) {
+
+                    ventana_cerrar(juego->ventanaUsername);
+                }
+                break;
+
+            case LOGICA_JUGANDO:
+                if (evento.type == SDL_KEYDOWN && TECLA_VALIDA(evento.key.keysym.sym)) {
+
+                    tecla = evento.key.keysym.sym;
+                    _juego_manejar_input(juego, tecla);
+                }
+                break;
+
+            case LOGICA_FIN_PARTIDA:
+                /* CAIDA */
+            case LOGICA_EN_ESPERA:
+                /* CAIDA */
+            case LOGICA_EN_PAUSA:
+                ventana_actualizar(juego->ventanaMenuPausa, &evento);
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+static void _juego_manejar_input(tJuego *juego, SDL_Keycode tecla)
+{
+    if (tecla == SDLK_ESCAPE) {
+
+        ventana_abrir(juego->ventanaMenuPausa);
+        juego->logica.estado = LOGICA_EN_PAUSA;
+        Mix_PlayChannel(-1, juego->sonidos[SONIDO_MENU_MOVIMIENTO], 0);
+        return;
+    }
+
+    if (logica_procesar_turno(&juego->logica, tecla)) {
+
+        logica_procesar_movimientos(&juego->logica);
+    }
+
+    if (juego->logica.estado == LOGICA_FIN_PARTIDA) {
+
+        juego->logica.estado = LOGICA_EN_ESPERA;
+        logica_mostrar_historial_movs(&juego->logica.movimientos);
+    }
+
+}
+
+static int _juego_actualizar_hud(tHud *hud, tLogica *logica)
 {
     widget_modificar_valor(hud->widgets[HUD_WIDGET_VIDAS], &logica->ronda.cantVidasActual);
     widget_modificar_valor(hud->widgets[HUD_WIDGETS_PREMIOS], &logica->ronda.cantPremios);
     widget_modificar_valor(hud->widgets[HUD_WIDGETS_RONDA], &logica->ronda.numRonda);
+
+    if (logica->mostrarSigRonda) {
+
+        widget_modificar_visibilidad(hud->widgets[HUD_WIDGETS_TEXTO], 1);
+        logica->mostrarSigRonda = 0;
+    }
+
+    temporizador_actualizar(&logica->temporCambioRonda);
+    if (temporizador_estado(&logica->temporCambioRonda) == TEMPOR_FINALIZADO) {
+
+        widget_modificar_visibilidad(hud->widgets[HUD_WIDGETS_TEXTO], 0);
+    }
 
     return TODO_OK;
 }
@@ -324,7 +289,22 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
 
 static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana)
 {
-    *ventana = SDL_CreateWindow(tituloVentana, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, anchoRes, altoRes, SDL_WINDOW_SHOWN);
+    float maxAltoVentana, factorEscala;
+
+    SDL_DisplayMode display;
+    if (SDL_GetDesktopDisplayMode(0, &display) != 0) {
+        SDL_Quit();
+        return ERR_VENTANA;
+    }
+
+    maxAltoVentana = display.h * 0.90f;
+    factorEscala = 1.0f;
+    if (altoRes > maxAltoVentana) {
+
+        factorEscala = maxAltoVentana / altoRes;
+    }
+
+    *ventana = SDL_CreateWindow(tituloVentana, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, anchoRes * factorEscala, altoRes * factorEscala, SDL_WINDOW_SHOWN);
     if (!*ventana) {
         printf("Error: %s\n", SDL_GetError());
         return ERR_VENTANA;
@@ -336,6 +316,8 @@ static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, u
         printf("Error: %s\n", SDL_GetError());
         return ERR_RENDERER;
     }
+
+    SDL_SetRenderDrawBlendMode(*renderer, SDL_BLENDMODE_BLEND);
 
     SDL_RenderSetLogicalSize(*renderer, anchoRes, altoRes);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
@@ -368,35 +350,70 @@ static void _juego_continuar_partida(void *datos)
 static int _juego_ventana_menu_crear(void *datos)
 {
     tDatosMenuPausa *datosMenuPausa = (tDatosMenuPausa*)(datos);
-    SDL_Texture *texturaAux;
+    SDL_Texture *texturaAux = NULL;
 
     datosMenuPausa->menu = menu_crear(datosMenuPausa->renderer, 2, (SDL_Point) {32, 32}, MENU_VERTICAL);
     if (!datosMenuPausa->menu) {
         return -1;
     }
 
+    // NUEVA PARTIDA
     texturaAux = texto_crear_textura(datosMenuPausa->renderer, datosMenuPausa->fuentes[FUENTE_TAM_64], "NUEVA PARTIDA", SDL_COLOR_BLANCO);
+    if (!texturaAux) {
+        menu_destruir(datosMenuPausa->menu);
+        return -1;
+    }
     if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_NUEVA_PARTIDA, texturaAux, 64, (tMenuAccion){_juego_iniciar_partida, datosMenuPausa->logica}, OPCION_HABILITADA) != TODO_OK) {
+        SDL_DestroyTexture(texturaAux);
+        menu_destruir(datosMenuPausa->menu);
         return -1;
     }
 
+    // CONTINUAR
     texturaAux = texto_crear_textura(datosMenuPausa->renderer, datosMenuPausa->fuentes[FUENTE_TAM_64], "CONTINUAR", SDL_COLOR_BLANCO);
+    if (!texturaAux) {
+        menu_destruir(datosMenuPausa->menu);
+        return -1;
+    }
     if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_CONTINUAR, texturaAux, 64, (tMenuAccion){_juego_continuar_partida, datosMenuPausa->logica}, OPCION_OCULTA) != TODO_OK) {
+        SDL_DestroyTexture(texturaAux);
+        menu_destruir(datosMenuPausa->menu);
         return -1;
     }
 
+    // LOGIN USUARIO
     texturaAux = texto_crear_textura(datosMenuPausa->renderer, datosMenuPausa->fuentes[FUENTE_TAM_64], "LOGIN USUARIO", SDL_COLOR_BLANCO);
+    if (!texturaAux) {
+        menu_destruir(datosMenuPausa->menu);
+        return -1;
+    }
     if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_CAMBIAR_USUARIO, texturaAux, 64, (tMenuAccion){NULL, datosMenuPausa->logica}, OPCION_HABILITADA) != TODO_OK) {
+        SDL_DestroyTexture(texturaAux);
+        menu_destruir(datosMenuPausa->menu);
         return -1;
     }
 
+    // ESTADISTICAS
     texturaAux = texto_crear_textura(datosMenuPausa->renderer, datosMenuPausa->fuentes[FUENTE_TAM_64], "ESTADISTICAS", SDL_COLOR_BLANCO);
+    if (!texturaAux) {
+        menu_destruir(datosMenuPausa->menu);
+        return -1;
+    }
     if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_ESTADISTICAS, texturaAux, 64, (tMenuAccion){NULL, NULL}, OPCION_DESHABILITADA) != TODO_OK) {
+        SDL_DestroyTexture(texturaAux);
+        menu_destruir(datosMenuPausa->menu);
         return -1;
     }
 
+    // SALIR
     texturaAux = texto_crear_textura(datosMenuPausa->renderer, datosMenuPausa->fuentes[FUENTE_TAM_64], "SALIR", SDL_COLOR_BLANCO);
+    if (!texturaAux) {
+        menu_destruir(datosMenuPausa->menu);
+        return -1;
+    }
     if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_SALIR, texturaAux, 64, (tMenuAccion){_juego_salir_del_juego, datosMenuPausa->estadoJuego}, OPCION_HABILITADA) != TODO_OK) {
+        SDL_DestroyTexture(texturaAux);
+        menu_destruir(datosMenuPausa->menu);
         return -1;
     }
 
@@ -446,11 +463,97 @@ static void _juego_ventana_menu_actualizar(SDL_Event *evento, void *datos)
 
         accionProcesada = menu_confirmar_opcion(datosMenuPausa->menu);
         Mix_PlayChannel(0, * (datosMenuPausa->sonidos + SONIDO_MENU_CONFIRMAR), 0);
-    } if (accionProcesada.funcion) {
 
-        accionProcesada.funcion(accionProcesada.datos);
+        if (accionProcesada.funcion) {
+
+            accionProcesada.funcion(accionProcesada.datos);
+        }
     }
 }
+
+static int _juego_cargar_assets(tJuego *juego)
+{
+    int i, ret = TODO_OK;
+
+    juego->sonidos = malloc(sizeof(Mix_Chunk*) * SONIDO_CANTIDAD);
+    if (!juego->sonidos) return ERR_SIN_MEMORIA;
+
+    juego->imagenes = malloc(sizeof(SDL_Texture*) * IMAGEN_CANTIDAD);
+    if (!juego->imagenes) {
+        free(juego->sonidos);
+        return ERR_SIN_MEMORIA;
+    }
+
+    if ((ret = assets_cargar_imagenes(juego->renderer, juego->imagenes)) != TODO_OK) return ret;
+
+    if ((ret = assets_cargar_sonidos(juego->sonidos)) != TODO_OK) return ret;
+
+    for (i = 0; i < FUENTE_CANTIDAD; i++) {
+
+        if ((ret = assets_cargar_fuente(&juego->fuentes[i], FUENTE_TAM_MIN + (FUENTE_INCREMENTO * i))) != TODO_OK) {
+            return ret;
+        }
+    }
+
+    return TODO_OK;
+}
+
+static int _juego_crear_hud(tJuego *juego)
+{
+    SDL_Rect dimsVentana;
+    int rendererW = 0, rendererH = 0;
+    tDatosMenuPausa *datosMenuPausa;
+    tDatosUsuario *datosUsername;
+
+    SDL_GetRendererOutputSize(juego->renderer, &rendererW, &rendererH);
+
+    // Widgets HUD
+    juego->hud.widgets[HUD_WIDGET_VIDAS] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_VIDAS_Y}, juego->imagenes[IMAGEN_ICO_VIDAS], juego->fuentes[FUENTE_TAM_48], SDL_COLOR_BLANCO, 0, 1);
+    if (!juego->hud.widgets[HUD_WIDGET_VIDAS]) return ERR_SIN_MEMORIA;
+    juego->hud.widgets[HUD_WIDGETS_PREMIOS] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_PREMIOS_Y}, juego->imagenes[IMAGEN_ICO_PREMIOS], juego->fuentes[FUENTE_TAM_48], SDL_COLOR_BLANCO, 0, 1);
+    if (!juego->hud.widgets[HUD_WIDGETS_PREMIOS]) return ERR_SIN_MEMORIA;
+    juego->hud.widgets[HUD_WIDGETS_RONDA] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_RONDA_Y}, NULL, juego->fuentes[FUENTE_TAM_64], SDL_COLOR_BLANCO, 0, 1);
+    if (!juego->hud.widgets[HUD_WIDGETS_RONDA]) return ERR_SIN_MEMORIA;
+    juego->hud.widgets[HUD_WIDGETS_TEXTO] = widget_crear_texto(juego->renderer, "SIGUIENTE RONDA!", (SDL_Point){rendererW / 2, 24}, juego->fuentes[FUENTE_TAM_32], SDL_COLOR_BLANCO, (SDL_Color){0,0,0,0}, 0);
+    if (!juego->hud.widgets[HUD_WIDGETS_TEXTO]) return ERR_SIN_MEMORIA;
+
+    // Ventana Pausa
+    dimsVentana.w = VENTANA_MENU_PAUSA_ANCHO;
+    dimsVentana.h = VENTANA_MENU_PAUSA_ALTO;
+    dimsVentana.x = (rendererW - dimsVentana.w) / 2;
+    dimsVentana.y = (rendererH - dimsVentana.h) / 2;
+
+    datosMenuPausa = malloc(sizeof(tDatosMenuPausa));
+    if (!datosMenuPausa) return ERR_SIN_MEMORIA;
+    datosMenuPausa->fuentes = juego->fuentes;
+    datosMenuPausa->sonidos = juego->sonidos;
+    datosMenuPausa->logica = &juego->logica;
+    datosMenuPausa->estadoJuego = &juego->estado;
+    datosMenuPausa->menu = NULL;
+    datosMenuPausa->renderer = juego->renderer;
+    juego->ventanaMenuPausa = ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_menu_crear, _juego_ventana_menu_actualizar, _juego_ventana_menu_dibujar, _juego_ventana_menu_destruir, datosMenuPausa}, dimsVentana, (SDL_Color){200, 162, 200, 255}, 1);
+    ventana_abrir(juego->ventanaMenuPausa);
+
+    // Ventana Username
+    dimsVentana.w = VENTANA_USERNAME_ANCHO;
+    dimsVentana.h = VENTANA_USERNAME_ALTO;
+    dimsVentana.x = (rendererW - dimsVentana.w) / 2;
+    dimsVentana.y = (rendererH - dimsVentana.h) / 2;
+
+    datosUsername = malloc(sizeof(tDatosUsuario));
+    if (!datosUsername) return ERR_SIN_MEMORIA;
+    *juego->usuario = '\0';
+    datosUsername->renderer = juego->renderer;
+    datosUsername->fuentes = juego->fuentes;
+    datosUsername->campoTexto = NULL;
+    datosUsername->usuario = juego->usuario;
+    datosUsername->estadoLogica = &juego->logica.estado;
+    juego->ventanaUsername = ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_usuario_crear, _juego_ventana_usuario_actualizar, _juego_ventana_usuario_dibujar, _juego_ventana_usuario_destruir, datosUsername}, dimsVentana, (SDL_Color){162, 200, 200, 255}, 1);
+    ventana_abrir(juego->ventanaUsername);
+
+    return TODO_OK;
+}
+
 
 static void _juego_ventana_menu_dibujar(void *datos)
 {

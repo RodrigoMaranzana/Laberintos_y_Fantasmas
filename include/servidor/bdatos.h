@@ -10,10 +10,13 @@
 #define TAM_INT_TEXTO 12
 #define TAM_SIMBOLO 12
 #define TAM_IDENTIFICADOR 16
+#define TAM_NOMBRE_ARCH TAM_IDENTIFICADOR + 4
 #define MAX_CAMPOS_POR_TABLA 8
 #define MAX_PK_POR_TABLA 2
+#define TAM_MAX_TIPO_CHAR 64
 
 typedef enum {
+    ERROR_TODO_OK,
     ERROR_SINTAXIS,
     ERROR_COMANDO,
     ERROR_DEMASIADOS_CAMPOS,
@@ -28,7 +31,12 @@ typedef enum {
     ERROR_CAMPO_INVALIDO,
     ERROR_SIN_MEMO,
     ERROR_LECTURA,
-    ERROR_ARCH
+    ERROR_ARCH,
+    ERROR_PARAMETRO,
+    ERROR_TAM_TEXTO,
+    ERROR_CAMPO_ES_AI,
+    ERROR_AI_DEBE_SER_PK,
+    ERROR_AI_DEBE_SER_ENTERO,
 } eError;
 
 typedef enum {
@@ -41,8 +49,8 @@ typedef enum {
     // Palabras clave
     TABLA,
     EN,
+    DESDE,
     DONDE,
-    TODO,
     // Operadores
     IGUAL,
     MAYOR,
@@ -50,10 +58,10 @@ typedef enum {
     DISTINTO,
     // Tipos
     ENTERO,
-    FLOTANTE,
     TEXTO,
     // Restricciones
     PK,
+    AI,
 
     SIMBOLOS_CANT,
     DESCONOCIDO,
@@ -61,10 +69,14 @@ typedef enum {
 
 typedef enum {
     TIPO_ENTERO,
-    TIPO_FLOTANTE,
     TIPO_TEXTO,
     TIPO_INVALIDO
 } eTipoDato;
+
+typedef struct {
+    char clave[TAM_MAX_TIPO_CHAR];
+    long offset;
+}tIndice;
 
 typedef struct {
     char *cursor;
@@ -74,16 +86,19 @@ typedef struct {
 typedef struct {
     char nombre[TAM_IDENTIFICADOR];
     eTipoDato tipo;
+    unsigned offsetCampo;
     unsigned tam;
-    char esPk;
+    char esPK;
+    char esAI;
 }tCampo;
 
 typedef struct {
     char nombreTabla[TAM_IDENTIFICADOR];
     unsigned cantCampos;
-    unsigned cantPK;
     unsigned tamRegistro;
+    unsigned tamRegIdx;
     int cantRegistros;
+    unsigned proximoAI;
     tCampo campos[MAX_CAMPOS_POR_TABLA];
 }tEncabezado;
 

@@ -20,5 +20,6 @@ eTemporEstado temporizador_estado(const tTempor* tempor);
 void temporizador_iniciar(tTempor* tempor);
 void temporizador_pausar(tTempor* tempor);
 void temporizador_reanudar(tTempor* tempor);
+float temporizador_tiempo_restante(tTempor* temporizador);
 
 #endif // TEMPORIZADOR_H_INCLUDED

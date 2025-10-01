@@ -6,6 +6,8 @@ void temporizador_inicializar(tTempor *tempor, float duracion)
 {
     tempor->duracion = duracion;
     tempor->estado = TEMPOR_INACTIVO;
+    tempor->transcurrido = 0.0f;
+    tempor->tiempoAnterior = 0;
 }
 
 void temporizador_actualizar(tTempor* tempor)
@@ -59,4 +61,9 @@ void temporizador_reanudar(tTempor* temporizador)
         temporizador->tiempoAnterior = SDL_GetTicks();
         temporizador->estado = TEMPOR_ACTIVO;
     }
+}
+
+float temporizador_tiempo_restante(tTempor* temporizador)
+{
+    return  temporizador->duracion - temporizador->transcurrido;
 }

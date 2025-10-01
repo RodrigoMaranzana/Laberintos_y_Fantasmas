@@ -4,146 +4,278 @@
 #include "../../include/servidor/bdatos.h"
 #include "../../include/comun/comun.h"
 #include "../../include/comun/arbol.h"
+#include "../../include/comun/lista.h"
+
+typedef int (*tParsear)(tSecuencia *secuencia, void *salida, unsigned tamSalida);
+
+static int _bdatos_dummy();
+
 
 static int _bdatos_ejecutar_comando(tBDatos *bDatos, eSimbolo comando);
 static int _bdatos_insertar(tBDatos *bDatos);
 static int _bdatos_crear(tBDatos *bDatos);
+static int _bdatos_seleccionar(tBDatos *bDatos);
 
-static int _bdatos_dummy();
-static void _bdatos_crear_secuencia(tSecuencia *secuencia, const char *buffer);
-static eSimbolo _bdatos_comparar_simbolo(const char* simbolo);
-static eSimbolo _bdatos_parsear_simbolo(tSecuencia *secuencia);
-static int _bdatos_parsear_identificador(tSecuencia *secuencia, char *identificador, unsigned tamIden);
-static int _bdatos_parsear_caracter(tSecuencia *secuencia, char caracter);
+
 static eTipoDato _bdatos_convertir_simbolo_a_tipo(eSimbolo simbolo);
 static int _bdatos_tabla_existe(const char *idenTabla);
-static int _bdatos_escribir_encabezado(FILE *arch, const char *nombreTabla, int cantCampos, tCampo *campos, int cantPK);
-static int _bdatos_parsear_campos(tSecuencia *secuencia, tCampo *campos, int maxCampos);
-static int _bdatos_parsear_tipo_campo(tSecuencia *secuencia, tCampo *campo);
-static int _bdatos_crear_archivo_tabla(tBDatos *bDatos, const char *idenTabla, tCampo *campos, int cantCampos, int cantPK);
-static int _bdatos_parsear_campos_y_valores(tSecuencia *secuencia, const tEncabezado *encabezado, tDatoParseado *datosParseados, int *cantParseados);
 static int _bdatos_buscar_campo(const tCampo *campos, int cantCampos, tCampo *campoEncontrado, const char *nombreCampoLeido);
+
+
+static int _bdatos_escribir_encabezado(FILE *arch, const char *nombreTabla, int cantCampos, tCampo *campos, int esAI);
+static int _bdatos_crear_archivo_tabla(tBDatos *bDatos, const char *idenTabla, tCampo *campos, int cantCampos);
+
+
+/// IDX
+static int _bdatos_guardar_idx(tBDatos *bDatos, const char* nombreIdx);
+static int _bdatos_cargar_idx(tBDatos *bDatos, const char* nombreIdx);
+static int _bdatos_cmp_indice(const void *a, const void *b);
+
+
+/// PARSEO Y SECUENCIADOR
+static int _bdatos_parsear(tSecuencia *secuencia, tParsear parsear, void *salida, unsigned tamSalida);
+static int _bdatos_parsear_identificador(tSecuencia *secuencia, void *salida, unsigned tamSalida);
+static int _bdatos_parsear_simbolo(tSecuencia *secuencia, void *salida, unsigned tamSalida);
+static int _bdatos_parsear_caracter(tSecuencia *secuencia, void *salida, unsigned tamSalida);
+static int _bdatos_parsear_numeros(tSecuencia *secuencia, void *salida, unsigned tamSalida);
+static int _bdatos_parsear_texto(tSecuencia *secuencia, void *salida, unsigned tamSalida);
+
+
+static void _bdatos_crear_secuencia(tSecuencia *secuencia, const char *buffer);
+static eSimbolo _bdatos_comparar_simbolo(const char* simbolo);
+
+static int _bdatos_leer_campos(tSecuencia *secuencia, tCampo *campos, int maxCampos);
+static int _bdatos_leer_campo_tipo(tSecuencia *secuencia, tCampo *campo);
+static int _bdatos_leer_campos_y_valores(tSecuencia *secuencia, const tEncabezado *encabezado, tDatoParseado *datosParseados, int *cantParseados);
+
+
 
 int bdatos_iniciar(tBDatos *bDatos)
 {
     memset(bDatos, 0, sizeof(tBDatos));
-    arbol_crear(&bDatos->arbol);
 
-    return TODO_OK;
+    return ERROR_TODO_OK;
 }
 
 int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud)
 {
-    int retorno = TODO_OK;
+    int ret = ERROR_TODO_OK;
     eSimbolo simbolo;
+
     _bdatos_crear_secuencia(&bDatos->secuencia, solicitud);
 
-    simbolo = _bdatos_parsear_simbolo(&bDatos->secuencia);
-    if (!(simbolo >= CREAR && simbolo <= SELECCIONAR)) {
+    if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &simbolo, sizeof(eSimbolo)) != ERROR_TODO_OK)) {
+        return ret;
+    }
 
+    if (!(simbolo >= CREAR && simbolo <= SELECCIONAR)) {
         return ERROR_COMANDO;
     }
 
-    retorno = _bdatos_ejecutar_comando(bDatos, simbolo);
+    ret = _bdatos_ejecutar_comando(bDatos, simbolo);
 
-    return retorno;
+    return ret;
 }
 
-
-static int _bdatos_parsear_identificador(tSecuencia *secuencia, char *identificador, unsigned tamIden)
+static int _bdatos_parsear(tSecuencia *secuencia, tParsear parsear, void *salida, unsigned tamSalida)
 {
-    char *pIdentificador = identificador;
+    int ret;
 
-    while(*secuencia->cursor && !ES_LETRA(*secuencia->cursor)) {
-
+    while (*secuencia->cursor && *secuencia->cursor == ' ') {
         secuencia->cursor++;
     }
 
-    if (!*secuencia->cursor) {
+    if (!*secuencia->cursor || secuencia->finSec) return ERROR_SINTAXIS;
 
-        *pIdentificador = '\0';
+    if ((ret = parsear(secuencia, salida, tamSalida)) != ERROR_TODO_OK) return ret;
+
+    return ERROR_TODO_OK;
+}
+
+
+static int _bdatos_parsear_identificador(tSecuencia *secuencia, void *salida, unsigned tamSalida)
+{
+
+    char *identificador = (char*)salida;
+    char *cursor = identificador;
+
+    if (!ES_LETRA(*secuencia->cursor)) return ERROR_SINTAXIS;
+
+    while (*secuencia->cursor && ES_LETRA(*secuencia->cursor) && (cursor - identificador) < (tamSalida - 1)) {
+        *cursor++ = *secuencia->cursor++;
+    }
+
+    *cursor = '\0';
+
+    return ERROR_TODO_OK;
+}
+
+static int _bdatos_parsear_simbolo(tSecuencia *secuencia, void *salida, unsigned tamSalida)
+{
+    eSimbolo *simbolo = (eSimbolo*)salida;
+    char simboloBuffer[TAM_SIMBOLO] = {0};
+    char *cursor = simboloBuffer;
+
+    if (tamSalida != sizeof(eSimbolo)) return ERROR_PARAMETRO;
+
+    while (*secuencia->cursor && ES_LETRA(*secuencia->cursor) && (cursor - simboloBuffer) < (TAM_SIMBOLO - 1)) {
+        *cursor++ = *secuencia->cursor++;
+    }
+
+    *cursor = '\0';
+
+    *simbolo = _bdatos_comparar_simbolo(simboloBuffer);
+    if (*simbolo == DESCONOCIDO) {
         return ERROR_SINTAXIS;
     }
 
-    while (*secuencia->cursor && ES_LETRA(*secuencia->cursor) && (pIdentificador - identificador) < (tamIden - 1)) {
-
-        *pIdentificador++ = *secuencia->cursor++;
-    }
-
-    *pIdentificador = '\0';
-
-    return TODO_OK;
+    return ERROR_TODO_OK;
 }
 
-
-
-static eSimbolo _bdatos_parsear_simbolo(tSecuencia *secuencia)
+static int _bdatos_parsear_caracter(tSecuencia *secuencia, void *salida, unsigned tamSalida)
 {
-    char comando[TAM_SIMBOLO] = {0}, *pComando = comando;
+    char *caracter = (char*)salida;
 
-    while(*secuencia->cursor && !ES_LETRA(*secuencia->cursor)) {
+    if (tamSalida != sizeof(char)) return ERROR_PARAMETRO;
 
-        secuencia->cursor++;
-    }
-
-    while (*secuencia->cursor && ES_LETRA(*secuencia->cursor)) {
-
-        *pComando++ = *secuencia->cursor++;
-    }
-
-    *pComando = '\0';
-
-    return _bdatos_comparar_simbolo(comando);
-}
-
-
-static int _bdatos_parsear_caracter(tSecuencia *secuencia, char caracter)
-{
-    while(*secuencia->cursor && *secuencia->cursor == ' ') {
-
-        secuencia->cursor++;
-    }
-
-    if (*secuencia->cursor != caracter) {
-
+    if (*secuencia->cursor) {
+        *caracter = *secuencia->cursor;
+    } else {
         return ERROR_SINTAXIS;
     }
 
     secuencia->cursor++;
-
-    return TODO_OK;
+    return ERROR_TODO_OK;
 }
 
-
-static int _bdatos_parsear_numeros(tSecuencia *secuencia, int *numero)
+static int _bdatos_parsear_numeros(tSecuencia *secuencia, void *salida, unsigned tamSalida)
 {
-    char buffer[TAM_INT_TEXTO], *pBuffer = buffer;
+    int *numero = (int*)salida;
+    char numBuffer[TAM_INT_TEXTO] = {0};
+    char *cursor = numBuffer;
 
-    while(*secuencia->cursor && *secuencia->cursor == ' ') {
+    if (tamSalida != sizeof(int)) return ERROR_PARAMETRO;
 
-        secuencia->cursor++;
+    if (*secuencia->cursor == '-' || *secuencia->cursor == '+') {
+        *cursor++ = *secuencia->cursor++;
     }
 
-    if (!*secuencia->cursor || !ES_DIGITO(*secuencia->cursor)) {
-
+    if (!ES_DIGITO(*secuencia->cursor)) {
         return ERROR_SINTAXIS;
     }
 
-    while(*secuencia->cursor && ES_DIGITO(*secuencia->cursor) && (pBuffer - buffer) < (TAM_INT_TEXTO - 1)) {
-
-        *pBuffer++ = *secuencia->cursor++;
+    while (*secuencia->cursor && ES_DIGITO(*secuencia->cursor) && (cursor - numBuffer) < (TAM_INT_TEXTO - 1)) {
+        *cursor++ = *secuencia->cursor++;
     }
 
-    *pBuffer = '\0';
-    sscanf(buffer, "%d", numero);
+    *cursor = '\0';
+    sscanf(numBuffer, "%d", numero);
 
-    return TODO_OK;
+    return ERROR_TODO_OK;
 }
 
 
+static int _bdatos_parsear_texto(tSecuencia *secuencia, void *salida, unsigned tamSalida)
+{
+    char *texto = (char*)salida;
+    char *cursor = texto;
+
+    while (*secuencia->cursor && *secuencia->cursor != ',' && *secuencia->cursor != ')' && (cursor - texto) < (tamSalida - 1)) {
+        *cursor++ = *secuencia->cursor++;
+    }
+
+    *cursor = '\0';
+
+    return ERROR_TODO_OK;
+}
+
+
+
+
+
+
+/// CODIGO SIN REVISAR
+
+
+
+
+
+static int _bdatos_leer_campos(tSecuencia *secuencia, tCampo *campos, int maxCampos)
+{
+    int ret, i = 0, fin = 0, hayPK = 0;
+    char caracter;
+    eSimbolo proximoSimbolo;
+    unsigned offsetCampo = 0;
+
+    do {
+        if (i >= maxCampos) return ERROR_DEMASIADOS_CAMPOS;
+
+        if ((ret = _bdatos_parsear(secuencia, _bdatos_parsear_identificador, campos[i].nombre, TAM_IDENTIFICADOR)) != ERROR_TODO_OK) return ret;
+        if ((ret = _bdatos_leer_campo_tipo(secuencia, &campos[i])) != ERROR_TODO_OK) return ret;
+
+        campos[i].offsetCampo = offsetCampo;
+        offsetCampo += campos[i].tam;
+
+        _bdatos_parsear(secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo));
+        if (proximoSimbolo == PK) {
+
+            campos[i].esPK = 1;
+            hayPK++;
+
+            _bdatos_parsear(secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo));
+            if (proximoSimbolo == AI) {
+
+                if (campos[i].tipo != TIPO_ENTERO) return ERROR_AI_DEBE_SER_ENTERO;
+
+                campos[i].esAI = 1;
+
+            }else if (proximoSimbolo != DESCONOCIDO) {
+                return ERROR_SINTAXIS;
+            }
+        }
+
+        if ((ret = _bdatos_parsear(secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char))) != ERROR_TODO_OK) return ret;
+
+        if (caracter == ')') {
+            fin = 1;
+        }else if (caracter != ',') {
+            return  ERROR_SINTAXIS;
+        }
+
+        if (hayPK > 1) return ERROR_DEMASIADOS_PK;
+
+        i++;
+
+    } while (!fin);
+
+    return i;
+}
+
+static int _bdatos_leer_campo_tipo(tSecuencia *secuencia, tCampo *campo)
+{
+    char caracter;
+    eSimbolo proximoSimbolo;
+    _bdatos_parsear(secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo));
+    campo->tipo = _bdatos_convertir_simbolo_a_tipo(proximoSimbolo);
+
+    if (campo->tipo == TIPO_INVALIDO) return ERROR_SINTAXIS;
+
+    if (campo->tipo == TIPO_ENTERO) {
+        campo->tam = sizeof(int);
+    } else if (campo->tipo == TIPO_TEXTO) {
+        int numero;
+        if (_bdatos_parsear(secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != ERROR_TODO_OK || caracter != '(') return ERROR_SINTAXIS;
+        if (_bdatos_parsear(secuencia, _bdatos_parsear_numeros, &numero, sizeof(int)) != ERROR_TODO_OK) return ERROR_SINTAXIS;
+        if (numero <= 0 || numero > TAM_MAX_TIPO_CHAR) return ERROR_TAM_TEXTO;
+        if (_bdatos_parsear(secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != ERROR_TODO_OK || caracter != ')') return ERROR_SINTAXIS;
+        campo->tam = numero;
+    }
+    return ERROR_TODO_OK;
+}
+
 static int _bdatos_tabla_existe(const char *idenTabla)
 {
-    char nombreArchivo[TAM_IDENTIFICADOR + 4];
+    char nombreArchivo[TAM_NOMBRE_ARCH];
     snprintf(nombreArchivo, sizeof(nombreArchivo), "%s.dat", idenTabla);
 
     FILE *arch = fopen(nombreArchivo, "r");
@@ -155,168 +287,97 @@ static int _bdatos_tabla_existe(const char *idenTabla)
     return 0;
 }
 
-static int _bdatos_parsear_campos(tSecuencia *secuencia, tCampo *campos, int maxCampos)
+
+static int _bdatos_crear_archivo_tabla(tBDatos *bDatos, const char *idenTabla, tCampo *campos, int cantCampos)
 {
-    int i = 0;
-    int fin = 0;
-    char nombreCampo[TAM_IDENTIFICADOR];
+    int ret, i, encontrado, esAI = 0;
+    char nombreArchivo[TAM_NOMBRE_ARCH];
+    FILE *archDat = NULL, *archIdx = NULL;
 
-    do {
-        if (i >= maxCampos) return ERROR_DEMASIADOS_CAMPOS;
-
-        if (_bdatos_parsear_identificador(secuencia, nombreCampo, TAM_IDENTIFICADOR) != TODO_OK) return ERROR_SINTAXIS;
-
-        if (strcmp(nombreCampo, "PK") == 0) {
-            fin = 1;
-        } else {
-            strcpy(campos[i].nombre, nombreCampo);
-            campos[i].esPk = 0;
-
-            if (_bdatos_parsear_tipo_campo(secuencia, &campos[i]) != TODO_OK) return ERROR_SINTAXIS;
-
-            i++;
-
-            if (_bdatos_parsear_caracter(secuencia, ',') != TODO_OK) {
-                fin = 1;
-            }
-        }
-    } while (!fin);
-
-    return i;
-}
-
-static int _bdatos_parsear_tipo_campo(tSecuencia *secuencia, tCampo *campo)
-{
-    eSimbolo proximoSimbolo = _bdatos_parsear_simbolo(secuencia);
-    campo->tipo = _bdatos_convertir_simbolo_a_tipo(proximoSimbolo);
-
-    if (campo->tipo == TIPO_INVALIDO) return ERROR_SINTAXIS;
-
-    if (campo->tipo == TIPO_ENTERO) {
-        campo->tam = sizeof(int);
-    } else if (campo->tipo == TIPO_FLOTANTE) {
-        campo->tam = sizeof(float);
-    } else if (campo->tipo == TIPO_TEXTO) {
-        int numero;
-        if (_bdatos_parsear_caracter(secuencia, '(') != TODO_OK) return ERROR_SINTAXIS;
-        if (_bdatos_parsear_numeros(secuencia, &numero) != TODO_OK) return ERROR_SINTAXIS;
-        if (_bdatos_parsear_caracter(secuencia, ')') != TODO_OK) return ERROR_SINTAXIS;
-        campo->tam = numero;
-    }
-    return TODO_OK;
-}
-
-static int _bdatos_parsear_pk(tSecuencia *secuencia, char idenPK[][TAM_IDENTIFICADOR], int maxPK)
-{
-    int cantPK = 0;
-    int fin = 0;
-
-    if (_bdatos_parsear_caracter(secuencia, '(') != TODO_OK) return ERROR_SINTAXIS;
-
-    do {
-        if (cantPK >= maxPK) return ERROR_DEMASIADOS_PK;
-        if (_bdatos_parsear_identificador(secuencia, idenPK[cantPK], TAM_IDENTIFICADOR) != TODO_OK) return ERROR_SINTAXIS;
-
-        cantPK++;
-
-        if (_bdatos_parsear_caracter(secuencia, ',') != TODO_OK) {
-            fin = 1;
-        }
-    } while (!fin);
-
-    if (_bdatos_parsear_caracter(secuencia, ')') != TODO_OK) return ERROR_SINTAXIS;
-
-    return cantPK;
-}
-
-static int _bdatos_validar_pk(tCampo *campos, int cantCampos, const char idenPK[][TAM_IDENTIFICADOR], int cantPK)
-{
-    for (int pk = 0; pk < cantPK; pk++) {
-
-        int encontrado = 0;
-
-        for (int campo = 0; campo < cantCampos && !encontrado; campo++) {
-
-            if (strcmp(campos[campo].nombre, idenPK[pk]) == 0) {
-
-                campos[campo].esPk = 1;
-                encontrado = 1;
-            }
-        }
-
-        if (!encontrado) return ERROR_PK_INEXISTENTE;
-    }
-
-    return TODO_OK;
-}
-
-static int _bdatos_crear_archivo_tabla(tBDatos *bDatos, const char *idenTabla, tCampo *campos, int cantCampos, int cantPK)
-{
-    char nombreArchivo[TAM_IDENTIFICADOR + 4];
     snprintf(nombreArchivo, sizeof(nombreArchivo), "%s.dat", idenTabla);
-
-    bDatos->arch = fopen(nombreArchivo, "w+b");
-    if (!bDatos->arch) {
-
-        bDatos->archIdx = NULL;
+    archDat = fopen(nombreArchivo, "w+b");
+    if (!archDat) {
         return ERR_ARCHIVO;
     }
 
-    return _bdatos_escribir_encabezado(bDatos->arch, idenTabla, cantCampos, campos, cantPK);
+    i = 0;
+    encontrado = 0;
+    while (i < cantCampos && !encontrado) {
+
+        if (campos[i].esAI) {
+
+            esAI = 1;
+            encontrado = 1;
+        }
+        ++i;
+    }
+
+    if ((ret = _bdatos_escribir_encabezado(archDat, idenTabla, cantCampos, campos, esAI)) != ERROR_TODO_OK) {
+        fclose(archDat);
+        return ret;
+    }
+
+    snprintf(nombreArchivo, sizeof(nombreArchivo), "%s.idx", idenTabla);
+    archIdx = fopen(nombreArchivo, "w+b");
+    if (!archIdx) {
+        fclose(archDat);
+        return ERR_ARCHIVO;
+    }
+
+    fclose(archDat);
+    fclose(archIdx);
+
+    return ERROR_TODO_OK;
 }
 
-static int _bdatos_escribir_encabezado(FILE *arch, const char *nombreTabla, int cantCampos, tCampo *campos, int cantPK)
+/// PRIMERA REVISION REALIZADA
+static int _bdatos_escribir_encabezado(FILE *arch, const char *nombreTabla, int cantCampos, tCampo *campos, int esAI)
 {
-    tEncabezado encabezado;
     int i;
+    tEncabezado encabezado;
+
+    if (!arch) return ERROR_ARCH;
 
     memset(&encabezado, 0, sizeof(tEncabezado));
-
     encabezado.cantCampos = cantCampos;
-    encabezado.cantPK = cantPK;
-    encabezado.cantRegistros = 0;
-    encabezado.tamRegistro = 0;
-    strcpy(encabezado.nombreTabla, nombreTabla);
+    strncpy(encabezado.nombreTabla, nombreTabla, TAM_IDENTIFICADOR - 1);
+    encabezado.nombreTabla[TAM_IDENTIFICADOR - 1] = '\0';
 
     for (i = 0; i < cantCampos; i++) {
 
-        strncpy(encabezado.campos[i].nombre, campos[i].nombre, TAM_IDENTIFICADOR);
+        strncpy(encabezado.campos[i].nombre, campos[i].nombre, TAM_IDENTIFICADOR - 1);
+        encabezado.campos[i].nombre[TAM_IDENTIFICADOR - 1] = '\0';
         encabezado.campos[i].tipo = campos[i].tipo;
         encabezado.campos[i].tam = campos[i].tam;
-        encabezado.campos[i].esPk = campos[i].esPk;
+        encabezado.campos[i].esPK = campos[i].esPK;
+        encabezado.campos[i].esAI = campos[i].esAI;
+        encabezado.campos[i].offsetCampo = campos[i].offsetCampo;
         encabezado.tamRegistro += campos[i].tam;
+    }
+
+    encabezado.tamRegIdx = sizeof(tIndice);
+    encabezado.proximoAI = esAI ? 1 : 0;
+
+    fseek(arch, 0, SEEK_SET);
+    if (fwrite(&encabezado, sizeof(tEncabezado), 1, arch) != 1) return ERROR_ESCRITURA;
+
+    fflush(arch);
+
+    return ERROR_TODO_OK;
+}
+
+static int _bdatos_leer_encabezado(FILE* arch, tEncabezado *encabezado) {
+
+    if (!arch) {
+        return ERROR_ARCH;
     }
 
     fseek(arch, 0, SEEK_SET);
 
-    if (fwrite(&encabezado, sizeof(tEncabezado), 1, arch) != 1) {
-
-        fclose(arch);
-        return ERROR_ESCRITURA;
-    }
-
-    fclose(arch);
-    return TODO_OK;
-}
-
-static int _bdatos_leer_encabezado(const char *nombreTabla, tEncabezado *encabezado) {
-
-    char nombreArchivo[TAM_IDENTIFICADOR + 4];
-    snprintf(nombreArchivo, sizeof(nombreArchivo), "%s.dat", nombreTabla);
-
-    FILE* arch = fopen(nombreArchivo, "r+b");
-    if (!arch) {
-
-        return ERROR_ARCH;
-    }
-
     if (fread(encabezado, sizeof(tEncabezado), 1, arch) != 1) {
-
-        fclose(arch);
         return ERROR_LECTURA;
     }
 
-    fclose(arch);
     return TODO_OK;
 }
 
@@ -326,8 +387,6 @@ static eTipoDato _bdatos_convertir_simbolo_a_tipo(eSimbolo simbolo)
     switch (simbolo) {
         case ENTERO:
             return TIPO_ENTERO;
-        case FLOTANTE:
-            return TIPO_FLOTANTE;
         case TEXTO:
             return TIPO_TEXTO;
         default:
@@ -335,179 +394,434 @@ static eTipoDato _bdatos_convertir_simbolo_a_tipo(eSimbolo simbolo)
     }
 }
 
-/// CREAR TABLA jugadores (idJugador ENTERO, nombre TEXTO(16), puntajeMax ENTERO, PK(idJugador))
-/// CREAR TABLA partidas (idPartida ENTERO, puntaje ENTERO, PK(idJugador, idPartida))
+/// CREAR TABLA jugadores (username TEXTO(16) PK, record ENTERO, cantPartidas ENTERO)
 static int _bdatos_crear(tBDatos *bDatos)
 {
-    tCampo campos[MAX_CAMPOS_POR_TABLA];
-    char idenPK[MAX_PK_POR_TABLA][TAM_IDENTIFICADOR] = {0};
-    char idenTabla[TAM_IDENTIFICADOR] = {0};
-    int cantCampos, cantPK, retorno;
+    tCampo campos[MAX_CAMPOS_POR_TABLA] = {0};
+    char caracter, idenTabla[TAM_IDENTIFICADOR] = {0};
+    int cantCampos, retorno;
     eSimbolo proximoSimbolo;
 
-    proximoSimbolo = _bdatos_parsear_simbolo(&bDatos->secuencia);
+    _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo));
     if (proximoSimbolo != TABLA) return ERROR_SINTAXIS;
-    if (_bdatos_parsear_identificador(&bDatos->secuencia, idenTabla, TAM_IDENTIFICADOR) != TODO_OK) return ERROR_SINTAXIS;
+    if ((retorno = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_identificador, idenTabla, TAM_IDENTIFICADOR)) != ERROR_TODO_OK) return retorno;
     if (_bdatos_tabla_existe(idenTabla)) return ERROR_TABLA_YA_EXISTE;
-    if (_bdatos_parsear_caracter(&bDatos->secuencia, '(') != TODO_OK) return ERROR_SINTAXIS;
+    if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != ERROR_TODO_OK || caracter != '(') return ERROR_SINTAXIS;
 
-    cantCampos = _bdatos_parsear_campos(&bDatos->secuencia, campos, MAX_CAMPOS_POR_TABLA);
+    cantCampos = _bdatos_leer_campos(&bDatos->secuencia, campos, MAX_CAMPOS_POR_TABLA);
     if (cantCampos < 0) return ERROR_CANT_CAMPOS;
 
-    cantPK = _bdatos_parsear_pk(&bDatos->secuencia, idenPK, MAX_PK_POR_TABLA);
-    if (cantPK > 3) return ERROR_DEMASIADOS_PK;
-    if (cantPK == 0) return ERROR_SIN_PK;
+    printf("CREAR TABLA -> Tabla: %s, Campos: %d\n", idenTabla, cantCampos);
 
-    retorno = _bdatos_validar_pk(campos, cantCampos, idenPK, cantPK);
-    if (retorno != TODO_OK) return retorno;
-
-    printf("CREAR TABLA -> Tabla: %s, Campos: %d, PKs: %d\n", idenTabla, cantCampos, cantPK);
-
-    return _bdatos_crear_archivo_tabla(bDatos, idenTabla, campos, cantCampos, cantPK);
+    return _bdatos_crear_archivo_tabla(bDatos, idenTabla, campos, cantCampos);
 }
 
-/// INSERTAR EN jugadores (idJugador 1000, nombre RODRIGO, puntajeMax 21)
+
+static int _bdatos_leer_campos_y_valores(tSecuencia *secuencia, const tEncabezado *encabezado, tDatoParseado *datosParseados, int *cantParseados)
+{
+    int retorno, i = 0, fin = 0, cantPK = 0;
+    char caracter, nombreCampoLeido[TAM_IDENTIFICADOR] = {0};
+    tCampo campoEncontrado;
+
+    *cantParseados = 0;
+
+    do {
+        if (i >= encabezado->cantCampos) return ERROR_DEMASIADOS_CAMPOS;
+
+        if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_identificador, nombreCampoLeido, TAM_IDENTIFICADOR)) != ERROR_TODO_OK) return retorno;
+
+        memset(&campoEncontrado, 0, sizeof(tCampo));
+        if ((retorno = _bdatos_buscar_campo(encabezado->campos, encabezado->cantCampos, &campoEncontrado, nombreCampoLeido)) != ERROR_TODO_OK) return retorno;
+
+        if (campoEncontrado.esPK) {
+            ++cantPK;
+        }
+
+        if (campoEncontrado.esAI) {
+            return ERROR_CAMPO_ES_AI;
+        }
+
+        switch (campoEncontrado.tipo) {
+            case TIPO_ENTERO: {
+
+                datosParseados[i].valor.dato = malloc(sizeof(int));
+                if (!datosParseados[i].valor.dato) return ERROR_SIN_MEMO;
+
+                datosParseados[i].valor.tam = sizeof(int);
+
+                if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_numeros, (int*)datosParseados[i].valor.dato, sizeof(int))) != ERROR_TODO_OK) {
+                    free(datosParseados[i].valor.dato);
+                    return retorno;
+                }
+                break;
+            }
+            case TIPO_TEXTO: {
+
+                datosParseados[i].valor.dato = malloc(campoEncontrado.tam);
+                if (!datosParseados[i].valor.dato) return ERROR_SIN_MEMO;
+                memset(datosParseados[i].valor.dato, 0, campoEncontrado.tam);
+
+                datosParseados[i].valor.tam = campoEncontrado.tam;
+
+                if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_texto, (char*)datosParseados[i].valor.dato, campoEncontrado.tam)) != ERROR_TODO_OK) {
+                    free(datosParseados[i].valor.dato); /// MEMORY LEAK, NO LIBERA LOS ANTERIORES
+                    return retorno;
+                }
+
+                break;
+            }
+            default:
+                return ERROR_CAMPO_INVALIDO;
+        }
+
+        memcpy(&datosParseados[i].campo, &campoEncontrado, sizeof(tCampo));
+
+        ++i;
+
+        if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char))) != ERROR_TODO_OK) return retorno;
+
+        if (caracter == ')') {
+            fin = 1;
+        } else if (caracter != ',') {
+            return ERROR_SINTAXIS;
+        }
+
+    } while (!fin);
+
+    if (cantPK < 1 && encabezado->proximoAI == 0) return ERROR_SIN_PK;
+
+    if (encabezado->proximoAI != 0) {
+
+        int j = 0, encontrado = 0, campoAI = 0;
+        while (j < encabezado->cantCampos && !encontrado) {
+
+            if (encabezado->campos[j].esAI) {
+                campoAI = j;
+                encontrado = 1;
+            }
+            ++j;
+        }
+
+        memcpy(&datosParseados[i].campo, &encabezado->campos[campoAI], sizeof(tCampo));
+
+        datosParseados[i].valor.dato = malloc(sizeof(int));
+        if (!datosParseados[i].valor.dato) return ERROR_SIN_MEMO;
+        memset(datosParseados[i].valor.dato, 0, sizeof(int));
+
+        datosParseados[i].valor.tam = sizeof(int);
+
+        *(int*)datosParseados[i].valor.dato = encabezado->proximoAI;
+        i++;
+    }
+
+    *cantParseados = i;
+    return ERROR_TODO_OK;
+}
+
+/// INSERTAR EN jugadores (username PEPE, record 15, cantPartidas 5)
 static int _bdatos_insertar(tBDatos *bDatos)
 {
+    int ret, cantParseados = 0, offset = 0, i, j;
     tDatoParseado datosParseados[MAX_CAMPOS_POR_TABLA] = {0};
-    char idenTabla[TAM_IDENTIFICADOR] = {0}, *registro;
-    int cantParseados = 0, i, offset, pkProporcionadas, retorno;
+    char caracter, idenTabla[TAM_IDENTIFICADOR] = {0}, *registro = NULL;
     eSimbolo proximoSimbolo;
+    tIndice nuevoIndiceReg;
 
-    proximoSimbolo = _bdatos_parsear_simbolo(&bDatos->secuencia);
+    _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo));
     if (proximoSimbolo != EN) return ERROR_SINTAXIS;
-    if (_bdatos_parsear_identificador(&bDatos->secuencia, idenTabla, TAM_IDENTIFICADOR) != TODO_OK) return ERROR_SINTAXIS;
+    if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_identificador, idenTabla, TAM_IDENTIFICADOR)) != ERROR_TODO_OK) return ret;
     if (!_bdatos_tabla_existe(idenTabla)) return ERROR_TABLA_NO_EXISTE;
-    if (_bdatos_parsear_caracter(&bDatos->secuencia, '(') != TODO_OK) return ERROR_SINTAXIS;
+    if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != ERROR_TODO_OK || caracter != '(') return ERROR_SINTAXIS;
 
-    retorno = _bdatos_parsear_campos_y_valores(&bDatos->secuencia, &bDatos->encabezado, datosParseados, &cantParseados);
-    if (retorno != TODO_OK) {
-
+    ret = _bdatos_leer_campos_y_valores(&bDatos->secuencia, &bDatos->encabezado, datosParseados, &cantParseados);
+    if (ret != ERROR_TODO_OK) {
         for (i = 0; i < cantParseados; i++) {
-
-            free(datosParseados[i].valor.dato);
+            if (datosParseados[i].valor.dato) free(datosParseados[i].valor.dato);
         }
-        return retorno;
+        return ret;
     }
 
     registro = (char*)malloc(bDatos->encabezado.tamRegistro);
-    if(!registro) return ERROR_SIN_MEMO;
+    if (!registro) return ERROR_SIN_MEMO;
     memset(registro, 0, bDatos->encabezado.tamRegistro);
+    memset(&nuevoIndiceReg, 0, sizeof(tIndice));
 
-    offset = 0;
-    pkProporcionadas = 0;
-    for (int i = 0; i < bDatos->encabezado.cantCampos; i++) {
+    for (i = 0; i < bDatos->encabezado.cantCampos; ++i) {
 
         int encontrado = 0;
-
-        for (int j = 0; j < cantParseados && !encontrado; j++) {
+        for (j = 0; j < cantParseados && !encontrado; ++j) {
 
             if (strcmp(bDatos->encabezado.campos[i].nombre, datosParseados[j].campo.nombre) == 0) {
 
                 memcpy(registro + offset, datosParseados[j].valor.dato, datosParseados[j].valor.tam);
-                if (datosParseados[j].campo.esPk) pkProporcionadas++;
+                if (datosParseados[j].campo.esPK) {
+
+                    if (datosParseados[j].campo.tipo == TIPO_TEXTO) {
+
+                        sprintf(nuevoIndiceReg.clave, "%s", (char*)datosParseados[j].valor.dato);
+                    } else {
+
+                        sprintf(nuevoIndiceReg.clave, "%011d", *(int*)datosParseados[j].valor.dato);
+                    }
+                }
                 encontrado = 1;
             }
         }
-
         offset += bDatos->encabezado.campos[i].tam;
     }
 
-    if (pkProporcionadas != bDatos->encabezado.cantPK) {
+    fseek(bDatos->arch, 0, SEEK_END);
+    nuevoIndiceReg.offset = ftell(bDatos->arch);
+
+    if ((ret = arbol_insertar_rec(&bDatos->arbol, &nuevoIndiceReg, sizeof(tIndice), _bdatos_cmp_indice)) != ARBOL_TODO_OK) {
 
         for (i = 0; i < cantParseados; i++) {
-
             free(datosParseados[i].valor.dato);
         }
-
         free(registro);
-        return ERROR_SIN_PK;
+        return ret;
     }
 
-
-    /// BUSCAR EN EL ARBOL SI LA PK YA ESTA INSERTADA
-
-
-    fseek(bDatos->arch, 0, SEEK_END);
     fwrite(registro, bDatos->encabezado.tamRegistro, 1, bDatos->arch);
 
     bDatos->encabezado.cantRegistros++;
+    if (bDatos->encabezado.proximoAI != 0) {
+
+        ++bDatos->encabezado.proximoAI;
+    }
 
     for (i = 0; i < cantParseados; i++) {
 
         free(datosParseados[i].valor.dato);
     }
-
     free(registro);
 
-    return TODO_OK;
+    return ERROR_TODO_OK;
 }
+
 
 /// ABRIR TABLA jugadores
 static int _bdatos_abrir(tBDatos *bDatos)
 {
     int retorno;
-    FILE *nuevoArch;
-    tEncabezado nuevoEncabezado;
-    char idenTabla[TAM_IDENTIFICADOR] = {0}, nombreArchivo[TAM_IDENTIFICADOR + 4];
+    char idenTabla[TAM_IDENTIFICADOR] = {0}, nombreArchivo[TAM_NOMBRE_ARCH];
     eSimbolo proximoSimbolo;
 
-    proximoSimbolo = _bdatos_parsear_simbolo(&bDatos->secuencia);
+    _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo));
     if (proximoSimbolo != TABLA) return ERROR_SINTAXIS;
-    if (_bdatos_parsear_identificador(&bDatos->secuencia, idenTabla, TAM_IDENTIFICADOR) != TODO_OK) return ERROR_SINTAXIS;
+    if ((retorno = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_identificador, idenTabla, TAM_IDENTIFICADOR)) != ERROR_TODO_OK) return retorno;
     if (!_bdatos_tabla_existe(idenTabla)) return ERROR_TABLA_NO_EXISTE;
 
+    if (bDatos->arch != NULL) {
+        bdatos_cerrar(bDatos);
+    }
+
     snprintf(nombreArchivo, sizeof(nombreArchivo), "%s.dat", idenTabla);
-    nuevoArch = fopen(nombreArchivo, "r+b");
-    if (!nuevoArch) {
+    bDatos->arch = fopen(nombreArchivo, "r+b");
+    if (!bDatos->arch) {
 
         return ERROR_ARCH;
     }
 
-    retorno = _bdatos_leer_encabezado(idenTabla, &nuevoEncabezado);
-    if (retorno != TODO_OK) return retorno;
-
-    if (bDatos->arch != NULL) {
-
-        printf("Cerrando tabla: %s\n", bDatos->encabezado.nombreTabla);
-
-        fseek(bDatos->arch, 0, SEEK_SET);
-        fwrite(&bDatos->encabezado, sizeof(tEncabezado), 1, bDatos->arch);
+    if (_bdatos_leer_encabezado(bDatos->arch, &bDatos->encabezado) != TODO_OK) {
         fclose(bDatos->arch);
+        bDatos->arch = NULL;
+        return ERROR_LECTURA;
     }
 
-    bDatos->arch = nuevoArch;
-    bDatos->encabezado = nuevoEncabezado;
+    snprintf(nombreArchivo, sizeof(nombreArchivo), "%s.idx", idenTabla);
+    bDatos->archIdx = fopen(nombreArchivo, "r+b");
+    if (!bDatos->archIdx) {
+        fclose(bDatos->arch);
+        bDatos->arch = NULL;
+        return ERROR_ARCH;
+    }
+
+    if (_bdatos_cargar_idx(bDatos, nombreArchivo) != TODO_OK) {
+        fclose(bDatos->arch);
+        fclose(bDatos->archIdx);
+        bDatos->arch = NULL;
+        bDatos->archIdx = NULL;
+        return ERR_ARCHIVO;
+    }
 
     printf("Tabla '%s' abierta correctamente.\n", bDatos->encabezado.nombreTabla);
 
-    return TODO_OK;
+    return ERROR_TODO_OK;
 }
 
-///ACTUALIZAR EN jugadores (puntajeMax 25) DONDE idJugador IGUAL 21")
-static int _bdatos_actualizar(tBDatos *bDatos)
+/////ACTUALIZAR EN jugadores (puntajeMax 25) DONDE idJugador IGUAL 21")
+//static int _bdatos_actualizar(tBDatos *bDatos)
+//{
+//
+//
+//
+//
+//    return ERROR_TODO_OK;
+//}
+
+/// SELECCIONAR DESDE jugadores DONDE (username IGUAL PEPE)
+static int _bdatos_seleccionar(tBDatos *bDatos)
 {
-    return TODO_OK;
+    int ret, valor;
+    char *buffer = NULL, *registro = NULL, caracter, idenTabla[TAM_IDENTIFICADOR] = {0}, nombreCampoLeido[TAM_IDENTIFICADOR] = {0};
+    eSimbolo proximoSimbolo;
+    tCampo campoEncontrado;
+    tLista listaResultados;
+
+    _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo));
+    if (proximoSimbolo != DESDE) return ERROR_SINTAXIS;
+    if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_identificador, idenTabla, TAM_IDENTIFICADOR)) != ERROR_TODO_OK) return ret;
+    if (!_bdatos_tabla_existe(idenTabla)) return ERROR_TABLA_NO_EXISTE;
+    _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo));
+    if (proximoSimbolo != DONDE) return ERROR_SINTAXIS;
+    if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != ERROR_TODO_OK || caracter != '(') return ERROR_SINTAXIS;
+    if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_identificador, nombreCampoLeido, TAM_IDENTIFICADOR)) != ERROR_TODO_OK) return ret;
+
+    memset(&campoEncontrado, 0, sizeof(tCampo));
+    if ((ret = _bdatos_buscar_campo(bDatos->encabezado.campos, bDatos->encabezado.cantCampos, &campoEncontrado, nombreCampoLeido)) != ERROR_TODO_OK) return ret;
+
+    _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo));
+    if (proximoSimbolo != IGUAL) return ERROR_SINTAXIS; /// ESCALABLE -> IGUAL, MAYOR, MENOR, DISTINTO
+
+    if (campoEncontrado.tipo == TIPO_ENTERO) {
+        if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_numeros, &valor, sizeof(int))) != ERROR_TODO_OK) return ret;
+    } else if (campoEncontrado.tipo == TIPO_TEXTO) {
+        buffer = (char*)malloc(campoEncontrado.tam);
+        if (!buffer) return ERROR_SIN_MEMO;
+        memset(buffer, 0, campoEncontrado.tam);
+        if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_texto, buffer, campoEncontrado.tam)) != ERROR_TODO_OK) {
+            free(buffer);
+            return ret;
+        }
+    } else {
+        return ERROR_CAMPO_INVALIDO;
+    }
+
+    registro = (char*)malloc(bDatos->encabezado.tamRegistro);
+    if (!registro) {
+        free(buffer);
+        return ERROR_SIN_MEMO;
+    }
+
+    lista_crear(&listaResultados);
+
+    if (campoEncontrado.esPK) {
+
+        tIndice indiceReg;
+
+        if (campoEncontrado.tipo == TIPO_ENTERO) {
+            sprintf(indiceReg.clave, "%011d", valor);
+        } else {
+            strcpy(indiceReg.clave, buffer);
+        }
+
+        if (arbol_buscar(&bDatos->arbol, &indiceReg, sizeof(tIndice), _bdatos_cmp_indice) == ARBOL_TODO_OK) {
+
+            fseek(bDatos->arch, indiceReg.offset, SEEK_SET);
+            fread(registro, bDatos->encabezado.tamRegistro, 1, bDatos->arch);
+            lista_insertar_final(&listaResultados, registro, bDatos->encabezado.tamRegistro);
+        }
+    } else {
+
+        fseek(bDatos->arch, sizeof(tEncabezado), SEEK_SET);
+
+        while (fread(registro, bDatos->encabezado.tamRegistro, 1, bDatos->arch) == 1) {
+
+            int coincidencia = 0;
+
+            if (campoEncontrado.tipo == TIPO_ENTERO) {
+                if (*(int*)(registro + campoEncontrado.offsetCampo) == valor) {
+                    coincidencia = 1;
+                }
+            } else {
+                if (strncmp(registro + campoEncontrado.offsetCampo, buffer, strlen(buffer)) == 0) {
+                    coincidencia = 1;
+                }
+            }
+
+            if (coincidencia) lista_insertar_final(&listaResultados, registro, bDatos->encabezado.tamRegistro);
+        }
+    }
+
+    while (lista_sacar_primero(&listaResultados, registro, bDatos->encabezado.tamRegistro) == LISTA_TODO_OK) {
+
+        printf("SACADO DE LA LISTA\n");
+    }
+
+    lista_vaciar(&listaResultados);
+    free(registro);
+    free(buffer);
+
+    return ERROR_TODO_OK;
 }
+
+
+
+static int _bdatos_cmp_indice(const void *a, const void *b)
+{
+    tIndice *indiceA = (tIndice*)a;
+    tIndice *indiceB = (tIndice*)b;
+
+    return strcmp(indiceA->clave, indiceB->clave);
+}
+
 
 int bdatos_cerrar(tBDatos *bDatos)
 {
-    if (bDatos->arch != NULL) {
+    char nombreIdx[TAM_NOMBRE_ARCH];
 
-        printf("Cerrando tabla: %s\n", bDatos->encabezado.nombreTabla);
-
-        fseek(bDatos->arch, 0, SEEK_SET);
-        fwrite(&bDatos->encabezado, sizeof(tEncabezado), 1, bDatos->arch);
-
-        fclose(bDatos->arch);
-        bDatos->arch = NULL;
-        memset(&bDatos->encabezado, 0, sizeof(tEncabezado));
+    if (bDatos->arch == NULL) {
+        return TODO_OK;
     }
 
-    /// GRABAR Y LIBERAR ARBOL DEL IDX
+    sprintf(nombreIdx, "%s.idx", bDatos->encabezado.nombreTabla);
+    printf("Cerrando tabla: %s\n", bDatos->encabezado.nombreTabla);
+
+    _bdatos_guardar_idx(bDatos, nombreIdx);
+
+    fseek(bDatos->arch, 0, SEEK_SET);
+    fwrite(&bDatos->encabezado, sizeof(tEncabezado), 1, bDatos->arch);
+
+    fclose(bDatos->arch);
+
+
+    arbol_vaciar(&bDatos->arbol);
+    memset(bDatos, 0, sizeof(tBDatos));
 
     return TODO_OK;
 }
+
+static int _bdatos_guardar_idx(tBDatos *bDatos, const char* nombreIdx)
+{
+    if (bDatos->archIdx != NULL) {
+        fclose(bDatos->archIdx);
+        bDatos->archIdx = NULL;
+    }
+
+    if (arbol_escribir_en_arch(&bDatos->arbol, nombreIdx) != ARBOL_TODO_OK) {
+
+        return ERR_ARCHIVO;
+    }
+
+    return ERROR_TODO_OK;
+}
+
+static int _bdatos_cargar_idx(tBDatos *bDatos, const char* nombreIdx)
+{
+    fseek(bDatos->archIdx, 0, SEEK_END);
+    long tamArch = ftell(bDatos->archIdx);
+    rewind(bDatos->archIdx);
+
+    if (tamArch == 0) {
+
+        arbol_crear(&bDatos->arbol);
+        return TODO_OK;
+    }
+
+    return arbol_cargar_de_archivo(&bDatos->arbol, nombreIdx, bDatos->encabezado.tamRegIdx, _bdatos_cmp_indice);
+}
+
 
 static int _bdatos_buscar_campo(const tCampo *campos, int cantCampos, tCampo *campoEncontrado, const char *nombreCampoLeido)
 {
@@ -523,72 +837,8 @@ static int _bdatos_buscar_campo(const tCampo *campos, int cantCampos, tCampo *ca
         }
     }
 
-    return encontrado ? TODO_OK : ERROR_CAMPO_INEXISTENTE;
+    return encontrado ? ERROR_TODO_OK : ERROR_CAMPO_INEXISTENTE;
 }
-
-static int _bdatos_parsear_campos_y_valores(tSecuencia *secuencia, const tEncabezado *encabezado, tDatoParseado *datosParseados, int *cantParseados)
-{
-    int i = 0, fin = 0, retorno;
-    char nombreCampoLeido[TAM_IDENTIFICADOR];
-    tCampo campoEncontrado;
-
-    do {
-        if (i >= encabezado->cantCampos) return ERROR_DEMASIADOS_CAMPOS;
-
-        if ((retorno = _bdatos_parsear_identificador(secuencia, nombreCampoLeido, TAM_IDENTIFICADOR)) != TODO_OK) return retorno;
-
-        if ((retorno = _bdatos_buscar_campo(encabezado->campos, encabezado->cantCampos, &campoEncontrado, nombreCampoLeido)) != TODO_OK) return retorno;
-
-        memcpy(&datosParseados[i].campo, &campoEncontrado, sizeof(tCampo));
-
-        switch (campoEncontrado.tipo) {
-            case TIPO_ENTERO: {
-
-                int valorInt;
-                if ((retorno = _bdatos_parsear_numeros(secuencia, &valorInt)) != TODO_OK) return retorno;
-
-                datosParseados[i].valor.dato = malloc(sizeof(int));
-                if (!datosParseados[i].valor.dato) return ERROR_SIN_MEMO;
-
-                memcpy(datosParseados[i].valor.dato, &valorInt, sizeof(int));
-                datosParseados[i].valor.tam = sizeof(int);
-                break;
-            }
-            case TIPO_TEXTO: {
-
-                char textoLeido[campoEncontrado.tam];
-                if ((retorno = _bdatos_parsear_identificador(secuencia, textoLeido, campoEncontrado.tam)) != TODO_OK) return retorno; /// MODIFICAR _bdatos_parsear_texto()
-
-                datosParseados[i].valor.dato = malloc(campoEncontrado.tam);
-                if (!datosParseados[i].valor.dato) return ERROR_SIN_MEMO;
-
-                strncpy((char*)datosParseados[i].valor.dato, textoLeido, campoEncontrado.tam);
-                datosParseados[i].valor.tam = campoEncontrado.tam;
-                break;
-            }
-            default:
-                return ERROR_CAMPO_INVALIDO;
-        }
-
-        if (retorno != TODO_OK) return retorno;
-
-        i++;
-
-        if (_bdatos_parsear_caracter(secuencia, ',') != TODO_OK) {
-
-            fin = 1;
-        }
-
-
-    } while (!fin);
-
-    if (_bdatos_parsear_caracter(secuencia, ')') != TODO_OK) return ERROR_SINTAXIS;
-
-    *cantParseados = i;
-
-    return TODO_OK;
-}
-
 
 static eSimbolo _bdatos_comparar_simbolo(const char* simbolo)
 {
@@ -606,10 +856,10 @@ static eSimbolo _bdatos_comparar_simbolo(const char* simbolo)
         return TABLA;
     } else if (strcmp(simbolo, "EN") == 0) {
         return EN;
+    } else if (strcmp(simbolo, "DESDE") == 0) {
+        return DESDE;
     } else if (strcmp(simbolo, "DONDE") == 0) {
         return DONDE;
-    } else if (strcmp(simbolo, "TODO") == 0) {
-        return TODO;
     } else if (strcmp(simbolo, "IGUAL") == 0) {
         return IGUAL;
     } else if (strcmp(simbolo, "MAYOR") == 0) {
@@ -620,12 +870,12 @@ static eSimbolo _bdatos_comparar_simbolo(const char* simbolo)
         return DISTINTO;
     } else if (strcmp(simbolo, "ENTERO") == 0) {
         return ENTERO;
-    } else if (strcmp(simbolo, "FLOTANTE") == 0) {
-        return FLOTANTE;
     } else if (strcmp(simbolo, "TEXTO") == 0) {
         return TEXTO;
     } else if (strcmp(simbolo, "PK") == 0) {
         return PK;
+    } else if (strcmp(simbolo, "AI") == 0) {
+        return AI;
     } else {
         return DESCONOCIDO;
     }
@@ -650,7 +900,7 @@ static int _bdatos_ejecutar_comando(tBDatos *bDatos, eSimbolo comando)
         case ACTUALIZAR:
             return _bdatos_dummy();
         case SELECCIONAR:
-            return _bdatos_dummy();
+            return _bdatos_seleccionar(bDatos);
         default:
             break;
     }
@@ -660,5 +910,5 @@ static int _bdatos_ejecutar_comando(tBDatos *bDatos, eSimbolo comando)
 
 static int _bdatos_dummy()
 {
-    return TODO_OK;
+    return ERROR_TODO_OK;
 }

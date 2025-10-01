@@ -173,7 +173,7 @@ int escenario_crear(tEscenario *escenario, unsigned columnas, unsigned filas);
 void escenario_generar(tEscenario *escenario);
 void escenario_destruir(tEscenario *escenario);
 int escenario_calcular_mascara(tEscenario *escenario, int columna, int fila);
-eParedLimite escenario_ubic_es_pared_limite(tEscenario *escenario, tUbicacion ubic);
+eParedLimite escenario_ubic_es_pared_limite(const tEscenario *escenario, tUbicacion ubic);
 
 
 #endif // ESCENARIO_H_INCLUDED

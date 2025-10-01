@@ -3,6 +3,7 @@
 #include "../../include/cliente/graficos.h"
 
 #include <math.h>
+#include <stdio.h>
 
 static void _dibujado_jugador_aturdido(SDL_Texture *textura);
 static void _dibujado_fantasma_aturdido(SDL_Texture *textura);
@@ -13,7 +14,14 @@ void dibujado_escenario(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textu
 {
     int columna, fila, mascara;
     eTileTipo tileTipo;
-    SDL_Rect rectTileDst;
+    SDL_Rect rectTileDst, rectEscenarioDst;
+
+    rectEscenarioDst.x = PADDING_MARGEN;
+    rectEscenarioDst.y = PADDING_MARGEN;
+    rectEscenarioDst.w = escenario->cantColumnas * PIXELES_TILE;
+    rectEscenarioDst.h = (escenario->cantFilas + 1) * PIXELES_TILE;
+
+    SDL_RenderSetViewport(renderer, &rectEscenarioDst);
 
     temporizador_actualizar(&escenario->temporFrame);
     if (temporizador_estado(&escenario->temporFrame) == TEMPOR_FINALIZADO) {
@@ -28,8 +36,8 @@ void dibujado_escenario(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textu
 
             tileTipo = escenario->tablero[fila][columna].tile->tileTipo;
 
-            rectTileDst.x = columna * PIXELES_TILE + MARGEN_VENTANA / 2;
-            rectTileDst.y = fila * PIXELES_TILE + (MARGEN_VENTANA / 2) + 8;
+            rectTileDst.x = columna * PIXELES_TILE;
+            rectTileDst.y = (fila + 1) * PIXELES_TILE;
             rectTileDst.w = escenario->tablero[fila][columna].tile->coords.w;
             rectTileDst.h = escenario->tablero[fila][columna].tile->coords.h;
 
@@ -63,18 +71,12 @@ void dibujado_escenario(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textu
                 graficos_dibujar_textura(*(imagenes + escenario->tileSet), renderer, &escenario->tablero[fila][columna].tile->coords, &rectTileDst, NULL);
             }
 
-            switch (escenario->tablero[fila][columna].extra) {
+            if (escenario->tablero[fila][columna].extra != EXTRA_NINGUNO) {
 
-                case EXTRA_PREMIO: {
-                    graficos_dibujar_textura(*(imagenes + IMAGEN_PREMIO), renderer, NULL, &rectTileDst, NULL);
-                    break;
-                }
-                case EXTRA_VIDA: {
-                    graficos_dibujar_textura(*(imagenes + IMAGEN_VIDA), renderer, NULL, &rectTileDst, NULL);
-                    break;
-                }
-                default:
-                    break;
+                eImagen imagen = escenario->tablero[fila][columna].extra == EXTRA_VIDA ? IMAGEN_VIDA : IMAGEN_PREMIO;
+                rectTileDst.y += escenario->frame < 2 ? escenario->frame * 2 : escenario->frame * -2;
+
+                graficos_dibujar_textura(*(imagenes + imagen), renderer, NULL, &rectTileDst, NULL);
             }
 
             if (escenario->tablero[fila][columna].entidad) {
@@ -83,6 +85,8 @@ void dibujado_escenario(SDL_Renderer *renderer, tEscenario *escenario, SDL_Textu
             }
         }
     }
+
+    SDL_RenderSetViewport(renderer, NULL);
 }
 
 
@@ -99,11 +103,11 @@ static void _dibujado_jugador_potenciado(SDL_Texture *textura)
 {
     char r, g, b;
     unsigned tick = SDL_GetTicks();
-    float tiempo = tick * 0.005f;
+    float tiempo = tick * 0.001f;
 
-    r = (char)(128 + (255 * (sin(tiempo + 1) + 1) / 2));
-    g = (char)(128 + (255 * (sin(tiempo + 2) + 1) / 2));
-    b = (char)(128 + (255 * (sin(tiempo + 4) + 1) / 2));
+    b = (char)((sin(tiempo + 4.0) * 127) + 128);
+    g = (char)((sin(tiempo + 2.0) * 127) + 128);
+    r = (char)((sin(tiempo)       * 127) + 128);
 
     SDL_SetTextureColorMod(textura, r, g, b);
     SDL_SetTextureBlendMode(textura, SDL_BLENDMODE_ADD);
@@ -111,7 +115,8 @@ static void _dibujado_jugador_potenciado(SDL_Texture *textura)
 
 static void _dibujado_fantasma_aturdido(SDL_Texture *textura)
 {
-    SDL_SetTextureColorMod(textura, 100, 100, 255);
+    SDL_SetTextureColorMod(textura, 128, 128, 255);
+    SDL_SetTextureBlendMode(textura, SDL_BLENDMODE_ADD);
 }
 
 static void _dibujado_entidad(SDL_Renderer *renderer, SDL_Texture **imagenes, tEntidad *entidad)
@@ -122,16 +127,22 @@ static void _dibujado_entidad(SDL_Renderer *renderer, SDL_Texture **imagenes, tE
 
     if (entidad->estado == ENTIDAD_ATURDIDA) {
 
-        if ((SDL_GetTicks() / 128) % 2 == 0) {
+        if (entidad->tipo == ENTIDAD_JUGADOR && (SDL_GetTicks() / 128) % 2 == 0) {
 
-            efecto = entidad->tipo == ENTIDAD_JUGADOR ? _dibujado_jugador_aturdido : _dibujado_fantasma_aturdido;
+            efecto = _dibujado_jugador_aturdido;
+
+        } else if (entidad->tipo != ENTIDAD_JUGADOR){
+
+            int divisor = 128 + (int)(128.0f * sqrt(temporizador_tiempo_restante(&entidad->temporEstado)));
+
+            if ((SDL_GetTicks() / divisor) % 2 == 0) {
+                efecto = _dibujado_fantasma_aturdido;
+            }
         }
+
     } else if (entidad->estado == ENTIDAD_POTENCIADA) {
 
-        if ((SDL_GetTicks() / 128) % 2 == 0) {
-
-            efecto = entidad->tipo == ENTIDAD_JUGADOR ? _dibujado_jugador_potenciado : _dibujado_fantasma_aturdido;
-        }
+        efecto = _dibujado_jugador_potenciado;
 
     } else if (entidad->estado == ENTIDAD_SIN_VIDA) {
 
@@ -143,10 +154,11 @@ static void _dibujado_entidad(SDL_Renderer *renderer, SDL_Texture **imagenes, tE
     rectEntidadSrc.w = PIXELES_TILE;
     rectEntidadSrc.h = PIXELES_TILE;
 
-    rectEntidadDst.x = entidad->ubic.columna * PIXELES_TILE + MARGEN_VENTANA / 2;
-    rectEntidadDst.y = entidad->ubic.fila * PIXELES_TILE + MARGEN_VENTANA / 2 + 8;
+    rectEntidadDst.x = entidad->ubic.columna * PIXELES_TILE;
+    rectEntidadDst.y = (entidad->ubic.fila + 1) * PIXELES_TILE - 8;
     rectEntidadDst.w = PIXELES_TILE;
     rectEntidadDst.h = PIXELES_TILE;
 
     graficos_dibujar_textura(texturaEntidad, renderer, &rectEntidadSrc, &rectEntidadDst, efecto);
 }
+
