@@ -9,13 +9,27 @@
 #include <string.h>
 #include <time.h>
 
+#define MIN_COLUMNAS 7
+#define MIN_FILAS 7
+#define DEF_COLUMNAS 11
+#define DEF_FILAS 11
+#define DEF_VIDAS_INICIO 3
+#define DEF_MAX_FANTASMAS 3
+#define DEF_MAX_PREMIOS 3
+#define DEF_MAX_VIDAS_EXTRA 3
+
 static int logica_ubicacion_valida(const tEscenario *escenario, tUbicacion ubic);
 static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *jugador, tEntidad *fantasma);
 static tUbicacion _logica_mover_fantasma_dfs(tEscenario *escenario, tEntidad *jugador, tEntidad *fantasma);
 static void _logica_colocar_fantasmas(tLogica *logica);
-static void _logica_colocar_jugador(tLogica *logica);
+static void _logica_inicializar_jugador(tEntidad *jugador);
+static void _logica_colocar_jugador(const tEscenario *escenario, tEntidad *jugador);
+static int _logica_fantasma_debe_usar_bfs(const tEntidad *fantasma);
+static void _logica_actualizar_entidad(tEntidad *entidad);
+static int _logica_encontrar_casilla_libre(tLogica *logica, tUbicacion *ubic);
+static int _logica_encontrar_casilla_adyacente_libre(tLogica *logica, tUbicacion ubicOriginal, tUbicacion *ubicEncontrada);
 
-void logica_calc_min_res(tLogica *logica, unsigned *anchoRes, unsigned *altoRes)
+void logica_calc_min_res(const tLogica *logica, unsigned *anchoRes, unsigned *altoRes)
 {
     *anchoRes = logica->config.columnas * PIXELES_TILE;
     *altoRes = logica->config.filas * PIXELES_TILE;
@@ -25,17 +39,15 @@ int logica_inicializar(tLogica *logica)
 {
     tConf confArch;
     FILE *archConf;
-    int reescribir = 0;
+    int reescribir = 1;
 
     archConf = fopen("config.txt", "r+");
-    if (!archConf) {
-        reescribir = 1;
-    } else {
+    if (archConf) {
 
-        if (archivo_leer_conf(archConf, &confArch) == ERR_CONF || confArch.columnas < 8 || confArch.filas < 8 || confArch.max_num_fantasmas < 1) {
-
-            reescribir = 1;
+        if (archivo_leer_conf(archConf, &confArch) == TODO_OK && confArch.columnas >= MIN_COLUMNAS && confArch.filas >= MIN_FILAS && confArch.max_num_fantasmas >= 1) {
+            reescribir = 0;
         }
+
         fclose(archConf);
     }
 
@@ -43,16 +55,14 @@ int logica_inicializar(tLogica *logica)
         puts("Creando archivo de configuracion por defecto...");
 
         archConf = fopen("config.txt", "w");
-        if (!archConf) {
-            return ERR_ARCHIVO;
-        }
+        if (!archConf)return ERR_ARCHIVO;
 
-        confArch.columnas = 11;
-        confArch.filas = 11;
-        confArch.vidas_inicio = 3;
-        confArch.max_num_fantasmas = 4;
-        confArch.max_num_premios = 2;
-        confArch.max_vidas_extra = 1;
+        confArch.columnas = DEF_COLUMNAS;
+        confArch.filas = DEF_FILAS;
+        confArch.vidas_inicio = DEF_VIDAS_INICIO;
+        confArch.max_num_fantasmas = DEF_MAX_FANTASMAS;
+        confArch.max_num_premios = DEF_MAX_PREMIOS;
+        confArch.max_vidas_extra = DEF_MAX_VIDAS_EXTRA;
 
         archivo_escribir_conf(archConf, &confArch);
         fclose(archConf);
@@ -66,14 +76,16 @@ int logica_inicializar(tLogica *logica)
     logica->config.vidasInicio = confArch.vidas_inicio;
 
     logica->fantasmas = (tEntidad*)malloc(sizeof(tEntidad) * logica->config.maxFantasmas);
-    if (!logica->fantasmas) {
-        return ERR_SIN_MEMORIA;
-    }
+    if (!logica->fantasmas) return ERR_SIN_MEMORIA;
+
+    _logica_inicializar_jugador(&logica->jugador);
 
     cola_crear(&logica->movimientos);
     cola_crear(&logica->movsJugador);
 
     escenario_crear(&logica->escenario, logica->config.columnas, logica->config.filas);
+
+    temporizador_inicializar(&logica->temporCambioRonda, 3.0);
 
     logica->estado = LOGICA_EN_LOGIN;
 
@@ -93,38 +105,36 @@ void logica_destruir(tLogica *logica)
     cola_vaciar(&logica->movsJugador);
 }
 
-void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
+int logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
 {
     tEntidad *fantasma, *fantasmaUlt = logica->fantasmas + (logica->ronda.cantFantasmas - 1);
     tUbicacion nuevaUbicJugador;
     tMovimiento mov;
 
-    if (logica->jugador.estado != ENTIDAD_CON_VIDA) {
-        return;
-    }
+    if (logica->jugador.estado == ENTIDAD_SIN_VIDA || logica->jugador.estado == ENTIDAD_ATURDIDA) return 0;
 
     nuevaUbicJugador = logica->jugador.ubic;
 
     switch (tecla) {
 
         case SDLK_UP:
-            nuevaUbicJugador.fila--;
+            --nuevaUbicJugador.fila;
             logica->jugador.orientacion = MIRANDO_ARRIBA;
             break;
         case SDLK_DOWN:
-            nuevaUbicJugador.fila++;
+            ++nuevaUbicJugador.fila;
             logica->jugador.orientacion = MIRANDO_ABAJO;
             break;
         case SDLK_LEFT:
-            nuevaUbicJugador.columna--;
+            --nuevaUbicJugador.columna;
             logica->jugador.orientacion = MIRANDO_IZQUIERDA;
             break;
         case SDLK_RIGHT:
-            nuevaUbicJugador.columna++;
+            ++nuevaUbicJugador.columna;
             logica->jugador.orientacion = MIRANDO_DERECHA;
             break;
         default:
-            return; // Tecla invalida
+            return 0; // Tecla invalida
     }
 
     if (logica_ubicacion_valida(&logica->escenario, nuevaUbicJugador)) {
@@ -136,7 +146,6 @@ void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
         mov.entidad = &logica->jugador;
 
         cola_encolar(&logica->movimientos, &mov, sizeof(tMovimiento));
-        cola_encolar(&logica->movsJugador, &mov, sizeof(tMovimiento));
 
         for (fantasma = logica->fantasmas; fantasma <= fantasmaUlt; fantasma++) {
 
@@ -145,10 +154,7 @@ void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
                 nuevaUbicFantasma.columna = -1;
                 nuevaUbicFantasma.fila = -1;
 
-                if ((fantasma->imagen == IMAGEN_FANTASMA_04 && rand() % 2 == 0)
-                    || (fantasma->imagen == IMAGEN_FANTASMA_03 && rand() % 4 == 0)
-                    || (fantasma->imagen == IMAGEN_FANTASMA_02 && rand() % 8 == 0)) {
-
+                if (_logica_fantasma_debe_usar_bfs(fantasma)) {
                     nuevaUbicFantasma = _logica_mover_fantasma_bfs(&logica->escenario, &logica->jugador, fantasma);
                 } else {
                     nuevaUbicFantasma = _logica_mover_fantasma_dfs(&logica->escenario, &logica->jugador, fantasma);
@@ -180,50 +186,40 @@ void logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
                 }
             }
         }
+
+        return 1;
+
+    } else {
+
+        int jugadorEnPuerta = (logica->escenario.tablero[logica->jugador.ubic.fila][logica->jugador.ubic.columna].tile->tileTipo == TILE_TIPO_PUERTA_SALIDA);
+        int saleDelMapa = (nuevaUbicJugador.columna < 0 || nuevaUbicJugador.columna >= logica->config.columnas || nuevaUbicJugador.fila < 0 || nuevaUbicJugador.fila >= logica->config.filas);
+
+        if (jugadorEnPuerta && saleDelMapa) {
+
+            logica_nueva_ronda(logica);
+        }
     }
+
+    return 0;
 }
 
 void logica_actualizar(tLogica *logica)
 {
-    tEntidad *jugador = &logica->jugador;
     tEntidad *fantasma, *fantasmaUlt;
 
-    if (jugador->estado == ENTIDAD_ATURDIDA || jugador->estado == ENTIDAD_POTENCIADA) {
-        jugador->frame = 0;
-        temporizador_actualizar(&jugador->temporEstado);
-        if (jugador->estado != ENTIDAD_SIN_VIDA && temporizador_estado(&jugador->temporEstado) == TEMPOR_FINALIZADO) {
-            jugador->estado = ENTIDAD_CON_VIDA;
-        }
-    }else {
-
-        temporizador_actualizar(&jugador->temporFrame);
-        if (temporizador_estado(&jugador->temporFrame) == TEMPOR_FINALIZADO) {
-            jugador->frame = (jugador->frame + 1) % 4;
-            temporizador_iniciar(&jugador->temporFrame);
-        }
-    }
+    _logica_actualizar_entidad(&logica->jugador);
 
     fantasmaUlt = logica->fantasmas + (logica->ronda.cantFantasmas - 1);
     for (fantasma = logica->fantasmas; fantasma <= fantasmaUlt; fantasma++) {
 
         if (fantasma->estado != ENTIDAD_SIN_VIDA) {
-            temporizador_actualizar(&fantasma->temporFrame);
-            if (temporizador_estado(&fantasma->temporFrame) == TEMPOR_FINALIZADO) {
-                fantasma->frame = (fantasma->frame + 1) % 4;
-                temporizador_iniciar(&fantasma->temporFrame);
-            }
-        }
 
-//        if (fantasma->estado == ENTIDAD_ATURDIDA) {
-//            temporizador_actualizar(&fantasma->temporEstado);
-//            if (temporizador_estado(&fantasma->temporEstado) == TEMPOR_FINALIZADO) {
-//                fantasma->estado = ENTIDAD_CON_VIDA;
-//            }
-//        }
+           _logica_actualizar_entidad(fantasma);
+        }
     }
 }
 
-int logica_procesar_movimientos(tLogica *logica)
+void logica_procesar_movimientos(tLogica *logica)
 {
     tMovimiento mov;
     tUbicacion ubicNueva;
@@ -234,6 +230,10 @@ int logica_procesar_movimientos(tLogica *logica)
         tEntidad *entidadEnMov, *entidadEnCasilla;
 
         cola_desencolar(&logica->movimientos, &mov, sizeof(tMovimiento));
+        if (mov.entidad->tipo == ENTIDAD_JUGADOR) {
+
+            cola_encolar(&logica->movsJugador, &mov, sizeof(tMovimiento));
+        }
 
         ubicNueva = mov.ubic;
         entidadEnMov = mov.entidad;
@@ -246,12 +246,14 @@ int logica_procesar_movimientos(tLogica *logica)
 
         if (puedeMoverse && entidadEnCasilla != NULL) {
 
+            tEntidad *fantasmaElim;
+
             if (entidadEnMov->tipo != ENTIDAD_JUGADOR && entidadEnCasilla->tipo != ENTIDAD_JUGADOR) { /// DOS FANTASMAS COLISIONAN
 
                 puedeMoverse = 0;
-            }
+            } else {
 
-            if (entidadEnMov->tipo == ENTIDAD_JUGADOR || entidadEnCasilla->tipo == ENTIDAD_JUGADOR) {
+                logica->escenario.tablero[logica->jugador.ubic.fila][logica->jugador.ubic.columna].entidad = NULL;
 
                 if (logica->ronda.cantVidasActual > 0) {
 
@@ -259,24 +261,25 @@ int logica_procesar_movimientos(tLogica *logica)
                     logica->ronda.cantVidasActual--;
                     temporizador_iniciar(&logica->jugador.temporEstado);
 
+//                    if (logica->escenario.tablero[logica->escenario.ubicPEntrada.fila][logica->escenario.ubicPEntrada.columna].entidad != NULL) {
+//
+//                        static int _logica_encontrar_casilla_adyacente_libre(tLogica *logica, tUbicacion ubicOriginal, tUbicacion *ubicEncontrada);
+//                    }
+
+                    _logica_colocar_jugador(&logica->escenario, &logica->jugador);
                 } else {
 
                     logica->jugador.estado = ENTIDAD_SIN_VIDA;
                     logica_fin_juego(logica);
                     cola_vaciar(&logica->movimientos);
-                    return TODO_OK;
+                    return;
                 }
 
-                if (entidadEnMov->tipo != ENTIDAD_JUGADOR) {
-                    entidadEnMov->estado = ENTIDAD_SIN_VIDA;
-                    puedeMoverse = 0;
-                    logica->escenario.tablero[entidadEnMov->ubic.fila][entidadEnMov->ubic.columna].entidad = NULL;
-                }
-
-                if (entidadEnCasilla->tipo != ENTIDAD_JUGADOR) {
-                    entidadEnCasilla->estado = ENTIDAD_SIN_VIDA;
-                    logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].entidad = NULL;
-                }
+                fantasmaElim = (entidadEnMov->tipo != ENTIDAD_JUGADOR) ? entidadEnMov : entidadEnCasilla;
+                logica->escenario.tablero[fantasmaElim->ubic.fila][fantasmaElim->ubic.columna].entidad = NULL;
+                fantasmaElim->estado = ENTIDAD_SIN_VIDA;
+                cola_vaciar(&logica->movimientos);
+                puedeMoverse = 0;
             }
         }
 
@@ -293,8 +296,21 @@ int logica_procesar_movimientos(tLogica *logica)
 
                 switch (logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].extra) {
                     case EXTRA_PREMIO: {
+
+                        tEntidad *fantasma, *fantasmaUlt = logica->fantasmas + (logica->ronda.cantFantasmas - 1);
+
                         logica->ronda.cantPremios++;
                         logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].extra = EXTRA_NINGUNO;
+
+                        for (fantasma = logica->fantasmas; fantasma <= fantasmaUlt; fantasma++) {
+
+                            if (fantasma->estado != ENTIDAD_SIN_VIDA) {
+
+                                fantasma->estado = ENTIDAD_ATURDIDA;
+                                temporizador_iniciar(&fantasma->temporEstado);
+                            }
+                        }
+
                         break;
                     }
                     case EXTRA_VIDA: {
@@ -308,55 +324,36 @@ int logica_procesar_movimientos(tLogica *logica)
                         break;
                 }
             }
-
-            if (entidadEnMov->tipo == ENTIDAD_JUGADOR && logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].tile->tileTipo == TILE_TIPO_PUERTA_SALIDA) {
-
-                mov.direccion = 4;
-                cola_encolar(&logica->movsJugador, &mov, sizeof(tMovimiento));
-
-                logica_nueva_ronda(logica);
-
-                cola_vaciar(&logica->movimientos);
-                return TODO_OK;
-            }
         }
     }
-
-    return TODO_OK;
 }
 
 
 
-void logica_mostrar_historial_movs(tLogica *logica)
+void logica_mostrar_historial_movs(tCola *movsJugador)
 {
-    unsigned movNro = 1;
+    int movNro = 0;
     tMovimiento mov;
+    const char *direccion[]=
+    {
+        "ARRIBA",
+        "ABAJO",
+        "IZQUIERDA",
+        "DERECHA",
+    };
 
-    if(!cola_vacia(&logica->movsJugador)){
+    if(cola_vacia(movsJugador)){
 
-        printf("Tus movimientos realizados:\n");
+       return;
     }
 
-    while (cola_vacia(&logica->movsJugador) == TODO_OK) {
+    printf("Tus movimientos realizados:\n");
 
-        cola_desencolar(&logica->movsJugador, &mov, sizeof(tMovimiento));
-        switch (mov.direccion){
-            case MIRANDO_ABAJO:
-                printf("Movimiento numero %-4u | Fila: %3d | Columna: %3d | Direccion: ABAJO\n", movNro++, mov.ubic.fila, mov.ubic.columna);
-                break;
-            case MIRANDO_IZQUIERDA:
-                printf("Movimiento numero %-4u | Fila: %3d | Columna: %3d | Direccion: IZQUIERDA\n", movNro++, mov.ubic.fila, mov.ubic.columna);
-                break;
-            case MIRANDO_DERECHA:
-                printf("Movimiento numero %-4u | Fila: %3d | Columna: %3d | Direccion: DERECHA\n", movNro++, mov.ubic.fila, mov.ubic.columna);
-                break;
-            case MIRANDO_ARRIBA:
-                printf("Movimiento numero %-4u | Fila: %3d | Columna: %3d | Direccion: ARRIBA\n", movNro++, mov.ubic.fila, mov.ubic.columna);
-                break;
-            default:
-                puts("\n Nivel Completado\n");
-                break;
-        }
+    while (cola_vacia(movsJugador) == TODO_OK) {
+
+        cola_desencolar(movsJugador, &mov, sizeof(tMovimiento));
+
+        printf("Movimiento numero %-4u | Fila: %3d | Columna: %3d | Direccion: %s\n", ++movNro, mov.ubic.fila, mov.ubic.columna, direccion[(int)mov.direccion]);
     }
 }
 
@@ -374,12 +371,15 @@ int logica_iniciar_juego(tLogica *logica)
     logica->ronda.cantVidasActual = logica->config.vidasInicio;
     logica->puntajeTotal = 0;
 
+    logica->jugador.estado = ENTIDAD_CON_VIDA;
+
     logica->ronda.semillaRonda = logica->semillaMaestra + logica->ronda.numRonda;
     srand(logica->ronda.semillaRonda);
 
     logica->ronda.cantFantasmas = 1 + (rand() % logica->config.maxFantasmas);
     escenario_generar(&logica->escenario);
-    _logica_colocar_jugador(logica);
+
+    _logica_colocar_jugador(&logica->escenario, &logica->jugador);
     _logica_colocar_fantasmas(logica);
 
     archivo_escribir_escenario(&logica->escenario, logica->ronda.numRonda, logica->ronda.semillaRonda);
@@ -401,10 +401,16 @@ int logica_nueva_ronda(tLogica *logica)
 
     logica->ronda.cantFantasmas = 1 + (rand()  % logica->config.maxFantasmas);
     escenario_generar(&logica->escenario);
-    _logica_colocar_jugador(logica);
+
+    _logica_colocar_jugador(&logica->escenario, &logica->jugador);
     _logica_colocar_fantasmas(logica);
 
+<<<<<<< Updated upstream
     archivo_escribir_escenario(&logica->escenario, logica->ronda.numRonda, logica->ronda.semillaRonda);
+=======
+    temporizador_iniciar(&logica->temporCambioRonda);
+    logica->mostrarSigRonda = 1;
+>>>>>>> Stashed changes
 
     return TODO_OK;
 }
@@ -425,78 +431,124 @@ void logica_fin_juego(tLogica *logica)
     FUNCIONES ESTATICAS
 *************************/
 
-static void _logica_colocar_jugador(tLogica *logica)
+static void _logica_colocar_jugador(const tEscenario *escenario, tEntidad *jugador)
 {
-    int pared, columna = logica->escenario.ubicPEntrada.columna, fila = logica->escenario.ubicPEntrada.fila;
+    int pared = escenario_ubic_es_pared_limite(escenario, escenario->ubicPEntrada);
 
-    pared = escenario_ubic_es_pared_limite(&logica->escenario, logica->escenario.ubicPEntrada);
+    jugador->ubic = escenario->ubicPEntrada;
 
     switch (pared) {
         case PARED_SUPERIOR:
-            logica->jugador.orientacion = MIRANDO_ABAJO;
-            fila++;
+            jugador->orientacion = MIRANDO_ABAJO;
+            ++jugador->ubic.fila;
             break;
         case PARED_INFERIOR:
-            logica->jugador.orientacion = MIRANDO_ARRIBA;
-            fila--;
+            jugador->orientacion = MIRANDO_ARRIBA;
+            --jugador->ubic.fila;
             break;
         case PARED_IZQUIERDA:
-            logica->jugador.orientacion = MIRANDO_DERECHA;
-            columna++;
+            jugador->orientacion = MIRANDO_DERECHA;
+            ++jugador->ubic.columna;
             break;
         case PARED_DERECHA:
-            logica->jugador.orientacion = MIRANDO_IZQUIERDA;
-            columna--;
+            jugador->orientacion = MIRANDO_IZQUIERDA;
+            --jugador->ubic.columna;
             break;
         default:
             return;
     }
 
-    logica->jugador.ubic.columna = columna;
-    logica->jugador.ubic.fila = fila;
-    logica->jugador.tipo = ENTIDAD_JUGADOR;
-    logica->jugador.imagen = IMAGEN_JUGADOR;
-    logica->jugador.frame = 0;
-    logica->jugador.estado = ENTIDAD_CON_VIDA;
+    escenario->tablero[jugador->ubic.fila][jugador->ubic.columna].entidad = jugador;
+}
 
-    temporizador_inicializar(&logica->jugador.temporFrame, 0.25f);
-    temporizador_iniciar(&logica->jugador.temporFrame);
+static void _logica_inicializar_jugador(tEntidad *jugador)
+{
+    jugador->tipo = ENTIDAD_JUGADOR;
+    jugador->imagen = IMAGEN_JUGADOR;
+    jugador->frame = 0;
+    temporizador_inicializar(&jugador->temporEstado, 1.5f);
+    temporizador_inicializar(&jugador->temporFrame, 0.25f);
+    temporizador_iniciar(&jugador->temporFrame);
+}
 
-    temporizador_inicializar(&logica->jugador.temporEstado, 1.5f);
+static int _logica_encontrar_casilla_adyacente_libre(tLogica *logica, tUbicacion ubicOriginal, tUbicacion *ubicEncontrada)
+{
+    int i;
+    tUbicacion ubic;
 
-    logica->escenario.tablero[fila][columna].tile = &logica->escenario.tiles[TILE_PISO_0];
-    logica->escenario.tablero[fila][columna].entidad = &logica->jugador;
-    logica->escenario.tablero[fila][columna].transitable = 1;
+    for (i = 0; i < 4; i++) {
+
+        ubic = ubicOriginal;
+
+        switch (i) {
+            case 0: ubic.fila--; break;       // Arriba
+            case 1: ubic.fila++; break;       // Abajo
+            case 2: ubic.columna--; break;    // Izquierda
+            case 3: ubic.columna++; break;    // Derecha
+        }
+
+        if (logica_ubicacion_valida(&logica->escenario, ubic) && logica->escenario.tablero[ubic.fila][ubic.columna].entidad == NULL){
+
+            *ubicEncontrada = ubic;
+            return TODO_OK;
+        }
+    }
+
+    return -1;
+}
+
+static int _logica_encontrar_casilla_libre(tLogica *logica, tUbicacion *ubicEncontrada)
+{
+    int columna, fila, intento = 0;
+
+    do {
+        columna = rand() % logica->config.columnas;
+        fila = rand() % logica->config.filas;
+        ++intento;
+
+        if (intento > logica->config.filas * logica->config.columnas) {
+
+            return -1;
+        }
+
+    } while (logica->escenario.tablero[fila][columna].tile->tileTipo != TILE_TIPO_PISO || logica->escenario.tablero[fila][columna].entidad != NULL);
+
+    ubicEncontrada->fila = fila;
+    ubicEncontrada->columna = columna;
+
+    return TODO_OK;
 }
 
 static void _logica_colocar_fantasmas(tLogica *logica)
 {
-    int columna, fila;
+    tUbicacion ubic;
     tEntidad *fantasma, *fantasmaUlt = logica->fantasmas + (logica->ronda.cantFantasmas - 1);
 
     for (fantasma = logica->fantasmas; fantasma <= fantasmaUlt; fantasma++) {
 
         int iFantasma = (fantasmaUlt - fantasma) % 4;
 
-        do {
-            columna = rand() % logica->config.columnas;
-            fila = rand() % logica->config.filas;
-        } while(logica->escenario.tablero[fila][columna].tile->tileTipo != TILE_TIPO_PISO
-                 || logica->escenario.tablero[fila][columna].entidad);
+        if (_logica_encontrar_casilla_libre(logica, &ubic) == TODO_OK) {
 
-        fantasma->orientacion = rand() % 4;
-        fantasma->frame = rand() % 4;
-        fantasma->ubic.columna = columna;
-        fantasma->ubic.fila = fila;
-        fantasma->ubicAnterior = fantasma->ubic;
-        fantasma->imagen = IMAGEN_FANTASMA_01 + iFantasma;
-        fantasma->tipo = ENTIDAD_FANTASMA_AMARILLO + iFantasma;
-        fantasma->estado = ENTIDAD_CON_VIDA;
+            fantasma->orientacion = rand() % 4;
+            fantasma->frame = rand() % 4;
+            fantasma->ubic = ubic;
+            fantasma->ubicAnterior = fantasma->ubic;
+            fantasma->imagen = IMAGEN_FANTASMA_01 + iFantasma;
+            fantasma->tipo = ENTIDAD_FANTASMA_AMARILLO + iFantasma;
+            fantasma->estado = ENTIDAD_CON_VIDA;
 
-        temporizador_inicializar(&fantasma->temporFrame, 0.25f + ((float)(rand() % 101)) / 1000.0f);
-        temporizador_iniciar(&fantasma->temporFrame);
+            temporizador_inicializar(&fantasma->temporEstado, 4.0f);
+            temporizador_inicializar(&fantasma->temporFrame, 0.25f + ((float)(rand() % 101)) / 1000.0f);
+            temporizador_iniciar(&fantasma->temporFrame);
 
-        logica->escenario.tablero[fila][columna].entidad = fantasma;
+            logica->escenario.tablero[ubic.fila][ubic.columna].entidad = fantasma;
+
+        } else {
+
+            printf("No hay espacio para colocar otro fantasma.\n");
+            fantasma->estado = ENTIDAD_SIN_VIDA;
+        }
     }
 }
 
@@ -594,7 +646,7 @@ static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *ju
     tCola cola;
     tUbicacion ubicProcesada, ubicVecina;
     tUbicacion primerMovimiento = {-1,-1};
-    int dirFila[] = {-1, 0, 1, 0}, dirColumna[] = {0, 1, 0, -1}, jugadorEncontrado = 0, columna, fila;
+    int i, dirFila[] = {-1, 0, 1, 0}, dirColumna[] = {0, 1, 0, -1}, jugadorEncontrado = 0, columna, fila;
 
     for (fila = 0; fila < escenario->cantFilas; fila++) {
 
@@ -624,7 +676,7 @@ static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *ju
             jugadorEncontrado = 1;
         }
 
-        for(int i = 0; i < 4 && !jugadorEncontrado; i++) {
+        for(i = 0; i < 4 && !jugadorEncontrado; i++) {
 
             ubicVecina.fila = ubicProcesada.fila + dirFila[i];
             ubicVecina.columna = ubicProcesada.columna + dirColumna[i];
@@ -661,4 +713,36 @@ static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *ju
     cola_vaciar(&cola);
 
     return primerMovimiento;
+}
+
+static int _logica_fantasma_debe_usar_bfs(const tEntidad *fantasma)
+{
+    if ((fantasma->tipo == ENTIDAD_FANTASMA_ROJO && rand() % 2 == 0)
+        || (fantasma->tipo == ENTIDAD_FANTASMA_ROSA && rand() % 4 == 0)
+        || (fantasma->tipo == ENTIDAD_FANTASMA_AZUL && rand() % 8 == 0)) {
+
+        return 1;
+    }
+
+    return 0;
+}
+
+static void _logica_actualizar_entidad(tEntidad *entidad)
+{
+    if (entidad->estado == ENTIDAD_ATURDIDA || entidad->estado == ENTIDAD_POTENCIADA) {
+
+        entidad->frame = 0;
+        temporizador_actualizar(&entidad->temporEstado);
+        if (temporizador_estado(&entidad->temporEstado) == TEMPOR_FINALIZADO) {
+            entidad->estado = ENTIDAD_CON_VIDA;
+        }
+
+    }else if (entidad->estado == ENTIDAD_CON_VIDA) {
+
+        temporizador_actualizar(&entidad->temporFrame);
+        if (temporizador_estado(&entidad->temporFrame) == TEMPOR_FINALIZADO) {
+            entidad->frame = (entidad->frame + 1) % 4;
+            temporizador_iniciar(&entidad->temporFrame);
+        }
+    }
 }
