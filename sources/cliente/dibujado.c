@@ -133,9 +133,8 @@ static void _dibujado_entidad(SDL_Renderer *renderer, SDL_Texture **imagenes, tE
 
         } else if (entidad->tipo != ENTIDAD_JUGADOR){
 
-            int divisor = 128 + (int)(128.0f * sqrt(temporizador_tiempo_restante(&entidad->temporEstado)));
-
-            if ((SDL_GetTicks() / divisor) % 2 == 0) {
+            float valor = (2.0f * entidad->temporEstado.transcurrido * entidad->temporEstado.transcurrido);
+            if (((int)valor) % 2 == 0) {
                 efecto = _dibujado_fantasma_aturdido;
             }
         }
