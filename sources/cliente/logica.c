@@ -405,12 +405,12 @@ int logica_nueva_ronda(tLogica *logica)
     _logica_colocar_jugador(&logica->escenario, &logica->jugador);
     _logica_colocar_fantasmas(logica);
 
-<<<<<<< Updated upstream
     archivo_escribir_escenario(&logica->escenario, logica->ronda.numRonda, logica->ronda.semillaRonda);
-=======
     temporizador_iniciar(&logica->temporCambioRonda);
     logica->mostrarSigRonda = 1;
->>>>>>> Stashed changes
+
+    temporizador_iniciar(&logica->temporCambioRonda);
+    logica->mostrarSigRonda = 1;
 
     return TODO_OK;
 }
