@@ -26,7 +26,7 @@ int vector_crear(tVector* vector, size_t tamElem)
     vector->cap = CAP_INI;
     vector->tamElem = tamElem;
 
-    return VECTOR_TODO_OK;
+    return VECTOR_BD_TODO_OK;
 }
 
 void vector_vaciar(tVector *vector)
@@ -74,7 +74,7 @@ int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tam
 
     fclose(arch);
 
-    return VECTOR_TODO_OK;
+    return VECTOR_BD_TODO_OK;
 }
 
 void vector_recorrer(tVector* vector, Accion accion, void* extra)
@@ -180,7 +180,7 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
     if (actual <= ult && cmp(elem, actual) == 0) {
 
         actualizar(actual, elem);
-        return VECTOR_TODO_OK;
+        return VECTOR_BD_TODO_OK;
     }
 
     posIns = actual;
@@ -193,7 +193,7 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
     memcpy(posIns, elem, vector->tamElem);
     vector->ce++;
 
-    return VECTOR_TODO_OK;
+    return VECTOR_BD_TODO_OK;
 }
 
 
@@ -219,7 +219,7 @@ int vector_insertar_al_final(tVector* vector, void* elem)
     memcpy(posIns, elem, vector->tamElem);
     vector->ce++;
 
-    return VECTOR_TODO_OK;
+    return VECTOR_BD_TODO_OK;
 }
 
 void vector_it_crear(tVectorIterador* it, tVector* vector)

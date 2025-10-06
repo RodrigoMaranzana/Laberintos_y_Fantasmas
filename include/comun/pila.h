@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 typedef enum {
-    PILA_TODO_OK,
+    PILA_BD_TODO_OK,
     PILA_VACIA,
     PILA_LLENA,
     PILA_SIN_MEM

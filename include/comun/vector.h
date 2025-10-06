@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 typedef enum {
-    VECTOR_TODO_OK,
+    VECTOR_BD_TODO_OK,
     VECTOR_VACIA,
     VECTOR_LLENA,
     VECTOR_SIN_MEM,

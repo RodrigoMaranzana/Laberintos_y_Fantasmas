@@ -40,7 +40,7 @@ int pila_apilar(tPila *pila, const void *dato, unsigned tamDato)
     nodoNuevo->sig = *pila;
     *pila = nodoNuevo;
 
-    return PILA_TODO_OK;
+    return PILA_BD_TODO_OK;
 }
 
 int pila_tope(const tPila *pila, void *dato, unsigned tamDato)
@@ -52,12 +52,12 @@ int pila_tope(const tPila *pila, void *dato, unsigned tamDato)
 
     memcpy(dato, (*pila)->dato, MIN(tamDato, (*pila)->tamDato));
 
-    return PILA_TODO_OK;
+    return PILA_BD_TODO_OK;
 }
 
 int pila_vacia(const tPila *pila)
 {
-    return *pila == NULL ? PILA_VACIA : PILA_TODO_OK;
+    return *pila == NULL ? PILA_VACIA : PILA_BD_TODO_OK;
 }
 
 int pila_desapilar(tPila *pila, void *dato, unsigned tamDato)
@@ -76,7 +76,7 @@ int pila_desapilar(tPila *pila, void *dato, unsigned tamDato)
     free(nodoAux->dato);
     free(nodoAux);
 
-    return PILA_TODO_OK;
+    return PILA_BD_TODO_OK;
 }
 
 void pila_vaciar(tPila *pila)

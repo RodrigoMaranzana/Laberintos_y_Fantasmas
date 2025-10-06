@@ -41,7 +41,7 @@ int cola_encolar(tCola *cola, const void *dato, unsigned tamDato)
 
     cola->ult = nodoNue;
 
-    return TODO_OK;
+    return COLA_TODO_OK;
 }
 
 int cola_desencolar(tCola *cola, void *dato, unsigned tamDato)
@@ -63,7 +63,7 @@ int cola_desencolar(tCola *cola, void *dato, unsigned tamDato)
         cola->ult = NULL;
     }
 
-    return TODO_OK;
+    return COLA_TODO_OK;
 }
 
 int cola_ver_primero(const tCola *cola, void *dato, unsigned tamDato)
@@ -75,12 +75,12 @@ int cola_ver_primero(const tCola *cola, void *dato, unsigned tamDato)
 
     memcpy(dato, cola->pri->dato, MIN(cola->pri->tamDato, tamDato));
 
-    return TODO_OK;
+    return COLA_TODO_OK;
 }
 
 int cola_vacia(const tCola *cola)
 {
-    return cola->pri == NULL? COLA_VACIA : TODO_OK;
+    return cola->pri == NULL? COLA_VACIA : COLA_TODO_OK;
 }
 
 int cola_llena(const tCola *cola, unsigned tamDato)
@@ -91,7 +91,7 @@ int cola_llena(const tCola *cola, unsigned tamDato)
     free(nodoAux);
     free(dato);
 
-    return nodoAux == NULL || dato == NULL? COLA_LLENA : TODO_OK;
+    return nodoAux == NULL || dato == NULL? COLA_LLENA : COLA_TODO_OK;
 }
 
 void cola_vaciar(tCola *cola)

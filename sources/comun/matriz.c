@@ -1,6 +1,6 @@
 #include "../../include/comun/matriz.h"
 
-#define TODO_OK 0
+#define BD_TODO_OK 0
 #define ERR_SIN_MEM 0
 
 void** matriz_crear(size_t columnas, size_t filas, size_t tamElem)
@@ -8,7 +8,7 @@ void** matriz_crear(size_t columnas, size_t filas, size_t tamElem)
     void** fila;
     void** ultimaFila;
     void** matriz;
-    int estado = TODO_OK;
+    int estado = BD_TODO_OK;
 
     matriz = malloc(filas * sizeof(void*));
     if (!matriz) {
@@ -18,7 +18,7 @@ void** matriz_crear(size_t columnas, size_t filas, size_t tamElem)
 
     ultimaFila = matriz + filas - 1;
 
-    for (fila = matriz; estado == TODO_OK && fila <= ultimaFila; fila++) {
+    for (fila = matriz; estado == BD_TODO_OK && fila <= ultimaFila; fila++) {
 
         *fila = malloc(columnas * tamElem);
         if (!*fila) {
