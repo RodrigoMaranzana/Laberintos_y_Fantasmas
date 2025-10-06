@@ -50,7 +50,7 @@ int arbol_insertar_rec(tArbol *arbol, const void *dato, unsigned tamDato, tCmp c
     nodoNuevo->der = NULL;
     *arbol = nodoNuevo;
 
-    return ARBOL_TODO_OK;
+    return ARBOL_BD_TODO_OK;
 }
 
 void arbol_recorrer_preorden(const tArbol *arbol, void *extra, tAccion accion)
@@ -77,25 +77,18 @@ void arbol_recorrer_posorden(const tArbol *arbol, void *extra, tAccion accion)
     accion((*arbol)->dato, extra);
 }
 
-int arbol_escribir_en_arch(tArbol *arbol, const char *nombreArch)
+int arbol_escribir_en_arch(FILE *arch, tArbol *arbol)
 {
-    FILE *arch = fopen(nombreArch, "wb");
-    if (!arch) {
-        return ARBOL_ERR_ARCH;
-    }
-
     if (*arbol) {
         _arbol_escribir_preorden(arbol, arch);
     }
 
-    fclose(arch);
-    return ARBOL_TODO_OK;
+    return ARBOL_BD_TODO_OK;
 }
 
 static void _arbol_escribir_preorden(const tArbol *arbol, FILE *arch)
 {
     if (!*arbol) {
-
         return;
     }
 
@@ -104,21 +97,13 @@ static void _arbol_escribir_preorden(const tArbol *arbol, FILE *arch)
     _arbol_escribir_preorden(&(*arbol)->der, arch);
 }
 
-int arbol_cargar_de_archivo(tArbol *arbol, const char *nombreArch, unsigned tamReg, tCmp cmp)
+int arbol_cargar_de_archivo(FILE *arch, tArbol *arbol, unsigned tamReg, tCmp cmp)
 {
-    int ret = ARBOL_TODO_OK;
-    FILE *arch;
+    int ret = ARBOL_BD_TODO_OK;
     void *dato;
 
     if (*arbol) {
-
         return ARBOL_NO_INICIALIZADO;
-    }
-
-    arch = fopen(nombreArch, "rb");
-    if (!arch) {
-
-        return ARBOL_ERR_ARCH;
     }
 
     dato = malloc(tamReg);
@@ -128,18 +113,16 @@ int arbol_cargar_de_archivo(tArbol *arbol, const char *nombreArch, unsigned tamR
         return ARBOL_SIN_MEM;
     }
 
-    while (ret == ARBOL_TODO_OK && fread(dato, tamReg, 1, arch)) {
+    while (ret == ARBOL_BD_TODO_OK && fread(dato, tamReg, 1, arch)) {
 
        ret = arbol_insertar_rec(arbol, dato, tamReg, cmp);
-       if (ret != ARBOL_TODO_OK) {
+       if (ret != ARBOL_BD_TODO_OK) {
 
             arbol_vaciar(arbol);
        }
     }
 
-    fclose(arch);
     free(dato);
-
     return ret;
 }
 
@@ -170,7 +153,7 @@ int arbol_buscar(const tArbol *arbol, void *dato, unsigned tamDato, tCmp cmp)
 
     memcpy(dato, (*nodo)->dato, MIN(tamDato, (*nodo)->tamDato));
 
-    return ARBOL_TODO_OK;
+    return ARBOL_BD_TODO_OK;
 }
 
 static tNodoArbol** _arbol_buscar_nodo(const tArbol *arbol, const void *dato, tCmp cmp)
