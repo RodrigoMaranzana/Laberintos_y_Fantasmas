@@ -93,6 +93,7 @@
 		<Unit filename="include/comun/lista.h" />
 		<Unit filename="include/comun/matriz.h" />
 		<Unit filename="include/comun/pila.h" />
+		<Unit filename="include/comun/protocolo.h" />
 		<Unit filename="include/comun/vector.h" />
 		<Unit filename="include/servidor/bdatos.h">
 			<Option target="Servidor" />

@@ -3,68 +3,23 @@
 #include <stdio.h>
 #include "..\..\include\comun\arbol.h"
 #include "..\..\include\comun\comun.h"
-
-#define ARCH_NOMBRE "jugadores.dat"
-#define ARCH_IDX_NOMBRE "jugadores.idx"
+#include "..\..\include\comun\lista.h"
+#include "..\..\include\comun\protocolo.h"
 
 #define TAM_INT_TEXTO 12
 #define TAM_SIMBOLO 12
-#define TAM_IDENTIFICADOR 16
-#define TAM_NOMBRE_ARCH TAM_IDENTIFICADOR + 4
-#define MAX_CAMPOS_POR_TABLA 8
-#define MAX_PK_POR_TABLA 2
-#define TAM_MAX_TIPO_CHAR 64
-
-typedef enum {
-    ERROR_TODO_OK,
-    ERROR_SINTAXIS,
-    ERROR_COMANDO,
-    ERROR_DEMASIADOS_CAMPOS,
-    ERROR_SIN_PK,
-    ERROR_DEMASIADOS_PK,
-    ERROR_PK_INEXISTENTE,
-    ERROR_TABLA_YA_EXISTE,
-    ERROR_TABLA_NO_EXISTE,
-    ERROR_ESCRITURA,
-    ERROR_CANT_CAMPOS,
-    ERROR_CAMPO_INEXISTENTE,
-    ERROR_CAMPO_INVALIDO,
-    ERROR_SIN_MEMO,
-    ERROR_LECTURA,
-    ERROR_ARCH,
-    ERROR_PARAMETRO,
-    ERROR_TAM_TEXTO,
-    ERROR_CAMPO_ES_AI,
-    ERROR_AI_DEBE_SER_PK,
-    ERROR_AI_DEBE_SER_ENTERO,
-} eError;
 
 typedef enum {
     // Comandos
-    CREAR,
-    ABRIR,
-    INSERTAR,
-    ACTUALIZAR,
-    SELECCIONAR,
-    // Palabras clave
-    TABLA,
-    EN,
-    DESDE,
-    DONDE,
+    CREAR, INSERTAR, ACTUALIZAR, SELECCIONAR,
     // Operadores
-    IGUAL,
-    MAYOR,
-    MENOR,
-    DISTINTO,
+    IGUAL, MAYOR, MENOR, DISTINTO,
     // Tipos
-    ENTERO,
-    TEXTO,
+    ENTERO, TEXTO,
     // Restricciones
-    PK,
-    AI,
-
-    SIMBOLOS_CANT,
-    DESCONOCIDO,
+    PK, AI,
+    // Control
+    SIMBOLOS_CANT, DESCONOCIDO,
 } eSimbolo;
 
 typedef enum {
@@ -79,7 +34,7 @@ typedef struct {
 }tIndice;
 
 typedef struct {
-    char *cursor;
+    const char *cursor;
     int finSec;
 }tSecuencia;
 
@@ -116,27 +71,23 @@ typedef struct {
 typedef struct {
     tEncabezado encabezado;
     FILE *arch;
-    FILE *archIdx;
     tArbol arbol;
-    const char **simbolos;
+}tTabla;
+
+typedef struct {
+    tTabla tablaAbierta;
     tSecuencia secuencia;
 } tBDatos;
 
 
 int bdatos_iniciar(tBDatos *bDatos);
-
-int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud);
-
+int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud, tLista *listaDatos, int *cantRegistrosDatos, int *tamRegistroDatos);
 eSimbolo bdatos_parsear_comando(tSecuencia *secuencia);
-
-int bdatos_crear(tBDatos *bDatos);
-int bdatos_abrir(tBDatos *bDatos);
-int bdatos_cerrar(tBDatos *bDatos);
+int bdatos_apagar(tBDatos *bDatos);
 int bdatos_insertar(tBDatos *bDatos);
 int bdatos_actualizar(tBDatos *bDatos);
 int bdatos_seleccionar(tBDatos *bDatos);
-
-int bdatos_cerrar(tBDatos *bDatos);
+const char* bdatos_obtener_mensaje(eBDRetorno codigoError);
 int bdatos_cargar_idx(tBDatos *bDatos);
 
 int bdatos_dummy();

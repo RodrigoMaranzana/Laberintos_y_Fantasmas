@@ -4,11 +4,11 @@
 #include "../../include/servidor/bdatos.h"
 
 typedef enum {
-    SERVIDOR_TODO_OK,
+    SERVIDOR_BD_TODO_OK,
 }eServidorRet;
 
 int servidor_inicializar();
 SOCKET servidor_crear_socket();
-void servidor_procesar_solicitud(tBDatos *bDatos, const char *request, char *response);
+void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *solicitud);
 
 #endif // SERVIDOR_H_INCLUDED

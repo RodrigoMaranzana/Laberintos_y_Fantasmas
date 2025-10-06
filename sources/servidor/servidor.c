@@ -44,13 +44,54 @@ SOCKET servidor_crear_socket()
     return skt;
 }
 
-void servidor_procesar_solicitud(tBDatos *bDatos, const char *solicitud, char *respuesta)
+void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *solicitud)
 {
-    int retorno;
+    int retorno, cantRegistrosDatos, tamRegistroDatos;
+    const char *mensaje;
+    tLista listaDatos;
+    char *serializacionDatos = NULL, *registroDatos = NULL, respuesta[TAM_BUFFER];
 
-    retorno = bdatos_procesar_solcitud(bDatos, solicitud);
+    lista_crear(&listaDatos);
 
-    snprintf(respuesta, TAM_BUFFER, "%s", retorno == ERROR_TODO_OK ? "Solicitud completada" : "Error");
+    retorno = bdatos_procesar_solcitud(bDatos, solicitud, &listaDatos, &cantRegistrosDatos, &tamRegistroDatos);
+    mensaje = bdatos_obtener_mensaje(retorno);
+
+    if (retorno == BD_DATOS_OBTENIDOS) {
+
+        serializacionDatos = malloc(cantRegistrosDatos * tamRegistroDatos);
+        if (!serializacionDatos || !(registroDatos = malloc(tamRegistroDatos))) {
+            mensaje = bdatos_obtener_mensaje(BD_ERROR_SIN_MEMO);
+            free(serializacionDatos);
+            lista_vaciar(&listaDatos);
+        } else{
+            char *pSerializacionDatos = serializacionDatos;
+            memset(serializacionDatos, 0, cantRegistrosDatos * tamRegistroDatos);
+            while (lista_sacar_primero(&listaDatos, registroDatos, tamRegistroDatos) != LISTA_VACIA) {
+
+                memcpy(pSerializacionDatos, registroDatos, tamRegistroDatos);
+                pSerializacionDatos += tamRegistroDatos;
+            }
+        }
+
+        snprintf(respuesta, TAM_BUFFER, "%d;%s;%d;%d\n", retorno, mensaje, cantRegistrosDatos, tamRegistroDatos);
+    } else {
+
+        snprintf(respuesta, TAM_BUFFER, "%d;%s\n", retorno, mensaje);
+    }
+
+    send(*sock, respuesta, strlen(respuesta), 0);
+    printf("Enviado:  %s\n", respuesta);
+
+    if (serializacionDatos) {
+
+        unsigned tamSerializacion = cantRegistrosDatos * tamRegistroDatos;
+
+        send(*sock, serializacionDatos, tamSerializacion, 0);
+        printf("Datos enviados: %d bytes\n", tamSerializacion);
+    }
+
+    free(serializacionDatos);
+    free(registroDatos);
 }
 
 

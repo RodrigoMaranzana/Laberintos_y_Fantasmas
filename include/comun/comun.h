@@ -18,24 +18,26 @@
 #define TAM_BUFFER 1024
 #define TAM_COMANDO_MAX 17
 #define TAM_USUARIO 17
-//Solicitudes
-#define SOLICITUD_INI_SESION        "INICIAR_SESION"
-#define SOLICITUD_INS_PARTIDA       "INSERTAR_PARTIDA"
-#define SOLICITUD_OBT_PARTIDA       "OBTENER_PARTIDAS"
-//Respuestas
-#define RESPUESTA_OK                "OK"
-#define RESPUESTA_ERROR             "ERROR"
-#define RESPUESTA_SOLIC_INVALIDA    "SOLICITUD_INVALIDA"
-#define RESPUESTA_PARTIDA           "PARTIDA"
-#define RESPUESTA_FIN               "FIN"
-/// Ejemplos
-//INICIAR_SESION|MANUEL\n
-//INSERTAR_PARTIDA|11|2|67\n
-//PARTIDA|11|2|67\n
-//FIN\n
+
+#define COLOR_ROJO         "\x1b[31m"
+#define COLOR_VERDE        "\x1b[32m"
+#define COLOR_AMARILLO     "\x1b[33m"
+#define COLOR_AZUL         "\x1b[34m"
+#define COLOR_MAGENTA      "\x1b[35m"
+#define COLOR_CIAN         "\x1b[36m"
+#define COLOR_BLANCO       "\x1b[37m"
+#define COLOR_RESET        "\x1b[0m"
+#define FONDO_NEGRO        "\x1b[40m"
+#define FONDO_ROJO         "\x1b[41m"
+#define FONDO_VERDE        "\x1b[42m"
+#define FONDO_AMARILLO     "\x1b[43m"
+#define FONDO_AZUL         "\x1b[44m"
+#define FONDO_MAGENTA      "\x1b[45m"
+#define FONDO_CIAN         "\x1b[46m"
+#define FONDO_BLANCO       "\x1b[47m"
 
 typedef enum {
-    TODO_OK,
+    ERR_TODO_OK,
     ERR_SIN_MEMORIA,
     ERR_SDL_INI,
     ERR_VENTANA,
