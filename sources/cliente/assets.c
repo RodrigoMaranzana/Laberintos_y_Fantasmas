@@ -33,7 +33,7 @@ int assets_cargar_imagenes(SDL_Renderer *renderer, SDL_Texture **imagenes)
         pPaths++;
     }
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 int assets_cargar_sonidos(Mix_Chunk **sonidos)
@@ -69,7 +69,7 @@ int assets_cargar_sonidos(Mix_Chunk **sonidos)
         pPaths++;
     }
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 int assets_cargar_fuente(TTF_Font **fuente, int tamFuente)
@@ -81,7 +81,7 @@ int assets_cargar_fuente(TTF_Font **fuente, int tamFuente)
         return ERR_ARCH_FUENTE;
     }
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 

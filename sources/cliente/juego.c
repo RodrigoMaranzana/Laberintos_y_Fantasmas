@@ -65,12 +65,12 @@ static void _juego_ventana_usuario_destruir(void *datos);
 
 int juego_inicializar(tJuego *juego, const char *tituloVentana)
 {
-    int ret = TODO_OK;
+    int ret = ERR_TODO_OK;
 
     memset(juego, 0, sizeof(tJuego));
     juego->estado = JUEGO_NO_INICIADO;
     printf("Iniciando SDL\n");
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != TODO_OK) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != ERR_TODO_OK) {
         printf("SDL_Init() ERROR: %s\n", SDL_GetError());
         return ERR_SDL_INI;
     }
@@ -96,15 +96,15 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
     juego->anchoRes += PADDING_MARGEN * 2;
     juego->altoRes += PADDING_MARGEN * 2;
 
-    if (_juego_crear_ventana(&juego->ventana, &juego->renderer, juego->anchoRes, juego->altoRes, tituloVentana) != TODO_OK) {
+    if (_juego_crear_ventana(&juego->ventana, &juego->renderer, juego->anchoRes, juego->altoRes, tituloVentana) != ERR_TODO_OK) {
         printf("Error: No se pudo crear la ventana.\n");
         Mix_CloseAudio();
         SDL_Quit();
         return ERR_VENTANA;
     }
 
-    if ((ret = _juego_cargar_assets(juego)) != TODO_OK) return ret;
-    if ((ret = _juego_crear_hud(juego)) != TODO_OK) return ret;
+    if ((ret = _juego_cargar_assets(juego)) != ERR_TODO_OK) return ret;
+    if ((ret = _juego_crear_hud(juego)) != ERR_TODO_OK) return ret;
 
     juego->estado = JUEGO_CORRIENDO;
     printf("Juego iniciado con exito.\n");
@@ -114,7 +114,7 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
 
 int juego_ejecutar(tJuego *juego)
 {
-    eRetorno ret = TODO_OK;
+    eRetorno ret = ERR_TODO_OK;
 
     while (juego->estado == JUEGO_CORRIENDO) {
 
@@ -258,7 +258,7 @@ static int _juego_actualizar_hud(tHud *hud, tLogica *logica)
         widget_modificar_visibilidad(hud->widgets[HUD_WIDGETS_TEXTO], 0);
     }
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 static void _juego_dibujar_hud(tHud *hud, SDL_Renderer *renderer)
@@ -322,7 +322,7 @@ static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, u
     SDL_RenderSetLogicalSize(*renderer, anchoRes, altoRes);
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "0");
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 static void _juego_iniciar_partida(void *datos)
@@ -346,6 +346,29 @@ static void _juego_continuar_partida(void *datos)
     logica->estado = LOGICA_JUGANDO;
 }
 
+//static int _juego_solicitar_apertura_tabla(const char *nombreTabla)
+//{
+//    char bufferEnvio[TAM_BUFFER] = {0};
+//    char bufferRespuesta[TAM_BUFFER] = {0};
+//
+//    sprintf(bufferEnvio, "%s %s", "ABRIR TABLA", nombreTabla);
+//    printf("Solicitud: %s\n", bufferEnvio);
+//
+//    cliente_enviar_solicitud(juego.sock, bufferEnvio, bufferRespuesta);
+//    printf("Respuesta del servidor: %s\n", bufferRespuesta);
+//
+//
+//
+//    return ERR_TODO_OK;
+//}
+
+///// LONGITUD|RETORNO|MENSAJE|
+//
+//static int _juego_parsear_respuesta(const char *respuesta)
+//{
+//
+//}
+
 
 static int _juego_ventana_menu_crear(void *datos)
 {
@@ -363,7 +386,7 @@ static int _juego_ventana_menu_crear(void *datos)
         menu_destruir(datosMenuPausa->menu);
         return -1;
     }
-    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_NUEVA_PARTIDA, texturaAux, 64, (tMenuAccion){_juego_iniciar_partida, datosMenuPausa->logica}, OPCION_HABILITADA) != TODO_OK) {
+    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_NUEVA_PARTIDA, texturaAux, 64, (tMenuAccion){_juego_iniciar_partida, datosMenuPausa->logica}, OPCION_HABILITADA) != ERR_TODO_OK) {
         SDL_DestroyTexture(texturaAux);
         menu_destruir(datosMenuPausa->menu);
         return -1;
@@ -375,7 +398,7 @@ static int _juego_ventana_menu_crear(void *datos)
         menu_destruir(datosMenuPausa->menu);
         return -1;
     }
-    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_CONTINUAR, texturaAux, 64, (tMenuAccion){_juego_continuar_partida, datosMenuPausa->logica}, OPCION_OCULTA) != TODO_OK) {
+    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_CONTINUAR, texturaAux, 64, (tMenuAccion){_juego_continuar_partida, datosMenuPausa->logica}, OPCION_OCULTA) != ERR_TODO_OK) {
         SDL_DestroyTexture(texturaAux);
         menu_destruir(datosMenuPausa->menu);
         return -1;
@@ -387,7 +410,7 @@ static int _juego_ventana_menu_crear(void *datos)
         menu_destruir(datosMenuPausa->menu);
         return -1;
     }
-    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_CAMBIAR_USUARIO, texturaAux, 64, (tMenuAccion){NULL, datosMenuPausa->logica}, OPCION_HABILITADA) != TODO_OK) {
+    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_CAMBIAR_USUARIO, texturaAux, 64, (tMenuAccion){NULL, datosMenuPausa->logica}, OPCION_HABILITADA) != ERR_TODO_OK) {
         SDL_DestroyTexture(texturaAux);
         menu_destruir(datosMenuPausa->menu);
         return -1;
@@ -399,7 +422,7 @@ static int _juego_ventana_menu_crear(void *datos)
         menu_destruir(datosMenuPausa->menu);
         return -1;
     }
-    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_ESTADISTICAS, texturaAux, 64, (tMenuAccion){NULL, NULL}, OPCION_DESHABILITADA) != TODO_OK) {
+    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_ESTADISTICAS, texturaAux, 64, (tMenuAccion){NULL, NULL}, OPCION_DESHABILITADA) != ERR_TODO_OK) {
         SDL_DestroyTexture(texturaAux);
         menu_destruir(datosMenuPausa->menu);
         return -1;
@@ -411,7 +434,7 @@ static int _juego_ventana_menu_crear(void *datos)
         menu_destruir(datosMenuPausa->menu);
         return -1;
     }
-    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_SALIR, texturaAux, 64, (tMenuAccion){_juego_salir_del_juego, datosMenuPausa->estadoJuego}, OPCION_HABILITADA) != TODO_OK) {
+    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_SALIR, texturaAux, 64, (tMenuAccion){_juego_salir_del_juego, datosMenuPausa->estadoJuego}, OPCION_HABILITADA) != ERR_TODO_OK) {
         SDL_DestroyTexture(texturaAux);
         menu_destruir(datosMenuPausa->menu);
         return -1;
@@ -473,7 +496,7 @@ static void _juego_ventana_menu_actualizar(SDL_Event *evento, void *datos)
 
 static int _juego_cargar_assets(tJuego *juego)
 {
-    int i, ret = TODO_OK;
+    int i, ret = ERR_TODO_OK;
 
     juego->sonidos = malloc(sizeof(Mix_Chunk*) * SONIDO_CANTIDAD);
     if (!juego->sonidos) return ERR_SIN_MEMORIA;
@@ -484,18 +507,18 @@ static int _juego_cargar_assets(tJuego *juego)
         return ERR_SIN_MEMORIA;
     }
 
-    if ((ret = assets_cargar_imagenes(juego->renderer, juego->imagenes)) != TODO_OK) return ret;
+    if ((ret = assets_cargar_imagenes(juego->renderer, juego->imagenes)) != ERR_TODO_OK) return ret;
 
-    if ((ret = assets_cargar_sonidos(juego->sonidos)) != TODO_OK) return ret;
+    if ((ret = assets_cargar_sonidos(juego->sonidos)) != ERR_TODO_OK) return ret;
 
     for (i = 0; i < FUENTE_CANTIDAD; i++) {
 
-        if ((ret = assets_cargar_fuente(&juego->fuentes[i], FUENTE_TAM_MIN + (FUENTE_INCREMENTO * i))) != TODO_OK) {
+        if ((ret = assets_cargar_fuente(&juego->fuentes[i], FUENTE_TAM_MIN + (FUENTE_INCREMENTO * i))) != ERR_TODO_OK) {
             return ret;
         }
     }
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 static int _juego_crear_hud(tJuego *juego)
@@ -551,7 +574,7 @@ static int _juego_crear_hud(tJuego *juego)
     juego->ventanaUsername = ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_usuario_crear, _juego_ventana_usuario_actualizar, _juego_ventana_usuario_dibujar, _juego_ventana_usuario_destruir, datosUsername}, dimsVentana, (SDL_Color){162, 200, 200, 255}, 1);
     ventana_abrir(juego->ventanaUsername);
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 

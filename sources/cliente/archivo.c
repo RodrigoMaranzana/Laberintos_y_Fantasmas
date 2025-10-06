@@ -67,7 +67,7 @@ int archivo_leer_conf(FILE* arch, tConf *conf)
         return ERR_CONF;
     }
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 int archivo_escribir_conf(FILE* arch, const tConf *conf)
@@ -81,7 +81,7 @@ int archivo_escribir_conf(FILE* arch, const tConf *conf)
     ret = fprintf(arch, "MAXIMO_NUMERO_PREMIOS : %d\n",  conf->max_num_premios);
     ret = fprintf(arch, "MAXIMO_VIDAS_EXTRA : %d\n",  conf->max_vidas_extra);
 
-    return ret >= 0 ? TODO_OK : ERR_ARCHIVO;
+    return ret >= 0 ? ERR_TODO_OK : ERR_ARCHIVO;
 }
 
 int archivo_escribir_escenario(tEscenario *escenario, int numRonda, long semillaRonda)
@@ -132,7 +132,7 @@ int archivo_escribir_escenario(tEscenario *escenario, int numRonda, long semilla
     }
 
     fclose(arch);
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 /*************************
@@ -180,5 +180,5 @@ static int _archivo_parsear_linea_conf(char *buffer, tParam *param)
 
     *cursor = '\0';
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }

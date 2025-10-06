@@ -27,7 +27,7 @@ int escenario_crear(tEscenario *escenario, unsigned columnas, unsigned filas)
 
     _escenario_init_tiles(escenario->tiles);
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 eParedLimite escenario_ubic_es_pared_limite(const tEscenario *escenario, tUbicacion ubic)
@@ -160,7 +160,7 @@ static void _escenario_generar_laberinto(tEscenario *escenario)
     casTope->transitable = 1;
     pila_apilar(&pila, &casTope, sizeof(tCasilla*));
 
-    while (pila_vacia(&pila) == TODO_OK) {
+    while (pila_vacia(&pila) == ERR_TODO_OK) {
 
         pila_tope(&pila, &casTope, sizeof(tCasilla*));
 

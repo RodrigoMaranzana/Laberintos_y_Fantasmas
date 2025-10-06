@@ -6,7 +6,7 @@
 #define TAM_NOMBRE_VENTANA 25
 
 typedef enum {
-    VENTANA_TODO_OK,
+    VENTANA_BD_ERR_TODO_OK,
 } eVentanaErr;
 
 typedef struct sVentana tVentana;

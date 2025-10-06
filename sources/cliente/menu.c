@@ -59,7 +59,7 @@ int menu_agregar_opcion(tMenu *menu, int id, SDL_Texture *textura, unsigned tamA
         tMenuOpcion* nuevasOpciones = (tMenuOpcion*) realloc(menu->opciones, nuevaCapOpc * sizeof(tMenuOpcion));
         if (!nuevasOpciones) {
 
-            return ERR_SIN_MEMORIA;
+            return MENU_SIN_MEM;
         }
 
         menu->opciones = nuevasOpciones;
@@ -86,7 +86,7 @@ int menu_agregar_opcion(tMenu *menu, int id, SDL_Texture *textura, unsigned tamA
         menu->selecOpc = pOpciones->id;
     }
 
-    return TODO_OK;
+    return MENU_ERR_TODO_OK;
 }
 
 void menu_siguiente_opcion(tMenu *menu)

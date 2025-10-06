@@ -27,7 +27,6 @@ static void _logica_colocar_jugador(const tEscenario *escenario, tEntidad *jugad
 static int _logica_fantasma_debe_usar_bfs(const tEntidad *fantasma);
 static void _logica_actualizar_entidad(tEntidad *entidad);
 static int _logica_encontrar_casilla_libre(tLogica *logica, tUbicacion *ubic);
-static int _logica_encontrar_casilla_adyacente_libre(tLogica *logica, tUbicacion ubicOriginal, tUbicacion *ubicEncontrada);
 
 void logica_calc_min_res(const tLogica *logica, unsigned *anchoRes, unsigned *altoRes)
 {
@@ -44,7 +43,7 @@ int logica_inicializar(tLogica *logica)
     archConf = fopen("config.txt", "r+");
     if (archConf) {
 
-        if (archivo_leer_conf(archConf, &confArch) == TODO_OK && confArch.columnas >= MIN_COLUMNAS && confArch.filas >= MIN_FILAS && confArch.max_num_fantasmas >= 1) {
+        if (archivo_leer_conf(archConf, &confArch) == ERR_TODO_OK && confArch.columnas >= MIN_COLUMNAS && confArch.filas >= MIN_FILAS && confArch.max_num_fantasmas >= 1) {
             reescribir = 0;
         }
 
@@ -89,7 +88,7 @@ int logica_inicializar(tLogica *logica)
 
     logica->estado = LOGICA_EN_LOGIN;
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 void logica_destruir(tLogica *logica)
@@ -349,7 +348,7 @@ void logica_mostrar_historial_movs(tCola *movsJugador)
 
     printf("Tus movimientos realizados:\n");
 
-    while (cola_vacia(movsJugador) == TODO_OK) {
+    while (cola_vacia(movsJugador) == ERR_TODO_OK) {
 
         cola_desencolar(movsJugador, &mov, sizeof(tMovimiento));
 
@@ -386,7 +385,7 @@ int logica_iniciar_juego(tLogica *logica)
 
     logica->estado = LOGICA_JUGANDO;
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 int logica_nueva_ronda(tLogica *logica)
@@ -412,7 +411,7 @@ int logica_nueva_ronda(tLogica *logica)
     temporizador_iniciar(&logica->temporCambioRonda);
     logica->mostrarSigRonda = 1;
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 void logica_fin_juego(tLogica *logica)
@@ -471,32 +470,6 @@ static void _logica_inicializar_jugador(tEntidad *jugador)
     temporizador_iniciar(&jugador->temporFrame);
 }
 
-static int _logica_encontrar_casilla_adyacente_libre(tLogica *logica, tUbicacion ubicOriginal, tUbicacion *ubicEncontrada)
-{
-    int i;
-    tUbicacion ubic;
-
-    for (i = 0; i < 4; i++) {
-
-        ubic = ubicOriginal;
-
-        switch (i) {
-            case 0: ubic.fila--; break;       // Arriba
-            case 1: ubic.fila++; break;       // Abajo
-            case 2: ubic.columna--; break;    // Izquierda
-            case 3: ubic.columna++; break;    // Derecha
-        }
-
-        if (logica_ubicacion_valida(&logica->escenario, ubic) && logica->escenario.tablero[ubic.fila][ubic.columna].entidad == NULL){
-
-            *ubicEncontrada = ubic;
-            return TODO_OK;
-        }
-    }
-
-    return -1;
-}
-
 static int _logica_encontrar_casilla_libre(tLogica *logica, tUbicacion *ubicEncontrada)
 {
     int columna, fila, intento = 0;
@@ -516,7 +489,7 @@ static int _logica_encontrar_casilla_libre(tLogica *logica, tUbicacion *ubicEnco
     ubicEncontrada->fila = fila;
     ubicEncontrada->columna = columna;
 
-    return TODO_OK;
+    return ERR_TODO_OK;
 }
 
 static void _logica_colocar_fantasmas(tLogica *logica)
@@ -528,7 +501,7 @@ static void _logica_colocar_fantasmas(tLogica *logica)
 
         int iFantasma = (fantasmaUlt - fantasma) % 4;
 
-        if (_logica_encontrar_casilla_libre(logica, &ubic) == TODO_OK) {
+        if (_logica_encontrar_casilla_libre(logica, &ubic) == ERR_TODO_OK) {
 
             fantasma->orientacion = rand() % 4;
             fantasma->frame = rand() % 4;
@@ -581,7 +554,7 @@ static tUbicacion _logica_mover_fantasma_dfs(tEscenario *escenario, tEntidad *ju
 
     escenario->tablero[ubicProcesada.fila][ubicProcesada.columna].visitada = 1;
 
-    while(pila_vacia(&pila) == TODO_OK && !jugadorEncontrado) {
+    while(pila_vacia(&pila) == ERR_TODO_OK && !jugadorEncontrado) {
 
         int i, nuevaUbicEncontrada = 0;
 
@@ -625,11 +598,11 @@ static tUbicacion _logica_mover_fantasma_dfs(tEscenario *escenario, tEntidad *ju
 
     if(jugadorEncontrado){
 
-        while(pila_vacia(&pila) == TODO_OK) {
+        while(pila_vacia(&pila) == ERR_TODO_OK) {
 
             pila_desapilar(&pila, &ubicProcesada, sizeof(tUbicacion));
 
-            if(pila_vacia(&pila) == TODO_OK) {
+            if(pila_vacia(&pila) == ERR_TODO_OK) {
 
                 primerMovimiento = ubicProcesada;
             }
@@ -668,7 +641,7 @@ static tUbicacion _logica_mover_fantasma_bfs(tEscenario *escenario, tEntidad *ju
 
     cola_encolar(&cola, &ubicProcesada, sizeof(tUbicacion));
 
-    while(cola_vacia(&cola) == TODO_OK && !jugadorEncontrado) {
+    while(cola_vacia(&cola) == ERR_TODO_OK && !jugadorEncontrado) {
 
         cola_desencolar(&cola, &ubicProcesada, sizeof(tUbicacion));
 

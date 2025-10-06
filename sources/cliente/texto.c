@@ -52,7 +52,7 @@ SDL_Texture* texto_crear_textura(SDL_Renderer *renderer, TTF_Font *fuente, const
 
 int texto_obtener_tam(TTF_Font *fuente, const char *texto, SDL_Point *tamTexto){
 
-    int ret = TODO_OK;
+    int ret = ERR_TODO_OK;
 
     if (TTF_SizeText(fuente, texto, &tamTexto->x, &tamTexto->y) == -1) {
         ret = ERR_FUENTE;

@@ -5,6 +5,9 @@
 
 #define MENU_NADA_SELEC -1
 
+#define MENU_ERR_TODO_OK 0
+#define MENU_SIN_MEM 1
+
 typedef enum {
     OPCION_DESHABILITADA,
     OPCION_HABILITADA,

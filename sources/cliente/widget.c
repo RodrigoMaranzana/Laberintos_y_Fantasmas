@@ -254,7 +254,7 @@ int widget_modificar_valor(tWidget *widget, void *valor)
         return widget->actualizar(widget);
     }
 
-    return WIDGET_TODO_OK;
+    return WIDGET_ERR_TODO_OK;
 }
 
 void widget_destruir(tWidget *widget)
@@ -500,7 +500,7 @@ static int _widget_contador_actualizar(tWidget *widget)
     widget->rectTexto.w = tamTexto.x;
     widget->rectTexto.h = tamTexto.y;
 
-    return WIDGET_TODO_OK;
+    return WIDGET_ERR_TODO_OK;
 }
 
 static void _widget_contador_dibujar(tWidget *widget)

@@ -5,7 +5,7 @@
 #include <SDL_ttf.h>
 
 typedef enum {
-    WIDGET_TODO_OK,
+    WIDGET_ERR_TODO_OK,
     WIDGET_INCORRECTO,
 } eWidgetErr;
 
