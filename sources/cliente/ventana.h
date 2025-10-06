@@ -1,6 +1,0 @@
-#ifndef VENTANA_H_INCLUDED
-#define VENTANA_H_INCLUDED
-
-
-
-#endif // VENTANA_H_INCLUDED
