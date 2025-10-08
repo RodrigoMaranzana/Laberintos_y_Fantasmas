@@ -28,13 +28,13 @@
 #define COLOR_BLANCO       "\x1b[37m"
 #define COLOR_RESET        "\x1b[0m"
 #define FONDO_NEGRO        "\x1b[40m"
-#define FONDO_ROJO         "\x1b[41m"
-#define FONDO_VERDE        "\x1b[42m"
-#define FONDO_AMARILLO     "\x1b[43m"
-#define FONDO_AZUL         "\x1b[44m"
-#define FONDO_MAGENTA      "\x1b[45m"
-#define FONDO_CIAN         "\x1b[46m"
-#define FONDO_BLANCO       "\x1b[47m"
+#define FONDO_ROJO         "\x1b[30m\x1b[41m"
+#define FONDO_VERDE        "\x1b[30m\x1b[42m"
+#define FONDO_AMARILLO     "\x1b[30m\x1b[43m"
+#define FONDO_AZUL         "\x1b[30m\x1b[44m"
+#define FONDO_MAGENTA      "\x1b[30m\x1b[45m"
+#define FONDO_CIAN         "\x1b[30m\x1b[46m"
+#define FONDO_BLANCO       "\x1b[30m\x1b[47m"
 
 typedef enum {
     ERR_TODO_OK,

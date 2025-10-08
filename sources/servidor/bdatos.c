@@ -9,13 +9,17 @@
 /// Salto de linea omitido intencionalmente
 #define ES_BLANCO(c) ((c) == ' ' || (c) == '\t' || (c) == '\r' || (c) == '\v' || (c) == '\f')
 
-typedef int (*tParsear)(tSecuencia *secuencia, void *salida, unsigned tamSalida);
+typedef enum {
+    MODO_INSERCION,
+    MODO_ACTUALIZACION
+} eModoParseoValores;
 
-static int _bdatos_dummy();
+typedef int (*tParsear)(tSecuencia *secuencia, void *salida, unsigned tamSalida);
 
 static int _bdatos_cerrar_tabla(tBDatos *bDatos);
 static int _bdatos_insertar(tBDatos *bDatos);
 static int _bdatos_seleccionar(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos);
+static int _bdatos_actualizar(tBDatos *bDatos);
 static int _bdatos_tabla_existe(const char *nombreTabla);
 static int _bdatos_crear_tabla(tBDatos *bDatos, const char *nombreTabla);
 static int _bdatos_construir_encabezado(tEncabezado *encabezado, const char *nombreTabla, int cantCampos, tCampo *campos);
@@ -29,11 +33,10 @@ static int _bdatos_parsear_caracter(tSecuencia *secuencia, void *salida, unsigne
 static int _bdatos_parsear_numeros(tSecuencia *secuencia, void *salida, unsigned tamSalida);
 static int _bdatos_parsear_texto(tSecuencia *secuencia, void *salida, unsigned tamSalida);
 static void _bdatos_crear_secuencia(tSecuencia *secuencia, const char *buffer);
-static eSimbolo _bdatos_comparar_simbolo(const char* simbolo);
 static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tCampo *campos, int maxCampos, int *cantCamposLeidos);
 static int _bdatos_leer_campo_tipo(tSecuencia *secuencia, tCampo *campo);
-static int _bdatos_parsear_valores_insercion(tSecuencia *secuencia, const tEncabezado *encabezado, tDatoParseado *datosParseados, int *cantParseados);
-
+static int _bdatos_parsear_valores(tSecuencia *secuencia, const tEncabezado *encabezado, eModoParseoValores modo, tDatoParseado *datosParseados, int *cantParseados);
+static eSimbolo _bdatos_comparar_simbolo(const char* simbolo);
 
 static int _bdatos_cerrar_tabla(tBDatos *bDatos)
 {
@@ -244,7 +247,9 @@ static eSimbolo _bdatos_comparar_simbolo(const char* simbolo)
         return MENOR;
     } else if (strcmp(simbolo, "DISTINTO") == 0) {
         return DISTINTO;
-    } else if (strcmp(simbolo, "ENTERO") == 0) {
+    } else if (strcmp(simbolo, "DONDE") == 0) {
+        return DONDE;
+    }  else if (strcmp(simbolo, "ENTERO") == 0) {
         return ENTERO;
     } else if (strcmp(simbolo, "TEXTO") == 0) {
         return TEXTO;
@@ -315,7 +320,7 @@ int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud, tLista *lis
         }
 
         case ACTUALIZAR:
-            return _bdatos_dummy();
+            return _bdatos_actualizar(bDatos);
         default:
             return BD_ERROR_COMANDO;
     }
@@ -488,6 +493,91 @@ static int _bdatos_buscar_campo(const tCampo *campos, int cantCampos, tCampo *ca
     return encontrado ? BD_TODO_OK : BD_ERROR_CAMPO_INEXISTENTE;
 }
 
+/// ACTUALIZAR jugadores (puntajeMax 300) DONDE (username IGUAL PEPE)
+static int _bdatos_actualizar(tBDatos *bDatos)
+{
+    int ret, cantParseados = 0, i, cantRegistrosDatos, encontradoPK = 0;
+    tCampo campoPK;
+    tLista listaDatos;
+    eSimbolo simboloConector;
+    tDatoParseado datosParseados[MAX_CAMPOS_POR_TABLA];
+    char caracter, *registro = NULL, *registroActualizado = NULL;
+
+    if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
+
+    memset(datosParseados, 0, sizeof(datosParseados));
+    ret = _bdatos_parsear_valores(&bDatos->secuencia, &bDatos->tablaAbierta.encabezado, MODO_ACTUALIZACION, datosParseados, &cantParseados);
+    if (ret != BD_TODO_OK) {
+        for (i = 0; i < cantParseados; i++) {
+            free(datosParseados[i].valor.dato);
+        }
+        return ret;
+    }
+
+    for (i = 0; i < cantParseados; i++) {
+        if (datosParseados[i].campo.esPK) {
+            for (int j = 0; j < cantParseados; j++) {
+                free(datosParseados[j].valor.dato);
+            }
+            return BD_ERROR_ACTUALIZAR_PK;
+        }
+    }
+
+    if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &simboloConector, sizeof(eSimbolo))) != BD_TODO_OK || (simboloConector != DONDE)) return BD_ERROR_SINTAXIS;
+
+    lista_crear(&listaDatos);
+    _bdatos_seleccionar(bDatos, &listaDatos, &cantRegistrosDatos);
+
+    registro = (char*)malloc(bDatos->tablaAbierta.encabezado.tamRegistro);
+    if (!registro || !(registroActualizado = (char*)malloc(bDatos->tablaAbierta.encabezado.tamRegistro))) {
+        free(registro);
+        free(registroActualizado);
+        for (i = 0; i < cantParseados; i++) {
+            free(datosParseados[i].valor.dato);
+        }
+        return BD_ERROR_SIN_MEMO;
+    }
+
+    for (i = 0; i < bDatos->tablaAbierta.encabezado.cantCampos && !encontradoPK; i++) {
+        if (bDatos->tablaAbierta.encabezado.campos[i].esPK) {
+            campoPK = bDatos->tablaAbierta.encabezado.campos[i];
+            encontradoPK = 1;
+        }
+    }
+
+    while (lista_sacar_primero(&listaDatos, registro, bDatos->tablaAbierta.encabezado.tamRegistro) != LISTA_VACIA) {
+
+        tIndice indiceReg;
+        memset(&indiceReg, 0, sizeof(tIndice));
+
+        if (campoPK.tipo == TIPO_ENTERO) {
+            int valorPK = *(int*)(registro + campoPK.offsetCampo);
+            sprintf(indiceReg.clave, "%011d", valorPK);
+        } else {
+            strncpy(indiceReg.clave, registro + campoPK.offsetCampo, campoPK.tam);
+        }
+
+        memcpy(registroActualizado, registro, bDatos->tablaAbierta.encabezado.tamRegistro);
+
+        for (i = 0; i < cantParseados; i++) {
+            memcpy(registroActualizado + datosParseados[i].campo.offsetCampo, datosParseados[i].valor.dato, datosParseados[i].valor.tam);
+        }
+
+        arbol_buscar(&bDatos->tablaAbierta.arbol, &indiceReg, sizeof(tIndice), _bdatos_cmp_indice);
+
+        fseek(bDatos->tablaAbierta.arch, indiceReg.offset, SEEK_SET);
+        fwrite(registroActualizado, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
+    }
+
+    for (i = 0; i < cantParseados; i++) {
+        free(datosParseados[i].valor.dato);
+    }
+    free(registro);
+    free(registroActualizado);
+    return BD_TODO_OK;
+}
+
+
 /// SELECCIONAR jugadores (username IGUAL PEPE)
 static int _bdatos_seleccionar(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos)
 {
@@ -636,7 +726,7 @@ static int _bdatos_insertar(tBDatos *bDatos)
     if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
 
     memset(datosParseados, 0, sizeof(datosParseados));
-    ret = _bdatos_parsear_valores_insercion(&bDatos->secuencia, &bDatos->tablaAbierta.encabezado, datosParseados, &cantParseados);
+    ret = _bdatos_parsear_valores(&bDatos->secuencia, &bDatos->tablaAbierta.encabezado, MODO_INSERCION, datosParseados, &cantParseados);
     if (ret != BD_TODO_OK) {
         for (i = 0; i < cantParseados; i++) {
             free(datosParseados[i].valor.dato);
@@ -690,7 +780,7 @@ static int _bdatos_insertar(tBDatos *bDatos)
     return BD_TODO_OK;
 }
 
-static int _bdatos_parsear_valores_insercion(tSecuencia *secuencia, const tEncabezado *encabezado, tDatoParseado *datosParseados, int *cantParseados)
+static int _bdatos_parsear_valores(tSecuencia *secuencia, const tEncabezado *encabezado, eModoParseoValores modo, tDatoParseado *datosParseados, int *cantParseados)
 {
     int retorno, i = 0, j, fin = 0, cantPK = 0;
     char caracter, nombreCampoLeido[TAM_IDENTIFICADOR];
@@ -769,7 +859,7 @@ static int _bdatos_parsear_valores_insercion(tSecuencia *secuencia, const tEncab
 
     } while (!fin);
 
-    if (cantPK < 1 && encabezado->proximoAI == 0) {
+    if (modo == MODO_INSERCION && cantPK < 1 && encabezado->proximoAI == 0) {
         for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
         return BD_ERROR_SIN_PK;
     }
@@ -815,6 +905,7 @@ const char* bdatos_obtener_mensaje(eBDRetorno codigoError)
         case BD_ERROR_TABLA_NO_EXISTE:   return "La tabla no existe";
         case BD_ERROR_DEMASIADOS_CAMPOS: return "La cantidad de campos supera el maximo permitido";
         case BD_ERROR_SIN_PK:            return "La operacion requiere una Clave Primaria (PK)";
+        case BD_ERROR_ACTUALIZAR_PK:     return "No se permite actualizar el valor de una Clave Primaria (PK)";
         case BD_ERROR_DEMASIADOS_PK:     return "Solo se permite una Clave Primaria (PK) por tabla";
         case BD_ERROR_DEMASIADOS_AI:     return "Solo se permite un campo Autoincremental (AI) por tabla";
         case BD_ERROR_ESCRITURA:         return "Error de escritura";
@@ -844,9 +935,4 @@ int bdatos_iniciar(tBDatos *bDatos)
 int bdatos_apagar(tBDatos *bDatos)
 {
     return _bdatos_cerrar_tabla(bDatos);
-}
-
-static int _bdatos_dummy()
-{
-    return BD_TODO_OK;
 }

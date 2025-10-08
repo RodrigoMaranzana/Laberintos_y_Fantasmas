@@ -48,6 +48,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="../../Algoritmos_y_Estructuras_de_Datos/Bibliotecas/lista/lista.cbp" />
 		<Unit filename="include/cliente/archivo.h">
 			<Option target="Cliente" />
 		</Unit>

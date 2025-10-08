@@ -80,56 +80,33 @@ static void _lote_pruebas_comunicacion_servidor(SOCKET *sock)
     int cantidad = 0, retorno, i;
 
     /* CREACIÓN DE TABLAS - CASOS VALIDOS */
-
     retorno = cliente_ejecutar_solicitud(*sock, "CREAR jugadores (username TEXTO(16) PK, record ENTERO, cantPartidas ENTERO)", &cantidad, &datos);
-    if(datos) free(datos);
-
     retorno = cliente_ejecutar_solicitud(*sock, "CREAR partidas (idPartida ENTERO PK AI, username TEXTO(16), puntaje ENTERO)", &cantidad, &datos);
-    if(datos) free(datos);
 
     /* CREACIÓN DE TABLAS - CASOS INVALIDOS */
-
     retorno = cliente_ejecutar_solicitud(*sock, "CREAR jugadores (dummy TEXTO(1))", &cantidad, &datos);
-    if(datos) free(datos);
-
     retorno = cliente_ejecutar_solicitud(*sock, "CREAR puntajes (valor ENTERO)", &cantidad, &datos);
-    if(datos) free(datos);
 
 
     /* INSERCIÓN DE DATOS - CASOS VALIDOS */
-
     retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR jugadores (username PEPE, record 100, cantPartidas 3)", &cantidad, &datos);
-    if(datos) free(datos);
-
     retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR jugadores (username PANCHO, record 60, cantPartidas 11)", &cantidad, &datos);
-    if(datos) free(datos);
-
     retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR jugadores (cantPartidas 5, username ANA, record 250)", &cantidad, &datos);
-    if(datos) free(datos);
-
     retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username PEPE, puntaje 100)", &cantidad, &datos);
-    if(datos) free(datos);
-
     retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (puntaje 120, username ANA)", &cantidad, &datos);
-    if(datos) free(datos);
-
     retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username PEPE, puntaje 50)", &cantidad, &datos);
-    if(datos) free(datos);
-
+    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username PEPE, puntaje 21)", &cantidad, &datos);
+    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username PEPE, puntaje 88)", &cantidad, &datos);
+    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username ANA, puntaje 120)", &cantidad, &datos);
 
     /* INSERCIÓN DE DATOS - CASOS INVALIDOS */
-
     retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR jugadores (username PEPE, record 999, cantPartidas 9)", &cantidad, &datos);
-    if(datos) free(datos);
-
     retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (idPartida 21, puntaje 120, username ANA)", &cantidad, &datos);
-    if(datos) free(datos);
 
 
     /* SELECCIÓN DE DATOS */
-
     retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR jugadores (username IGUAL ANA)", &cantidad, &datos);
-    if (retorno == 1 && cantidad > 0 && datos != NULL) {
+    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
 
         printf("Datos Recibidos:\n");
         for (i = 0; i < cantidad; i++) {
@@ -141,7 +118,7 @@ static void _lote_pruebas_comunicacion_servidor(SOCKET *sock)
     }
 
     retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR jugadores (username IGUAL HOMERO)", &cantidad, &datos);
-    if (retorno == CE_TODO_OK && cantidad > 0 && datos != NULL) {
+    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
 
         printf("Datos Recibidos:\n");
         for (i = 0; i < cantidad; i++) {
@@ -153,7 +130,7 @@ static void _lote_pruebas_comunicacion_servidor(SOCKET *sock)
     }
 
     retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR partidas (idPartida IGUAL 2)", &cantidad, &datos);
-    if (retorno == CE_TODO_OK && cantidad > 0 && datos != NULL) {
+    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
 
         printf("Datos Recibidos:\n");
         for (i = 0; i < cantidad; i++) {
@@ -165,7 +142,7 @@ static void _lote_pruebas_comunicacion_servidor(SOCKET *sock)
     }
 
     retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR partidas (username IGUAL PEPE)", &cantidad, &datos);
-    if (retorno == CE_TODO_OK && cantidad > 0 && datos != NULL) {
+    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
 
         printf("Datos Recibidos:\n");
         for (i = 0; i < cantidad; i++) {
@@ -175,4 +152,21 @@ static void _lote_pruebas_comunicacion_servidor(SOCKET *sock)
 
         free(datos);
     }
+
+    /* ACTUALIZACION DE DATOS - CASOS VALIDOS */
+    retorno = cliente_ejecutar_solicitud(*sock, "ACTUALIZAR jugadores (record 2121, cantPartidas 99) DONDE (username IGUAL ANA)", &cantidad, &datos);
+
+    /* SELECCIÓN DE DATOS LUEGO DE ACTUALIZACION */
+    retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR jugadores (username IGUAL ANA)", &cantidad, &datos);
+    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
+
+        printf("Datos Recibidos:\n");
+        for (i = 0; i < cantidad; i++) {
+            tJugador* j = ((tJugador*)datos) + i;
+            printf(COLOR_AZUL"\t- Jugador: %s, Record: %d, Partidas: %d\n"COLOR_RESET, j->username, j->record, j->cantPartidas);
+        }
+
+        free(datos);
+    }
+
 }

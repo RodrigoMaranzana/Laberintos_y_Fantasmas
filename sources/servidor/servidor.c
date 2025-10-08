@@ -11,8 +11,7 @@ int servidor_inicializar(tBDatos *bDatos)
 
     retorno = WSAStartup(MAKEWORD(2, 2), &wsa);
     if (retorno) {
-
-        printf("WSAStartup() %d\n", retorno);
+        printf(FONDO_ROJO "ERROR: WSAStartup() %d\n" COLOR_RESET, retorno);
         return retorno;
     }
 
@@ -80,14 +79,14 @@ void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *soli
     }
 
     send(*sock, respuesta, strlen(respuesta), 0);
-    printf("Enviado:  %s\n", respuesta);
+    printf(FONDO_AMARILLO "Enviado:" COLOR_RESET " %s\n", respuesta);
 
     if (serializacionDatos) {
 
         unsigned tamSerializacion = cantRegistrosDatos * tamRegistroDatos;
 
         send(*sock, serializacionDatos, tamSerializacion, 0);
-        printf("Datos enviados: %d bytes\n", tamSerializacion);
+        printf(FONDO_BLANCO "Datos enviados:" COLOR_RESET " %d bytes\n", tamSerializacion);
     }
 
     free(serializacionDatos);

@@ -16,6 +16,8 @@ typedef enum {
     IGUAL, MAYOR, MENOR, DISTINTO,
     // Tipos
     ENTERO, TEXTO,
+    // Conector
+    DONDE,
     // Restricciones
     PK, AI,
     // Control
@@ -31,12 +33,12 @@ typedef enum {
 typedef struct {
     char clave[TAM_MAX_TIPO_CHAR];
     long offset;
-}tIndice;
+} tIndice;
 
 typedef struct {
     const char *cursor;
     int finSec;
-}tSecuencia;
+} tSecuencia;
 
 typedef struct {
     char nombre[TAM_IDENTIFICADOR];
@@ -45,7 +47,7 @@ typedef struct {
     unsigned tam;
     char esPK;
     char esAI;
-}tCampo;
+} tCampo;
 
 typedef struct {
     char nombreTabla[TAM_IDENTIFICADOR];
@@ -55,7 +57,7 @@ typedef struct {
     int cantRegistros;
     unsigned proximoAI;
     tCampo campos[MAX_CAMPOS_POR_TABLA];
-}tEncabezado;
+} tEncabezado;
 
 typedef struct {
     void *dato;
@@ -72,7 +74,7 @@ typedef struct {
     tEncabezado encabezado;
     FILE *arch;
     tArbol arbol;
-}tTabla;
+} tTabla;
 
 typedef struct {
     tTabla tablaAbierta;

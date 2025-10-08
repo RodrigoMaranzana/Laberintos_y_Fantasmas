@@ -15,31 +15,31 @@ int main()
     int bytesRecibidos;
 
     if ((servidorRet = servidor_inicializar(&bDatos)) != SERVIDOR_BD_TODO_OK) {
-        puts("Error: No se pudo inicializar Winsock");
+        puts(FONDO_ROJO "Error:" COLOR_RESET " No se pudo inicializar Winsock");
         return servidorRet;
     }
 
     SOCKET serverSocket = servidor_crear_socket();
     if (serverSocket == INVALID_SOCKET) {
-        puts("Error: No se pudo crear el socket del servidor");
+        puts(FONDO_ROJO "Error:" COLOR_RESET " No se pudo crear el socket del servidor");
         WSACleanup();
         return SOCKET_ERR;
     }
 
-    printf("Servidor escuchando en puerto %d...\n", PUERTO);
+    printf(FONDO_AMARILLO "Servidor escuchando en puerto %d...\n" FONDO_NEGRO, PUERTO);
 
     while (1) {
 
         SOCKET socketCliente = accept(serverSocket, (struct sockaddr *)&client_addr, &client_addr_size);
         if (socketCliente == INVALID_SOCKET) {
-            printf("Error en accept()\n");
+            printf(FONDO_ROJO "Error:" COLOR_RESET " accept() ha fallado\n");
         }
 
-        printf("Cliente conectado.\n");
+        printf(FONDO_VERDE "Cliente conectado.\n" FONDO_NEGRO);
 
         while ((bytesRecibidos = recv(socketCliente, buffer, TAM_BUFFER - 1, 0)) > 0) {
             buffer[bytesRecibidos] = '\0';
-            printf("Recibido: %s\n", buffer);
+            printf(FONDO_CIAN "Recibido:" COLOR_RESET " %s\n", buffer);
             servidor_procesar_solicitud(&bDatos, &socketCliente, buffer);
         }
 
