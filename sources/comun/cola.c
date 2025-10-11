@@ -13,14 +13,12 @@ void cola_crear(tCola *cola)
 int cola_encolar(tCola *cola, const void *dato, unsigned tamDato)
 {
     tNodo *nodoNue = (tNodo*)malloc(sizeof(tNodo));
-    if(!nodoNue)
-    {
+    if(!nodoNue) {
         return COLA_SIN_MEM;
     }
 
     nodoNue->dato = malloc(tamDato);
-    if(!nodoNue->dato)
-    {
+    if(!nodoNue->dato) {
         free(nodoNue);
         return COLA_SIN_MEM;
     }
@@ -29,13 +27,9 @@ int cola_encolar(tCola *cola, const void *dato, unsigned tamDato)
     nodoNue->tamDato = tamDato;
     nodoNue->sig = NULL;
 
-    if(cola->ult)
-    {
-        //El siguiente elemento de la cola es el nuevo nodo
+    if (cola->ult) {
         cola->ult->sig = nodoNue;
-    }
-    else{
-        //si la cola esta vacia, el nuevo nodo es el primero
+    } else {
         cola->pri = nodoNue;
     }
 
@@ -47,8 +41,7 @@ int cola_encolar(tCola *cola, const void *dato, unsigned tamDato)
 int cola_desencolar(tCola *cola, void *dato, unsigned tamDato)
 {
     tNodo *nodoElim = cola->pri;
-    if(nodoElim == NULL)
-    {
+    if(nodoElim == NULL){
         return COLA_VACIA;
     }
 
@@ -57,9 +50,7 @@ int cola_desencolar(tCola *cola, void *dato, unsigned tamDato)
     free(nodoElim->dato);
     free(nodoElim);
 
-    if(cola->pri == NULL)
-    {
-        //No hay mas elementos en la cola
+    if(cola->pri == NULL){
         cola->ult = NULL;
     }
 
@@ -68,8 +59,7 @@ int cola_desencolar(tCola *cola, void *dato, unsigned tamDato)
 
 int cola_ver_primero(const tCola *cola, void *dato, unsigned tamDato)
 {
-    if(cola->pri == NULL)
-    {
+    if(cola->pri == NULL){
         return COLA_VACIA;
     }
 

@@ -44,6 +44,7 @@ int main()
         }
 
         printf(FONDO_MAGENTA "\n -- Cliente desconectado --" FONDO_NEGRO "\n");
+        bdatos_apagar(&bDatos);
         closesocket(socketCliente);
     }
 

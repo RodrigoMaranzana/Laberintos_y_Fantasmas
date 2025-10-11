@@ -13,13 +13,13 @@ typedef enum {
     // Comandos
     CREAR, INSERTAR, ACTUALIZAR, SELECCIONAR,
     // Operadores
-    IGUAL, MAYOR, MENOR, DISTINTO,
+    IGUAL, MAYOR, MENOR, DISTINTO, TOP,
     // Tipos
     ENTERO, TEXTO,
     // Conector
     DONDE,
     // Restricciones
-    PK, AI,
+    PK, AI, IS,
     // Control
     SIMBOLOS_CANT, DESCONOCIDO,
 } eSimbolo;
@@ -29,6 +29,12 @@ typedef enum {
     TIPO_TEXTO,
     TIPO_INVALIDO
 } eTipoDato;
+
+typedef struct {
+    char clave[TAM_MAX_TIPO_CHAR];
+    unsigned cantOffsets;
+    tLista listaOffsets;
+} tIndiceSecundario;
 
 typedef struct {
     char clave[TAM_MAX_TIPO_CHAR];
@@ -47,15 +53,23 @@ typedef struct {
     unsigned tam;
     char esPK;
     char esAI;
+    char esIS;
 } tCampo;
 
 typedef struct {
     char nombreTabla[TAM_IDENTIFICADOR];
     unsigned cantCampos;
     unsigned tamRegistro;
-    unsigned tamRegIdx;
     int cantRegistros;
+
+    short iCampoPK;
+    short iCampoAI;
+    short iCampoIS;
+
+    unsigned tamRegIdx;
+
     unsigned proximoAI;
+
     tCampo campos[MAX_CAMPOS_POR_TABLA];
 } tEncabezado;
 
@@ -73,14 +87,14 @@ typedef struct {
 typedef struct {
     tEncabezado encabezado;
     FILE *arch;
-    tArbol arbol;
+    tArbol arbolPK;
+    tArbol arbolIS;
 } tTabla;
 
 typedef struct {
     tTabla tablaAbierta;
     tSecuencia secuencia;
 } tBDatos;
-
 
 int bdatos_iniciar(tBDatos *bDatos);
 int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud, tLista *listaDatos, int *cantRegistrosDatos, int *tamRegistroDatos);

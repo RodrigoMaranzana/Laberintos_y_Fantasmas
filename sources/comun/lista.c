@@ -19,6 +19,42 @@ void lista_recorrer(const tLista *lista, tAccion accion, void *extra)
     }
 }
 
+int lista_copiar(const tLista *listaOriginal, tLista *listaCopia)
+{
+    const tNodo *act = *listaOriginal;
+    tNodo *nodoNuevo, *nodoAnterior = NULL;
+
+    if (!act)
+        return LISTA_VACIA;
+
+    while (act) {
+
+        nodoNuevo = (tNodo*)malloc(sizeof(tNodo));
+        if (!nodoNuevo)
+            return LISTA_SIN_MEM;
+
+        nodoNuevo->dato = malloc(act->tamDato);
+        if (!nodoNuevo->dato) {
+            free(nodoNuevo);
+            return LISTA_SIN_MEM;
+        }
+
+        memcpy(nodoNuevo->dato, act->dato, act->tamDato);
+        nodoNuevo->tamDato = act->tamDato;
+        nodoNuevo->sig = NULL;
+
+        if (!*listaCopia)
+            *listaCopia = nodoNuevo;
+        else
+            nodoAnterior->sig = nodoNuevo;
+
+        nodoAnterior = nodoNuevo;
+        act = act->sig;
+    }
+
+    return LISTA_TODO_OK;
+}
+
 
 int lista_insertar_final(tLista *lista, const void *dato, unsigned tamDato)
 {
@@ -86,6 +122,31 @@ void lista_vaciar(tLista *lista)
     }
 }
 
+int lista_eliminar(tLista *lista, const void *dato,  unsigned tamDato, tCmp cmp)
+{
+    int comp;
+    tNodo *elim, **act = lista;
+
+    if (!*lista) {
+        return LISTA_VACIA;
+    }
+
+    while (*act && (comp = cmp(dato, (*act)->dato)) > 0) {
+        act = &(*act)->sig;
+    }
+
+    if (!*act || (comp = cmp(dato, (*act)->dato)) != 0) {
+        return LISTA_NO_ENCONTRADO;
+    }
+
+    elim = *act;
+    *act = elim->sig;
+
+    free(elim->dato);
+    free(elim);
+
+    return LISTA_TODO_OK;
+}
 
 int lista_llena(const tLista *lista, unsigned tamDato)
 {
@@ -110,7 +171,6 @@ int lista_sacar_primero(tLista *lista, void *dato, unsigned tamDato)
     unsigned tamDatoEnLista;
 
     if (*lista == NULL) {
-
         return LISTA_VACIA;
     }
 
@@ -136,7 +196,6 @@ int lista_sacar_ultimo(tLista *lista, void *dato, unsigned tamDato)
     }
 
     while ((*lista)->sig) {
-
         lista = &(*lista)->sig;
     }
 
@@ -219,8 +278,28 @@ int lista_insertar_en_orden(tLista *lista, const void *dato, unsigned tamDato, i
     return LISTA_TODO_OK;
 }
 
+void lista_it_crear(tLista *lista, tListaIterador *iterador)
+{
+    iterador->primero = *lista;
+    iterador->actual = *lista;
+}
 
+void* lista_it_primero(tListaIterador *iterador)
+{
+    iterador->actual = iterador->primero;
 
+    return iterador->actual ? iterador->actual->dato : NULL;
+}
+
+void* lista_it_siguiente(tListaIterador *iterador)
+{
+    if (!iterador || !iterador->actual) {
+        return NULL;
+    }
+
+    iterador->actual = iterador->actual->sig;
+    return iterador->actual ? iterador->actual->dato : NULL;
+}
 
 
 

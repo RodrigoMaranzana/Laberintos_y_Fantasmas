@@ -17,7 +17,7 @@
 #define PUERTO 12345
 #define TAM_BUFFER 1024
 #define TAM_COMANDO_MAX 17
-#define TAM_USUARIO 17
+#define TAM_USUARIO 16
 
 #define COLOR_ROJO         "\x1b[31m"
 #define COLOR_VERDE        "\x1b[32m"
