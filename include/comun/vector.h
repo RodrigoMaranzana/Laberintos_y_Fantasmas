@@ -4,11 +4,12 @@
 #include <stdlib.h>
 
 typedef enum {
-    VECTOR_BD_TODO_OK,
+    VECTOR_TODO_OK,
     VECTOR_VACIA,
     VECTOR_LLENA,
     VECTOR_SIN_MEM,
     VECTOR_ERR_ARCH,
+    VECTOR_DUPLICADO,
 } eVectorRet;
 
 typedef struct {
@@ -39,8 +40,10 @@ int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tam
 void vector_recorrer(tVector* vector, Accion accion, void* extra);
 void vector_ordenar(tVector* vector, int metodo, Cmp cmp);
 int vector_ord_buscar(tVector* vector, void* elem, Cmp cmp);
+int vector_ord_buscar_binaria(const tVector* vector, void* elem, Cmp cmp);
 int vector_ord_insertar(tVector* vector, void* elem, Cmp cmp, Actualizar actualizar);
 int vector_insertar_al_final(tVector* vector, void* elem);
+size_t vector_obtener_cantidad_elem(const tVector* vector);
 
 void vector_it_crear(tVectorIterador* it, tVector* vector);
 void* vector_it_primero(tVectorIterador* it);

@@ -5,6 +5,7 @@
 #include "..\..\include\comun\comun.h"
 #include "..\..\include\comun\lista.h"
 #include "..\..\include\comun\protocolo.h"
+#include "..\..\include\comun\vector.h"
 
 #define TAM_INT_TEXTO 12
 #define TAM_SIMBOLO 12
@@ -34,12 +35,12 @@ typedef struct {
     char clave[TAM_MAX_TIPO_CHAR];
     unsigned cantOffsets;
     tLista listaOffsets;
-} tIndiceSecundario;
+} tIndiceIS;
 
 typedef struct {
     char clave[TAM_MAX_TIPO_CHAR];
     long offset;
-} tIndice;
+} tIndicePK;
 
 typedef struct {
     const char *cursor;
@@ -61,16 +62,9 @@ typedef struct {
     unsigned cantCampos;
     unsigned tamRegistro;
     int cantRegistros;
-
-    short iCampoPK;
-    short iCampoAI;
-    short iCampoIS;
-
     unsigned tamRegIdx;
-
     unsigned proximoAI;
-
-    tCampo campos[MAX_CAMPOS_POR_TABLA];
+    tVector  vecCampos;
 } tEncabezado;
 
 typedef struct {

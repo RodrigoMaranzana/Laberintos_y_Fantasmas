@@ -48,8 +48,7 @@ static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, 
 static int _bdatos_actualizar(tBDatos *bDatos);
 static int _bdatos_tabla_existe(const char *nombreTabla);
 static int _bdatos_crear_tabla(tBDatos *bDatos, const char *nombreTabla);
-static int _bdatos_construir_encabezado(tEncabezado *encabezado, const char *nombreTabla, int cantCampos, tCampo *campos);
-static int _bdatos_buscar_campo(const tCampo *campos, int cantCampos, tCampo *campoEncontrado, const char *nombreCampoLeido);
+static int _bdatos_buscar_campo(const tEncabezado *encabezado, tCampo *campoEncontrado, const char *nombreCampoLeido);
 static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTabla);
 static int _bdatos_cmp_indice(const void *a, const void *b);
 static int _bdatos_cmp_indice_secundario(const void *a, const void *b);
@@ -60,17 +59,21 @@ static int _bdatos_parsear_caracter(tSecuencia *secuencia, void *salida, unsigne
 static int _bdatos_parsear_numeros(tSecuencia *secuencia, void *salida, unsigned tamSalida);
 static int _bdatos_parsear_texto(tSecuencia *secuencia, void *salida, unsigned tamSalida);
 static void _bdatos_crear_secuencia(tSecuencia *secuencia, const char *buffer);
-static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tCampo *campos, int maxCampos, int *cantCamposLeidos);
+static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tVector *vecCampos);
 static int _bdatos_leer_campo_tipo(tSecuencia *secuencia, tCampo *campo);
-static int _bdatos_parsear_valores(tSecuencia *secuencia, const tEncabezado *encabezado, eModoParseoValores modo, tDatoParseado *datosParseados, int *cantParseados);
+static int _bdatos_parsear_valores(tSecuencia *secuencia, tEncabezado *encabezado, eModoParseoValores modo, tDatoParseado *datosParseados, int *cantParseados);
 static eSimbolo _bdatos_comparar_simbolo(const char* simbolo);
-static int _bdatos_leer_indice_secundario(void **indiceSecundario, unsigned *tamIndiceSecundario, FILE *arch);
+static int _bdatos_leer_indice_secundario(void **indiceIS, unsigned *tamindiceIS, FILE *arch);
 static void _bdatos_escribir_indice_secundario(void *dato, FILE *arch);
 static int _bdatos_cmp_offset(const void *a, const void *b);
 static void _bdatos_destruir_indice_secundario(void *dato);
 static int _bdatos_accion_limite_top(void *elem, void *extra);
 static int _bdatos_seleccionar_por_top(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos, tCampo *campo, int limite);
 static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, eModoOffset modo);
+static tCampo* _bdatos_encabezado_buscar_campo_por_tipo(tEncabezado* encabezado, eSimbolo tipoBuscado);
+static int _bdatos_cmp_campo_por_nombre(const void* a, const void* b);
+static void _bdatos_accion_escribir_campo(void* elem, void* extra);
+
 
 /// DEBUG
 void _bdatos_reset_metricas() {
@@ -83,7 +86,7 @@ static void _bdatos_escribir_indice_secundario(void *dato, FILE *arch)
 {
     long *offset;
     tListaIterador listaIt;
-    tIndiceSecundario *indice = (tIndiceSecundario*)dato;
+    tIndiceIS *indice = (tIndiceIS*)dato;
 
     if (!dato) {
         return;
@@ -106,6 +109,7 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
 {
     int ret = BD_TODO_OK;
     FILE *archIdx;
+    tCampo* campoIS;
     char nombreIdx[TAM_NOMBRE_ARCH];
 
     if (!bDatos->tablaAbierta.arch) return BD_TODO_OK;
@@ -124,11 +128,11 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
         ret = BD_ERROR_ESCRITURA;
     }
 
-    if (bDatos->tablaAbierta.encabezado.iCampoIS != -1 && ret == BD_TODO_OK) {
+    if (ret == BD_TODO_OK && (campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, IS))) {
 
         char nombreIdxS[TAM_NOMBRE_ARCH + TAM_IDENTIFICADOR + 2];
 
-        sprintf(nombreIdxS, "%s_%s.idxs", bDatos->tablaAbierta.encabezado.nombreTabla, bDatos->tablaAbierta.encabezado.campos[bDatos->tablaAbierta.encabezado.iCampoIS].nombre);
+        sprintf(nombreIdxS, "%s_%s.idxs", bDatos->tablaAbierta.encabezado.nombreTabla, campoIS->nombre);
         archIdx = fopen(nombreIdxS, "wb");
         if (archIdx) {
 
@@ -144,11 +148,17 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
     if (ret == BD_TODO_OK) {
 
         rewind(bDatos->tablaAbierta.arch);
-        if (fwrite(&bDatos->tablaAbierta.encabezado, sizeof(tEncabezado), 1, bDatos->tablaAbierta.arch) != 1) {
+
+        if (fwrite(&bDatos->tablaAbierta.encabezado, sizeof(tEncabezado) - sizeof(tVector), 1, bDatos->tablaAbierta.arch) != 1) {
             ret = BD_ERROR_ESCRITURA;
+        }
+
+        if (ret == BD_TODO_OK) {
+             vector_recorrer(&bDatos->tablaAbierta.encabezado.vecCampos, _bdatos_accion_escribir_campo, bDatos->tablaAbierta.arch);
         }
     }
 
+    vector_destruir(&bDatos->tablaAbierta.encabezado.vecCampos);
     arbol_vaciar(&bDatos->tablaAbierta.arbolPK);
     arbol_vaciar_destructor(&bDatos->tablaAbierta.arbolIS, _bdatos_destruir_indice_secundario);
     fclose(bDatos->tablaAbierta.arch);
@@ -157,11 +167,16 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
     return ret;
 }
 
+static void _bdatos_accion_escribir_campo(void* elem, void* extra)
+{
+    fwrite(elem, sizeof(tCampo), 1, (FILE*)extra);
+}
+
 static void _bdatos_destruir_indice_secundario(void *dato)
 {
-    tIndiceSecundario *indiceSecundario = (tIndiceSecundario*)dato;
+    tIndiceIS *indiceIS = (tIndiceIS*)dato;
 
-    lista_vaciar(&indiceSecundario->listaOffsets);
+    lista_vaciar(&indiceIS->listaOffsets);
 }
 
 static int _bdatos_parsear(tSecuencia *secuencia, tParsear parsear, void *salida, unsigned tamSalida)
@@ -304,8 +319,20 @@ static int _bdatos_leer_campo_tipo(tSecuencia *secuencia, tCampo *campo)
 static int _bdatos_leer_encabezado(FILE* arch, tEncabezado *encabezado)
 {
     if (!arch) return BD_ERROR_ARCHIVO;
+
     fseek(arch, 0, SEEK_SET);
-    if (fread(encabezado, sizeof(tEncabezado), 1, arch) != 1)  return BD_ERROR_LECTURA;
+    if (fread(encabezado, sizeof(tEncabezado) - sizeof(tVector), 1, arch) != 1) return BD_ERROR_LECTURA;
+    if (vector_crear(&encabezado->vecCampos, sizeof(tCampo)) != VECTOR_TODO_OK) return BD_ERROR_SIN_MEMO;
+
+    tCampo campo_leido;
+    for (unsigned i = 0; i < encabezado->cantCampos; i++) {
+
+        if (fread(&campo_leido, sizeof(tCampo), 1, arch) != 1) {
+            vector_destruir(&encabezado->vecCampos);
+            return BD_ERROR_LECTURA;
+        }
+        vector_ord_insertar(&encabezado->vecCampos, &campo_leido, _bdatos_cmp_campo_por_nombre, NULL);
+    }
 
     return BD_TODO_OK;
 }
@@ -437,16 +464,16 @@ int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud, tLista *lis
 
 static int _bdatos_cmp_indice_secundario(const void *a, const void *b)
 {
-    tIndiceSecundario *indiceA = (tIndiceSecundario*)a;
-    tIndiceSecundario *indiceB = (tIndiceSecundario*)b;
+    tIndiceIS *indiceA = (tIndiceIS*)a;
+    tIndiceIS *indiceB = (tIndiceIS*)b;
 
     return strcmp(indiceA->clave, indiceB->clave);
 }
 
-static int _bdatos_leer_indice_secundario(void **indiceSecundario, unsigned *tamIndiceSecundario, FILE *arch)
+static int _bdatos_leer_indice_secundario(void **indiceIS, unsigned *tamindiceIS, FILE *arch)
 {
     int i;
-    tIndiceSecundario *nuevoIndice = malloc(sizeof(tIndiceSecundario));
+    tIndiceIS *nuevoIndice = malloc(sizeof(tIndiceIS));
     if (!nuevoIndice) {
         return 0;
     }
@@ -473,8 +500,8 @@ static int _bdatos_leer_indice_secundario(void **indiceSecundario, unsigned *tam
         lista_insertar_final(&nuevoIndice->listaOffsets, &offset, sizeof(long));
     }
 
-    *indiceSecundario = nuevoIndice;
-    *tamIndiceSecundario = sizeof(tIndiceSecundario);
+    *indiceIS = nuevoIndice;
+    *tamindiceIS = sizeof(tIndiceIS);
 
     return 1;
 }
@@ -485,6 +512,7 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
     tArbol arbolPK, arbolIS;
     FILE *archDat, *archIdx;
     tEncabezado encabezado;
+    tCampo* campoIS;
     char nombreArch[TAM_NOMBRE_ARCH];
 
     if (bDatos->tablaAbierta.arch && strcmp(bDatos->tablaAbierta.encabezado.nombreTabla, nombreTabla) == 0) return BD_TODO_OK;
@@ -500,6 +528,7 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
 
     if (strcmp(encabezado.nombreTabla, nombreTabla) != 0) {
         fclose(archDat);
+        vector_destruir(&encabezado.vecCampos);
         return BD_ERROR_ENCABEZADO;
     }
 
@@ -508,6 +537,7 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
     archIdx = fopen(nombreArch, "rb");
     if (!archIdx) {
         fclose(archDat);
+        vector_destruir(&encabezado.vecCampos);
         return BD_ERROR_ARCHIVO;
     }
 
@@ -515,18 +545,22 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
     fclose(archIdx);
     if (ret != ARBOL_TODO_OK) {
         fclose(archDat);
+        vector_destruir(&encabezado.vecCampos);
         return BD_ERROR_ARCHIVO;
     }
 
     arbol_crear(&arbolIS);
-    if (encabezado.iCampoIS != -1) {
+    campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&encabezado, IS);
+    if (campoIS) {
         FILE* archIdxS;
         char nombreIdxS[TAM_NOMBRE_ARCH + TAM_IDENTIFICADOR + 2];
-        sprintf(nombreIdxS, "%s_%s.idxs", encabezado.nombreTabla, encabezado.campos[encabezado.iCampoIS].nombre);
+        sprintf(nombreIdxS, "%s_%s.idxs", encabezado.nombreTabla, campoIS->nombre);
 
         archIdxS = fopen(nombreIdxS, "rb");
         if (!archIdxS) {
             fclose(archDat);
+            vector_destruir(&encabezado.vecCampos);
+            arbol_vaciar(&arbolPK);
             return BD_ERROR_ARCHIVO;
         }
 
@@ -534,6 +568,7 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
         fclose(archIdxS);
         if (ret != ARBOL_TODO_OK) {
             fclose(archDat);
+            vector_destruir(&encabezado.vecCampos);
             arbol_vaciar(&arbolPK);
             arbol_vaciar_destructor(&bDatos->tablaAbierta.arbolIS, _bdatos_destruir_indice_secundario);
             return BD_ERROR_ARCHIVO;
@@ -543,6 +578,7 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
     if (bDatos->tablaAbierta.arch) {
         if ((ret = _bdatos_cerrar_tabla(bDatos)) != BD_TODO_OK) {
             fclose(archDat);
+            vector_destruir(&encabezado.vecCampos);
             arbol_vaciar(&arbolPK);
             arbol_vaciar_destructor(&bDatos->tablaAbierta.arbolIS, _bdatos_destruir_indice_secundario);
             return ret;
@@ -562,40 +598,52 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
 /// CREAR jugadores (username TEXTO(16) PK, record ENTERO IS, cantPartidas ENTERO)
 static int _bdatos_crear_tabla(tBDatos *bDatos, const char *nombreTabla)
 {
-    int cantCamposLeidos, ret;
+    int ret;
     FILE *archIdx;
-    tEncabezado encabezado;
-    tCampo campos[MAX_CAMPOS_POR_TABLA];
+    tCampo *campoIS, *campoActual;
+    tEncabezado encabezado = {0};
+    tVectorIterador vecIt;
     char caracter, nombreDat[TAM_NOMBRE_ARCH], nombreIdx[TAM_NOMBRE_ARCH];
 
-    memset(campos, 0, sizeof(campos));
     if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
-    if ((ret = _bdatos_parsear_declaracion_campos(&bDatos->secuencia, campos, MAX_CAMPOS_POR_TABLA, &cantCamposLeidos)) != BD_TODO_OK) return ret;
+    if (vector_crear(&encabezado.vecCampos, sizeof(tCampo)) != VECTOR_TODO_OK) return BD_ERROR_SIN_MEMO;
+    if ((ret = _bdatos_parsear_declaracion_campos(&bDatos->secuencia, &encabezado.vecCampos)) != BD_TODO_OK) return ret;
 
     sprintf(nombreDat, "%s.dat", nombreTabla);
     sprintf(nombreIdx, "%s.idx", nombreTabla);
 
     bDatos->tablaAbierta.arch = fopen(nombreDat, "w+b");
-    if (!bDatos->tablaAbierta.arch) return BD_ERROR_ARCHIVO;
-
-    if ((ret = _bdatos_construir_encabezado(&encabezado, nombreTabla, cantCamposLeidos, campos)) != BD_TODO_OK) {
-        fclose(bDatos->tablaAbierta.arch);
-        bDatos->tablaAbierta.arch = NULL;
-        remove(nombreDat);
-        return ret;
+    if (!bDatos->tablaAbierta.arch) {
+        vector_destruir(&encabezado.vecCampos);
+        return BD_ERROR_ARCHIVO;
     }
 
-    fseek(bDatos->tablaAbierta.arch, 0, SEEK_SET);
-    if (fwrite(&encabezado, sizeof(tEncabezado), 1, bDatos->tablaAbierta.arch) != 1) {
+    strncpy(encabezado.nombreTabla, nombreTabla, TAM_IDENTIFICADOR - 1);
+    encabezado.cantCampos = vector_obtener_cantidad_elem(&encabezado.vecCampos);
+    vector_it_crear(&vecIt, &encabezado.vecCampos);
+    campoActual = vector_it_primero(&vecIt);
+    while (campoActual) {
+        encabezado.tamRegistro += campoActual->tam;
+        if (campoActual->esAI) {
+            encabezado.proximoAI = 1;
+        }
+        campoActual = vector_it_siguiente(&vecIt);
+    }
+    encabezado.tamRegIdx = sizeof(tIndicePK);
+
+    rewind(bDatos->tablaAbierta.arch);
+    if (fwrite(&encabezado, sizeof(tEncabezado) - sizeof(tVector), 1, bDatos->tablaAbierta.arch) != 1) {
         fclose(bDatos->tablaAbierta.arch);
         bDatos->tablaAbierta.arch = NULL;
         remove(nombreDat);
         return BD_ERROR_ESCRITURA;
     }
+    vector_recorrer(&encabezado.vecCampos, _bdatos_accion_escribir_campo, bDatos->tablaAbierta.arch);
     fflush(bDatos->tablaAbierta.arch);
 
     archIdx = fopen(nombreIdx, "w+b");
     if (!archIdx) {
+        vector_destruir(&encabezado.vecCampos);
         fclose(bDatos->tablaAbierta.arch);
         bDatos->tablaAbierta.arch = NULL;
         remove(nombreDat);
@@ -603,10 +651,11 @@ static int _bdatos_crear_tabla(tBDatos *bDatos, const char *nombreTabla)
     }
     fclose(archIdx);
 
-    if (encabezado.iCampoIS != -1) {
+    campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&encabezado, IS);
+    if (campoIS) {
         FILE *archIdxS;
         char nombreIdxS[TAM_NOMBRE_ARCH + TAM_IDENTIFICADOR + 2];
-        sprintf(nombreIdxS, "%s_%s.idxs", nombreTabla, campos[encabezado.iCampoIS].nombre);
+        sprintf(nombreIdxS, "%s_%s.idxs", nombreTabla, campoIS->nombre);
         archIdxS = fopen(nombreIdxS, "w+b");
         if (!archIdxS) {
             fclose(bDatos->tablaAbierta.arch);
@@ -618,88 +667,26 @@ static int _bdatos_crear_tabla(tBDatos *bDatos, const char *nombreTabla)
         fclose(archIdxS);
     }
 
-    memcpy(&bDatos->tablaAbierta.encabezado, &encabezado, sizeof(tEncabezado));
+    bDatos->tablaAbierta.encabezado = encabezado;
     arbol_crear(&bDatos->tablaAbierta.arbolPK);
     arbol_crear(&bDatos->tablaAbierta.arbolIS);
     return BD_TODO_OK;
 }
 
-static int _bdatos_construir_encabezado(tEncabezado *encabezado, const char *nombreTabla, int cantCampos, tCampo *campos)
-{
-    int i, esAI = 0, esIS = 0;
-
-    memset(encabezado, 0, sizeof(tEncabezado));
-    encabezado->cantCampos = cantCampos;
-    strncpy(encabezado->nombreTabla, nombreTabla, TAM_IDENTIFICADOR - 1);
-    encabezado->nombreTabla[TAM_IDENTIFICADOR - 1] = '\0';
-
-    encabezado->iCampoPK = -1;
-    encabezado->iCampoIS = -1;
-    encabezado->iCampoAI = -1;
-
-    for (i = 0; i < cantCampos; i++) {
-
-        strncpy(encabezado->campos[i].nombre, campos[i].nombre, TAM_IDENTIFICADOR - 1);
-        encabezado->campos[i].nombre[TAM_IDENTIFICADOR - 1] = '\0';
-        encabezado->campos[i].tipo = campos[i].tipo;
-        encabezado->campos[i].tam = campos[i].tam;
-        encabezado->campos[i].esPK = campos[i].esPK;
-        encabezado->campos[i].esAI = campos[i].esAI;
-        encabezado->campos[i].esIS = campos[i].esIS;
-
-        if (campos[i].esPK) {
-            encabezado->iCampoPK = i;
-        }
-
-        if (campos[i].esAI) {
-            if (esAI == 1) {
-                return BD_ERROR_DEMASIADOS_AI;
-            }
-            esAI = 1;
-            encabezado->iCampoAI = i;
-        }
-
-        if (campos[i].esIS) {
-            if (esIS == 1) {
-                return BD_ERROR_DEMASIADOS_IS;
-            }
-            esIS = 1;
-            encabezado->iCampoIS = i;
-        }
-
-        encabezado->campos[i].offsetCampo = campos[i].offsetCampo;
-        encabezado->tamRegistro += campos[i].tam;
-    }
-
-    encabezado->tamRegIdx = sizeof(tIndice);
-    encabezado->proximoAI = esAI ? 1 : 0;
-
-    return BD_TODO_OK;
-}
-
 static int _bdatos_cmp_indice(const void *a, const void *b)
 {
-    tIndice *indiceA = (tIndice*)a;
-    tIndice *indiceB = (tIndice*)b;
+    tIndicePK *indiceA = (tIndicePK*)a;
+    tIndicePK *indiceB = (tIndicePK*)b;
 
     return strcmp(indiceA->clave, indiceB->clave);
 }
 
-static int _bdatos_buscar_campo(const tCampo *campos, int cantCampos, tCampo *campoEncontrado, const char *nombreCampoLeido)
+static int _bdatos_buscar_campo(const tEncabezado *encabezado, tCampo *campoEncontrado, const char *nombreCampoLeido)
 {
-    int campo, encontrado = 0;
+    strncpy(campoEncontrado->nombre, nombreCampoLeido, TAM_IDENTIFICADOR);
+    campoEncontrado->nombre[TAM_IDENTIFICADOR - 1] = '\0';
 
-    memset(campoEncontrado, 0, sizeof(tCampo));
-
-    for (campo = 0; campo < cantCampos && !encontrado; campo++) {
-
-        if (strcmp(campos[campo].nombre, nombreCampoLeido) == 0) {
-            encontrado = 1;
-            memcpy(campoEncontrado, &campos[campo], sizeof(tCampo));
-        }
-    }
-
-    return encontrado ? BD_TODO_OK : BD_ERROR_CAMPO_INEXISTENTE;
+    return vector_ord_buscar_binaria((tVector*)&encabezado->vecCampos, campoEncontrado, _bdatos_cmp_campo_por_nombre) != -1 ? BD_TODO_OK : BD_ERROR_CAMPO_INEXISTENTE;
 }
 
 static int _bdatos_cmp_offset(const void *a, const void *b)
@@ -710,13 +697,13 @@ static int _bdatos_cmp_offset(const void *a, const void *b)
 
 static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, eModoOffset modo)
 {
-    tIndiceSecundario indice;
+    tIndiceIS indice;
     int resultado;
 
     memset(indice.clave, 0, sizeof(indice.clave));
     sprintf(indice.clave, "%011d", valorClave);
 
-    resultado = arbol_eliminar(arbolIS, &indice, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario);
+    resultado = arbol_eliminar(arbolIS, &indice, sizeof(tIndiceIS), _bdatos_cmp_indice_secundario);
     if (resultado == ARBOL_NO_ENCONTRADO)
     {
         if (modo == AGREGAR_OFFSET) {
@@ -725,7 +712,7 @@ static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, 
             lista_insertar_final(&indice.listaOffsets, &offset, sizeof(long));
             indice.cantOffsets = 1;
 
-            arbol_insertar_rec(arbolIS, &indice, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario);
+            arbol_insertar_rec(arbolIS, &indice, sizeof(tIndiceIS), _bdatos_cmp_indice_secundario);
         }
         return;
     }
@@ -739,7 +726,7 @@ static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, 
     }
 
     if (lista_vacia(&indice.listaOffsets) != LISTA_VACIA) {
-        arbol_insertar_rec(arbolIS, &indice, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario);
+        arbol_insertar_rec(arbolIS, &indice, sizeof(tIndiceIS), _bdatos_cmp_indice_secundario);
     }
 }
 
@@ -751,7 +738,7 @@ static int _bdatos_actualizar(tBDatos *bDatos)
     eSimbolo simboloConector;
     tDatoParseado datosParseados[MAX_CAMPOS_POR_TABLA];
     char caracter, *registro = NULL, *registroActualizado = NULL;
-    tCampo campoPK = bDatos->tablaAbierta.encabezado.campos[bDatos->tablaAbierta.encabezado.iCampoPK];
+    tCampo *campoPK = _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, PK), *campoIS;
 
     if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
 
@@ -781,22 +768,21 @@ static int _bdatos_actualizar(tBDatos *bDatos)
 
     while (lista_sacar_primero(&listaDatos, registro, bDatos->tablaAbierta.encabezado.tamRegistro) != LISTA_VACIA) {
 
-        tIndice indiceReg;
+        tIndicePK indicePK;
         long offsetRegistro;
-        memset(&indiceReg, 0, sizeof(tIndice));
+        memset(&indicePK, 0, sizeof(tIndicePK));
 
-        if (campoPK.tipo == TIPO_ENTERO) {
-            int valorPK = *(int*)(registro + campoPK.offsetCampo);
-            sprintf(indiceReg.clave, "%011d", valorPK);
+        if (campoPK->tipo == TIPO_ENTERO) {
+            int valorPK = *(int*)(registro + campoPK->offsetCampo);
+            sprintf(indicePK.clave, "%011d", valorPK);
         } else {
-            strncpy(indiceReg.clave, registro + campoPK.offsetCampo, campoPK.tam);
+            strncpy(indicePK.clave, registro + campoPK->offsetCampo, campoPK->tam);
         }
-        arbol_buscar(&bDatos->tablaAbierta.arbolPK, &indiceReg, sizeof(tIndice), _bdatos_cmp_indice);
-        offsetRegistro = indiceReg.offset;
+        arbol_buscar(&bDatos->tablaAbierta.arbolPK, &indicePK, sizeof(tIndicePK), _bdatos_cmp_indice);
+        offsetRegistro = indicePK.offset;
 
-        if (bDatos->tablaAbierta.encabezado.iCampoIS != -1) {
-
-            tCampo* campoIS = &bDatos->tablaAbierta.encabezado.campos[bDatos->tablaAbierta.encabezado.iCampoIS];
+        campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, IS);
+        if (campoIS) {
             int valorAnteriorIS = *(int*)(registro + campoIS->offsetCampo);
             int valorNuevoIS;
             int actualizado = 0;
@@ -819,7 +805,7 @@ static int _bdatos_actualizar(tBDatos *bDatos)
             memcpy(registroActualizado + datosParseados[i].campo.offsetCampo, datosParseados[i].valor.dato, datosParseados[i].valor.tam);
         }
 
-        fseek(bDatos->tablaAbierta.arch, indiceReg.offset, SEEK_SET);
+        fseek(bDatos->tablaAbierta.arch, indicePK.offset, SEEK_SET);
         fwrite(registroActualizado, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
     }
 
@@ -838,7 +824,7 @@ static int _bdatos_insertar(tBDatos *bDatos)
     int ret, i, cantParseados = 0, valorIS = 0;
     tDatoParseado datosParseados[MAX_CAMPOS_POR_TABLA];
     char caracter, *registro = NULL;
-    tIndice nuevoIndiceReg;
+    tIndicePK nuevoIndiceReg;
 
     if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
 
@@ -860,7 +846,7 @@ static int _bdatos_insertar(tBDatos *bDatos)
     }
 
     memset(registro, 0, bDatos->tablaAbierta.encabezado.tamRegistro);
-    memset(&nuevoIndiceReg, 0, sizeof(tIndice));
+    memset(&nuevoIndiceReg, 0, sizeof(tIndicePK));
 
     for (i = 0; i < cantParseados; i++) {
         memcpy(registro + datosParseados[i].campo.offsetCampo, datosParseados[i].valor.dato, datosParseados[i].valor.tam);
@@ -880,7 +866,7 @@ static int _bdatos_insertar(tBDatos *bDatos)
     offset = ftell(bDatos->tablaAbierta.arch);
 
     nuevoIndiceReg.offset = offset;
-    if ((ret = arbol_insertar_rec(&bDatos->tablaAbierta.arbolPK, &nuevoIndiceReg, sizeof(tIndice), _bdatos_cmp_indice)) != ARBOL_TODO_OK) {
+    if ((ret = arbol_insertar_rec(&bDatos->tablaAbierta.arbolPK, &nuevoIndiceReg, sizeof(tIndicePK), _bdatos_cmp_indice)) != ARBOL_TODO_OK) {
         for (i = 0; i < cantParseados; i++) {
             free(datosParseados[i].valor.dato);
         }
@@ -888,13 +874,13 @@ static int _bdatos_insertar(tBDatos *bDatos)
         return ret == ARBOL_DATO_DUP ? BD_ERROR_DUPLICADO_PK : BD_ERROR_SIN_MEMO;
     }
 
-    if (bDatos->tablaAbierta.encabezado.iCampoIS != -1) {
+    if ( _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, IS)) {
         _bdatos_actualizar_is(&bDatos->tablaAbierta.arbolIS, valorIS, offset, AGREGAR_OFFSET);
     }
 
     fwrite(registro, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
     bDatos->tablaAbierta.encabezado.cantRegistros++;
-    if (bDatos->tablaAbierta.encabezado.iCampoAI != -1) {
+    if ( _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, AI)) {
         ++bDatos->tablaAbierta.encabezado.proximoAI;
     }
 
@@ -919,7 +905,7 @@ static int _bdatos_seleccionar(tBDatos *bDatos, tLista *listaDatos, int *cantReg
 
     if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
     if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_identificador, nombreCampoLeido, TAM_IDENTIFICADOR)) != BD_TODO_OK) return ret;
-    if ((ret = _bdatos_buscar_campo(bDatos->tablaAbierta.encabezado.campos, bDatos->tablaAbierta.encabezado.cantCampos, &campoEncontrado, nombreCampoLeido)) != BD_TODO_OK) return ret;
+    if ((ret = _bdatos_buscar_campo(&bDatos->tablaAbierta.encabezado, &campoEncontrado, nombreCampoLeido)) != BD_TODO_OK) return ret;
     if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo)) != BD_TODO_OK) return BD_ERROR_SINTAXIS;
 
     lista_crear(listaDatos);
@@ -1015,7 +1001,7 @@ static int _bdatos_seleccionar_por_top(tBDatos *bDatos, tLista *listaDatos, int 
 
 static int _bdatos_accion_limite_top(void *elem, void *extra)
 {
-    tIndiceSecundario *indiceSecundario = (tIndiceSecundario*)elem;
+    tIndiceIS *indiceIS = (tIndiceIS*)elem;
     tContextoTop *contextoTop = (tContextoTop*)extra;
     long *offset;
     tListaIterador listaIt;
@@ -1024,7 +1010,7 @@ static int _bdatos_accion_limite_top(void *elem, void *extra)
         return 0;
     }
 
-    lista_it_crear(&indiceSecundario->listaOffsets, &listaIt);
+    lista_it_crear(&indiceIS->listaOffsets, &listaIt);
 
     offset = lista_it_primero(&listaIt);
     while (offset && contextoTop->cantActual < contextoTop->limite) {
@@ -1043,16 +1029,16 @@ static int _bdatos_seleccionar_por_pk(tBDatos *bDatos, tLista *listaDatos, int *
         return BD_ERROR_SIN_MEMO;
     }
 
-    tIndice indiceReg;
+    tIndicePK indicePK;
     if (campo->tipo == TIPO_ENTERO) {
-        sprintf(indiceReg.clave, "%011d", valor);
+        sprintf(indicePK.clave, "%011d", valor);
     } else {
-        strncpy(indiceReg.clave, buffer, sizeof(indiceReg.clave) - 1);
-        indiceReg.clave[sizeof(indiceReg.clave) - 1] = '\0';
+        strncpy(indicePK.clave, buffer, sizeof(indicePK.clave) - 1);
+        indicePK.clave[sizeof(indicePK.clave) - 1] = '\0';
     }
 
-    if (arbol_buscar(&bDatos->tablaAbierta.arbolPK, &indiceReg, sizeof(tIndice), _bdatos_cmp_indice) == ARBOL_TODO_OK) {
-        fseek(bDatos->tablaAbierta.arch, indiceReg.offset, SEEK_SET);
+    if (arbol_buscar(&bDatos->tablaAbierta.arbolPK, &indicePK, sizeof(tIndicePK), _bdatos_cmp_indice) == ARBOL_TODO_OK) {
+        fseek(bDatos->tablaAbierta.arch, indicePK.offset, SEEK_SET);
         fread(registro, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
         lista_insertar_final(listaDatos, registro, bDatos->tablaAbierta.encabezado.tamRegistro);
         (*cantRegistrosDatos)++;
@@ -1069,18 +1055,18 @@ static int _bdatos_seleccionar_por_is(tBDatos *bDatos, tLista *listaDatos, int *
         return BD_ERROR_SIN_MEMO;
     }
 
-    tIndiceSecundario indiceSecundario;
+    tIndiceIS indiceIS;
     if (campo->tipo == TIPO_ENTERO) {
-        sprintf(indiceSecundario.clave, "%011d", valor);
+        sprintf(indiceIS.clave, "%011d", valor);
     } else {
-        strncpy(indiceSecundario.clave, buffer, sizeof(indiceSecundario.clave) - 1);
+        strncpy(indiceIS.clave, buffer, sizeof(indiceIS.clave) - 1);
     }
 
-    if (arbol_buscar(&bDatos->tablaAbierta.arbolIS, &indiceSecundario, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario) == ARBOL_TODO_OK) {
+    if (arbol_buscar(&bDatos->tablaAbierta.arbolIS, &indiceIS, sizeof(tIndiceIS), _bdatos_cmp_indice_secundario) == ARBOL_TODO_OK) {
         tListaIterador listaIt;
         long* offset;
 
-        lista_it_crear(&indiceSecundario.listaOffsets, &listaIt);
+        lista_it_crear(&indiceIS.listaOffsets, &listaIt);
 
         offset = (long*)lista_it_primero(&listaIt);
         while (offset) {
@@ -1135,38 +1121,44 @@ static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, 
 }
 
 
-static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tCampo *campos, int maxCampos, int *cantCamposLeidos)
+static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tVector *vecCampos)
 {
-    int ret, i = 0, fin = 0, hayPK = 0;
+    int ret, fin = 0, hayPK = 0;
     char caracter;
     eSimbolo proximoSimbolo;
     unsigned offsetCampo = 0;
+    tCampo campoActual;
 
     do {
-        if (i >= maxCampos) return BD_ERROR_DEMASIADOS_CAMPOS;
 
-        if ((ret = _bdatos_parsear(secuencia, _bdatos_parsear_identificador, campos[i].nombre, TAM_IDENTIFICADOR)) != BD_TODO_OK) return ret;
-        if ((ret = _bdatos_leer_campo_tipo(secuencia, &campos[i])) != BD_TODO_OK) return ret;
+        memset(&campoActual, 0, sizeof(tCampo));
 
-        campos[i].offsetCampo = offsetCampo;
-        offsetCampo += campos[i].tam;
+        if ((ret = _bdatos_parsear(secuencia, _bdatos_parsear_identificador, campoActual.nombre, TAM_IDENTIFICADOR)) != BD_TODO_OK) {
+            return ret;
+        }
+        if ((ret = _bdatos_leer_campo_tipo(secuencia, &campoActual)) != BD_TODO_OK) {
+            return ret;
+        }
+
+        campoActual.offsetCampo = offsetCampo;
+        offsetCampo += campoActual.tam;
 
         if(_bdatos_parsear(secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo)) == BD_TODO_OK) {
 
             if (proximoSimbolo == PK) {
-                campos[i].esPK = 1;
+                campoActual.esPK = 1;
                 hayPK++;
 
                 if (_bdatos_parsear(secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo)) == BD_TODO_OK) {
                     if (proximoSimbolo == AI) {
-                        if (campos[i].tipo != TIPO_ENTERO) return BD_ERROR_AI_NO_ES_ENTERO;
-                        campos[i].esAI = 1;
+                        if (campoActual.tipo != TIPO_ENTERO) return BD_ERROR_AI_NO_ES_ENTERO;
+                        campoActual.esAI = 1;
                     } else {
                         return BD_ERROR_SINTAXIS;
                     }
                 }
             }else if (proximoSimbolo == IS) {
-                campos[i].esIS = 1;
+                campoActual.esIS = 1;
             }else if (proximoSimbolo == AI) {
                 return BD_ERROR_AI_NO_ES_PK;
             } else {
@@ -1174,6 +1166,7 @@ static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tCampo *cam
             }
         }
 
+        if (vector_ord_insertar(vecCampos, &campoActual, _bdatos_cmp_campo_por_nombre, NULL) != VECTOR_TODO_OK) return BD_ERROR_SIN_MEMO;
         if ((ret = _bdatos_parsear(secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char))) != BD_TODO_OK) return ret;
 
         if (caracter == ')') {
@@ -1184,36 +1177,31 @@ static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tCampo *cam
 
         if (hayPK > 1) return BD_ERROR_DEMASIADOS_PK;
 
-        i++;
-
     } while (!fin);
 
     if (hayPK == 0) return BD_ERROR_SIN_PK;
-
-    *cantCamposLeidos = i;
 
     return BD_TODO_OK;
 }
 
 
-static int _bdatos_parsear_valores(tSecuencia *secuencia, const tEncabezado *encabezado, eModoParseoValores modo, tDatoParseado *datosParseados, int *cantParseados)
+static int _bdatos_parsear_valores(tSecuencia *secuencia, tEncabezado *encabezado, eModoParseoValores modo, tDatoParseado *datosParseados, int *cantParseados)
 {
     int retorno, i = 0, j, fin = 0, cantPK = 0;
     char caracter, nombreCampoLeido[TAM_IDENTIFICADOR];
-    tCampo campoEncontrado;
+    tCampo *campoAI, campoEncontrado;
 
     memset(nombreCampoLeido, 0, sizeof(nombreCampoLeido));
     *cantParseados = 0;
 
     do {
-        if (i >= encabezado->cantCampos) return BD_ERROR_DEMASIADOS_CAMPOS;
 
         if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_identificador, nombreCampoLeido, TAM_IDENTIFICADOR)) != BD_TODO_OK) return retorno;
 
         memset(&campoEncontrado, 0, sizeof(tCampo));
-        if ((retorno = _bdatos_buscar_campo(encabezado->campos, encabezado->cantCampos, &campoEncontrado, nombreCampoLeido)) != BD_TODO_OK) return retorno;
+        if ((retorno = _bdatos_buscar_campo(encabezado, &campoEncontrado, nombreCampoLeido)) != BD_TODO_OK) return retorno;
 
-        if ( (modo == MODO_ACTUALIZACION && campoEncontrado.esPK) || campoEncontrado.esAI){
+        if ((modo == MODO_ACTUALIZACION && campoEncontrado.esPK) || campoEncontrado.esAI){
             for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
             return campoEncontrado.esAI ? BD_ERROR_CAMPO_ES_AI : BD_ERROR_ACTUALIZAR_PK;
         }
@@ -1279,11 +1267,10 @@ static int _bdatos_parsear_valores(tSecuencia *secuencia, const tEncabezado *enc
         return BD_ERROR_SIN_PK;
     }
 
-    if (encabezado->iCampoAI != -1) {
+    campoAI = _bdatos_encabezado_buscar_campo_por_tipo(encabezado, AI);
+    if (campoAI) {
 
-        int campoAI = encabezado->iCampoAI;
-
-        memcpy(&datosParseados[i].campo, &encabezado->campos[campoAI], sizeof(tCampo));
+        memcpy(&datosParseados[i].campo, campoAI, sizeof(tCampo));
         datosParseados[i].valor.dato = malloc(sizeof(int));
         if (!datosParseados[i].valor.dato) {
             for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
@@ -1300,6 +1287,31 @@ static int _bdatos_parsear_valores(tSecuencia *secuencia, const tEncabezado *enc
     return BD_TODO_OK;
 }
 
+static int _bdatos_cmp_campo_por_nombre(const void* a, const void* b)
+{
+    tCampo* campoA = (tCampo*)a;
+    tCampo* campoB = (tCampo*)b;
+
+    return strcmp(campoA->nombre, campoB->nombre);
+}
+
+static tCampo* _bdatos_encabezado_buscar_campo_por_tipo(tEncabezado* encabezado, eSimbolo tipoBuscado)
+{
+    tVectorIterador vecIt;
+    tCampo* campoActual;
+
+    vector_it_crear(&vecIt, &encabezado->vecCampos);
+
+    campoActual = vector_it_primero(&vecIt);
+    while (campoActual) {
+        if (tipoBuscado == PK && campoActual->esPK) return campoActual;
+        if (tipoBuscado == AI && campoActual->esAI) return campoActual;
+        if (tipoBuscado == IS && campoActual->esIS) return campoActual;
+        campoActual = vector_it_siguiente(&vecIt);
+    }
+    return NULL;
+}
+
 const char* bdatos_obtener_mensaje(eBDRetorno codigoError)
 {
     switch (codigoError) {
@@ -1311,7 +1323,6 @@ const char* bdatos_obtener_mensaje(eBDRetorno codigoError)
         case BD_ERROR_COMANDO:           return "Comando desconocido";
         case BD_ERROR_TABLA_EXISTE:      return "La tabla ya existe";
         case BD_ERROR_TABLA_NO_EXISTE:   return "La tabla no existe";
-        case BD_ERROR_DEMASIADOS_CAMPOS: return "La cantidad de campos supera el maximo permitido";
         case BD_ERROR_SIN_PK:            return "La operacion requiere una Clave Primaria (PK)";
         case BD_ERROR_ACTUALIZAR_PK:     return "No se permite actualizar el valor de una Clave Primaria (PK)";
         case BD_ERROR_DEMASIADOS_PK:     return "Solo se permite una Clave Primaria (PK) por tabla";

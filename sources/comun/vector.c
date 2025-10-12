@@ -26,7 +26,7 @@ int vector_crear(tVector* vector, size_t tamElem)
     vector->cap = CAP_INI;
     vector->tamElem = tamElem;
 
-    return VECTOR_BD_TODO_OK;
+    return VECTOR_TODO_OK;
 }
 
 void vector_vaciar(tVector *vector)
@@ -44,6 +44,12 @@ void vector_destruir(tVector* vector)
     vector->ce = 0;
     vector->tamElem = 0;
 }
+
+size_t vector_obtener_cantidad_elem(const tVector* vector)
+{
+    return vector->ce;
+}
+
 
 int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tamElem)
 {
@@ -74,7 +80,7 @@ int vector_cargar_de_archivo(tVector* vector, const char* nombreArch, size_t tam
 
     fclose(arch);
 
-    return VECTOR_BD_TODO_OK;
+    return VECTOR_TODO_OK;
 }
 
 void vector_recorrer(tVector* vector, Accion accion, void* extra)
@@ -139,7 +145,6 @@ int vector_ord_buscar(tVector* vector, void* elem, Cmp cmp)
     void* ult = vector->vec + ((vector->ce - 1) * vector->tamElem);
 
     while (actual <= ult && cmp(elem, actual) > 0) {
-
         actual += vector->tamElem;
     }
 
@@ -152,6 +157,31 @@ int vector_ord_buscar(tVector* vector, void* elem, Cmp cmp)
     return -1;
 }
 
+int vector_ord_buscar_binaria(const tVector* vector, void* elem, Cmp cmp)
+{
+    void* pIzq = vector->vec;
+    void* pDer = vector->vec + (vector->ce - 1) * vector->tamElem;
+    void* pMedio;
+
+    while (pIzq <= pDer) {
+
+        pMedio = pIzq + (((pDer - pIzq) / vector->tamElem) / 2) * vector->tamElem;
+
+        int comparacion = cmp(elem, pMedio);
+
+        if (comparacion == 0) {
+            memcpy(elem, pMedio, vector->tamElem);
+            return (pMedio - vector->vec) / vector->tamElem;
+        }
+        if (comparacion < 0) {
+            pDer = pMedio - vector->tamElem;
+        } else {
+            pIzq = pMedio + vector->tamElem;
+        }
+    }
+    return -1;
+}
+
 int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actualizar)
 {
     void *actual, *ult, *posIns;
@@ -161,7 +191,6 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
         size_t capNueva = vector->cap * FACTOR_INC;
         void* vecNuevo = realloc(vector->vec, capNueva * vector->tamElem);
         if (!vecNuevo) {
-
             return VECTOR_SIN_MEM;
         }
 
@@ -173,27 +202,27 @@ int vector_ord_insertar(tVector *vector, void *elem, Cmp cmp, Actualizar actuali
     ult = vector->vec + ((vector->ce - 1) * vector->tamElem);
 
     while (actual <= ult && cmp(elem, actual) > 0) {
-
         actual += vector->tamElem;
     }
 
     if (actual <= ult && cmp(elem, actual) == 0) {
-
-        actualizar(actual, elem);
-        return VECTOR_BD_TODO_OK;
+        if (actualizar) {
+            actualizar(actual, elem);
+            return VECTOR_TODO_OK;
+        }
+        return VECTOR_DUPLICADO;
     }
 
     posIns = actual;
 
     for (actual = ult; actual >= posIns; actual -= vector->tamElem) {
-
         memcpy(actual + vector->tamElem, actual, vector->tamElem);
     }
 
     memcpy(posIns, elem, vector->tamElem);
     vector->ce++;
 
-    return VECTOR_BD_TODO_OK;
+    return VECTOR_TODO_OK;
 }
 
 
@@ -219,7 +248,7 @@ int vector_insertar_al_final(tVector* vector, void* elem)
     memcpy(posIns, elem, vector->tamElem);
     vector->ce++;
 
-    return VECTOR_BD_TODO_OK;
+    return VECTOR_TODO_OK;
 }
 
 void vector_it_crear(tVectorIterador* it, tVector* vector)
