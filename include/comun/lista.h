@@ -46,7 +46,6 @@ int lista_ver_primero(const tLista *lista, void *dato, unsigned tamDato);
 int lista_ver_ultimo(const tLista *lista, void *dato, unsigned tamDato);
 int lista_insertar_en_orden(tLista *lista, const void *dato, unsigned tamDato, int modo, tCmp cmp);
 int lista_eliminar(tLista *lista, const void *dato,  unsigned tamDato, tCmp cmp);
-int lista_copiar(const tLista *listaOriginal, tLista *listaCopia);
 
 void lista_it_crear(tLista *lista, tListaIterador *iterador);
 void* lista_it_primero(tListaIterador *iterador);

@@ -19,43 +19,6 @@ void lista_recorrer(const tLista *lista, tAccion accion, void *extra)
     }
 }
 
-int lista_copiar(const tLista *listaOriginal, tLista *listaCopia)
-{
-    const tNodo *act = *listaOriginal;
-    tNodo *nodoNuevo, *nodoAnterior = NULL;
-
-    if (!act)
-        return LISTA_VACIA;
-
-    while (act) {
-
-        nodoNuevo = (tNodo*)malloc(sizeof(tNodo));
-        if (!nodoNuevo)
-            return LISTA_SIN_MEM;
-
-        nodoNuevo->dato = malloc(act->tamDato);
-        if (!nodoNuevo->dato) {
-            free(nodoNuevo);
-            return LISTA_SIN_MEM;
-        }
-
-        memcpy(nodoNuevo->dato, act->dato, act->tamDato);
-        nodoNuevo->tamDato = act->tamDato;
-        nodoNuevo->sig = NULL;
-
-        if (!*listaCopia)
-            *listaCopia = nodoNuevo;
-        else
-            nodoAnterior->sig = nodoNuevo;
-
-        nodoAnterior = nodoNuevo;
-        act = act->sig;
-    }
-
-    return LISTA_TODO_OK;
-}
-
-
 int lista_insertar_final(tLista *lista, const void *dato, unsigned tamDato)
 {
     tNodo *nodoNuevo;

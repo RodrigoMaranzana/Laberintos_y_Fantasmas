@@ -15,6 +15,11 @@ typedef enum {
     MODO_ACTUALIZACION
 } eModoParseoValores;
 
+typedef enum {
+    AGREGAR_OFFSET,
+    QUITAR_OFFSET
+} eModoOffset;
+
 typedef struct {
     int limite;
     int cantActual;
@@ -39,7 +44,7 @@ static int _bdatos_insertar(tBDatos *bDatos);
 static int _bdatos_seleccionar(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos);
 static int _bdatos_seleccionar_por_pk(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos, tCampo *campo, int valor, char* buffer);
 static int _bdatos_seleccionar_por_is(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos, tCampo *campo, int valor, char* buffer);
-static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos, tCampo *campo, int valor, char* buffer);
+static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos, tCampo *campo, int valor, char* buffer, eSimbolo operador);
 static int _bdatos_actualizar(tBDatos *bDatos);
 static int _bdatos_tabla_existe(const char *nombreTabla);
 static int _bdatos_crear_tabla(tBDatos *bDatos, const char *nombreTabla);
@@ -62,11 +67,10 @@ static eSimbolo _bdatos_comparar_simbolo(const char* simbolo);
 static int _bdatos_leer_indice_secundario(void **indiceSecundario, unsigned *tamIndiceSecundario, FILE *arch);
 static void _bdatos_escribir_indice_secundario(void *dato, FILE *arch);
 static int _bdatos_cmp_offset(const void *a, const void *b);
-static void _bdatos_actualizar_indice_secundario(void* actualizado, const void* actualizador);
 static void _bdatos_destruir_indice_secundario(void *dato);
 static int _bdatos_accion_limite_top(void *elem, void *extra);
 static int _bdatos_seleccionar_por_top(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos, tCampo *campo, int limite);
-
+static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, eModoOffset modo);
 
 /// DEBUG
 void _bdatos_reset_metricas() {
@@ -112,7 +116,7 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
     archIdx = fopen(nombreIdx, "wb");
 
     if (archIdx) {
-        if (arbol_escribir_en_arch(archIdx, &bDatos->tablaAbierta.arbolPK) != ARBOL_BD_TODO_OK) {
+        if (arbol_escribir_en_arch(archIdx, &bDatos->tablaAbierta.arbolPK) != ARBOL_TODO_OK) {
             ret = BD_ERROR_ESCRITURA;
         }
         fclose(archIdx);
@@ -128,7 +132,7 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
         archIdx = fopen(nombreIdxS, "wb");
         if (archIdx) {
 
-            if (arbol_escribir_en_arch_reg_variable(archIdx, &bDatos->tablaAbierta.arbolIS, _bdatos_escribir_indice_secundario) != ARBOL_BD_TODO_OK) {
+            if (arbol_escribir_en_arch_con_escritor(archIdx, &bDatos->tablaAbierta.arbolIS, _bdatos_escribir_indice_secundario) != ARBOL_TODO_OK) {
                 ret = BD_ERROR_ESCRITURA;
             }
             fclose(archIdx);
@@ -509,7 +513,7 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
 
     ret = arbol_cargar_de_arch(archIdx, &arbolPK, encabezado.tamRegIdx, _bdatos_cmp_indice);
     fclose(archIdx);
-    if (ret != ARBOL_BD_TODO_OK) {
+    if (ret != ARBOL_TODO_OK) {
         fclose(archDat);
         return BD_ERROR_ARCHIVO;
     }
@@ -526,9 +530,9 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
             return BD_ERROR_ARCHIVO;
         }
 
-        ret = arbol_cargar_de_arch_reg_variable(archIdxS, &arbolIS, _bdatos_leer_indice_secundario, _bdatos_cmp_indice_secundario);
+        ret = arbol_cargar_de_arch_con_lector(archIdxS, &arbolIS, _bdatos_leer_indice_secundario, _bdatos_cmp_indice_secundario);
         fclose(archIdxS);
-        if (ret != ARBOL_BD_TODO_OK) {
+        if (ret != ARBOL_TODO_OK) {
             fclose(archDat);
             arbol_vaciar(&arbolPK);
             arbol_vaciar_destructor(&bDatos->tablaAbierta.arbolIS, _bdatos_destruir_indice_secundario);
@@ -703,55 +707,41 @@ static int _bdatos_cmp_offset(const void *a, const void *b)
     return *(long*)a - *(long*)b;
 }
 
-static void _bdatos_actualizar_indice_secundario(void* actualizado, const void* actualizador)
+
+static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, eModoOffset modo)
 {
-    long offset;
-    tIndiceSecundario *indiceActualizado = (tIndiceSecundario*)actualizado;
-    tIndiceSecundario *indiceActualizador = (tIndiceSecundario*)actualizador;
+    tIndiceSecundario indice;
+    int resultado;
 
-    while (lista_sacar_primero(&indiceActualizador->listaOffsets, &offset, sizeof(long)) != LISTA_VACIA) {
+    memset(indice.clave, 0, sizeof(indice.clave));
+    sprintf(indice.clave, "%011d", valorClave);
 
-        lista_insertar_comienzo(&indiceActualizado->listaOffsets, &offset, sizeof(long));
-        indiceActualizado->cantOffsets++;
+    resultado = arbol_eliminar(arbolIS, &indice, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario);
+    if (resultado == ARBOL_NO_ENCONTRADO)
+    {
+        if (modo == AGREGAR_OFFSET) {
+
+            lista_crear(&indice.listaOffsets);
+            lista_insertar_final(&indice.listaOffsets, &offset, sizeof(long));
+            indice.cantOffsets = 1;
+
+            arbol_insertar_rec(arbolIS, &indice, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario);
+        }
+        return;
+    }
+
+    if (modo == AGREGAR_OFFSET) {
+        lista_insertar_final(&indice.listaOffsets, &offset, sizeof(long));
+        indice.cantOffsets++;
+    } else {
+        lista_eliminar(&indice.listaOffsets, &offset, sizeof(long), _bdatos_cmp_offset);
+        indice.cantOffsets--;
+    }
+
+    if (lista_vacia(&indice.listaOffsets) != LISTA_VACIA) {
+        arbol_insertar_rec(arbolIS, &indice, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario);
     }
 }
-
-static void _bdatos_actualizar_indice_secundario_elim(void* actualizado, const void* actualizador)
-{
-    long offset;
-    tIndiceSecundario *indiceActualizado = (tIndiceSecundario*)actualizado;
-    tIndiceSecundario *indiceActualizador = (tIndiceSecundario*)actualizador;
-
-    while (lista_sacar_primero(&indiceActualizador->listaOffsets, &offset, sizeof(long)) != LISTA_VACIA) {
-
-        lista_eliminar(&indiceActualizado->listaOffsets, &offset, sizeof(long), _bdatos_cmp_offset);
-        indiceActualizado->cantOffsets--;
-    }
-}
-
-
-/// MEJORAAAR -- MULTIPLES BUSQUEDAS EN EL ARBOL
-static void _bdatos_eliminar_de_indice_secundario(tArbol* arbolIS, int valorClave, long offset)
-{
-    tIndiceSecundario indiceElim;
-
-    sprintf(indiceElim.clave, "%011d", valorClave);
-
-    lista_crear(&indiceElim.listaOffsets);
-    lista_insertar_final(&indiceElim.listaOffsets, &offset, sizeof(long));
-
-    arbol_insertar_rec_con_act(arbolIS, &indiceElim, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario, _bdatos_actualizar_indice_secundario_elim);
-    lista_vaciar(&indiceElim.listaOffsets);
-
-    arbol_buscar(arbolIS, &indiceElim, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario);
-    if (lista_vacia(&indiceElim.listaOffsets) == LISTA_VACIA) {
-
-        ///arbol_eliminar()
-        puts("La lista quedo vacia! Deberia eliminarse el nodo...");
-    }
-}
-/// MEJORAAAR -- MULTIPLES BUSQUEDAS EN EL ARBOL
-
 
 /// ACTUALIZAR jugadores (puntajeMax 300) DONDE (username IGUAL PEPE)
 static int _bdatos_actualizar(tBDatos *bDatos)
@@ -804,37 +794,25 @@ static int _bdatos_actualizar(tBDatos *bDatos)
         arbol_buscar(&bDatos->tablaAbierta.arbolPK, &indiceReg, sizeof(tIndice), _bdatos_cmp_indice);
         offsetRegistro = indiceReg.offset;
 
-        /// MEJORAAAR
         if (bDatos->tablaAbierta.encabezado.iCampoIS != -1) {
 
-            tEncabezado* enc = &bDatos->tablaAbierta.encabezado;
-            tCampo* campoIS = &enc->campos[enc->iCampoIS];
-            int valorAntiguoIS = *(int*)(registro + campoIS->offsetCampo);
+            tCampo* campoIS = &bDatos->tablaAbierta.encabezado.campos[bDatos->tablaAbierta.encabezado.iCampoIS];
+            int valorAnteriorIS = *(int*)(registro + campoIS->offsetCampo);
             int valorNuevoIS;
             int actualizado = 0;
 
-            for(i = 0; i < cantParseados; i++) {
+            for(i = 0; i < cantParseados && !actualizado; i++) {
                 if (strcmp(datosParseados[i].campo.nombre, campoIS->nombre) == 0) {
                     valorNuevoIS = *(int*)datosParseados[i].valor.dato;
                     actualizado = 1;
-                    break;
                 }
             }
 
-            if (actualizado && valorAntiguoIS != valorNuevoIS) {
-                tIndiceSecundario nuevoIndiceSec;
-
-                _bdatos_eliminar_de_indice_secundario(&bDatos->tablaAbierta.arbolIS, valorAntiguoIS, offsetRegistro);
-
-                memset(&nuevoIndiceSec, 0, sizeof(tIndiceSecundario));
-                sprintf(nuevoIndiceSec.clave, "%011d", valorNuevoIS);
-                lista_crear(&nuevoIndiceSec.listaOffsets);
-                lista_insertar_final(&nuevoIndiceSec.listaOffsets, &offsetRegistro, sizeof(long));
-                nuevoIndiceSec.cantOffsets = 1;
-                arbol_insertar_rec_con_act(&bDatos->tablaAbierta.arbolIS, &nuevoIndiceSec,sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario, _bdatos_actualizar_indice_secundario);
+            if (actualizado && valorAnteriorIS != valorNuevoIS) {
+                _bdatos_actualizar_is(&bDatos->tablaAbierta.arbolIS, valorAnteriorIS, offsetRegistro, QUITAR_OFFSET);
+                _bdatos_actualizar_is(&bDatos->tablaAbierta.arbolIS, valorNuevoIS, offsetRegistro, AGREGAR_OFFSET);
             }
         }
-        /// MEJORAAAR
 
         memcpy(registroActualizado, registro, bDatos->tablaAbierta.encabezado.tamRegistro);
         for (i = 0; i < cantParseados; i++) {
@@ -853,6 +831,80 @@ static int _bdatos_actualizar(tBDatos *bDatos)
     return BD_TODO_OK;
 }
 
+/// INSERTAR jugadores (username PEPE, record 15, cantPartidas 5)
+static int _bdatos_insertar(tBDatos *bDatos)
+{
+    long offset;
+    int ret, i, cantParseados = 0, valorIS = 0;
+    tDatoParseado datosParseados[MAX_CAMPOS_POR_TABLA];
+    char caracter, *registro = NULL;
+    tIndice nuevoIndiceReg;
+
+    if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
+
+    memset(datosParseados, 0, sizeof(datosParseados));
+    ret = _bdatos_parsear_valores(&bDatos->secuencia, &bDatos->tablaAbierta.encabezado, MODO_INSERCION, datosParseados, &cantParseados);
+    if (ret != BD_TODO_OK) {
+        for (i = 0; i < cantParseados; i++) {
+            free(datosParseados[i].valor.dato);
+        }
+        return ret;
+    }
+
+    registro = (char*)malloc(bDatos->tablaAbierta.encabezado.tamRegistro);
+    if (!registro) {
+        for (i = 0; i < cantParseados; i++) {
+            free(datosParseados[i].valor.dato);
+        }
+        return BD_ERROR_SIN_MEMO;
+    }
+
+    memset(registro, 0, bDatos->tablaAbierta.encabezado.tamRegistro);
+    memset(&nuevoIndiceReg, 0, sizeof(tIndice));
+
+    for (i = 0; i < cantParseados; i++) {
+        memcpy(registro + datosParseados[i].campo.offsetCampo, datosParseados[i].valor.dato, datosParseados[i].valor.tam);
+        if (datosParseados[i].campo.esPK) {
+            if (datosParseados[i].campo.tipo == TIPO_TEXTO) {
+                strncpy(nuevoIndiceReg.clave, (char*)datosParseados[i].valor.dato, sizeof(nuevoIndiceReg.clave) - 1);
+                nuevoIndiceReg.clave[sizeof(nuevoIndiceReg.clave) - 1] = '\0';
+            } else {
+                sprintf(nuevoIndiceReg.clave, "%011d", *(int*)datosParseados[i].valor.dato);
+            }
+        }else if (datosParseados[i].campo.esIS) {
+            valorIS = *(int*)datosParseados[i].valor.dato;
+        }
+    }
+
+    fseek(bDatos->tablaAbierta.arch, 0, SEEK_END);
+    offset = ftell(bDatos->tablaAbierta.arch);
+
+    nuevoIndiceReg.offset = offset;
+    if ((ret = arbol_insertar_rec(&bDatos->tablaAbierta.arbolPK, &nuevoIndiceReg, sizeof(tIndice), _bdatos_cmp_indice)) != ARBOL_TODO_OK) {
+        for (i = 0; i < cantParseados; i++) {
+            free(datosParseados[i].valor.dato);
+        }
+        free(registro);
+        return ret == ARBOL_DATO_DUP ? BD_ERROR_DUPLICADO_PK : BD_ERROR_SIN_MEMO;
+    }
+
+    if (bDatos->tablaAbierta.encabezado.iCampoIS != -1) {
+        _bdatos_actualizar_is(&bDatos->tablaAbierta.arbolIS, valorIS, offset, AGREGAR_OFFSET);
+    }
+
+    fwrite(registro, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
+    bDatos->tablaAbierta.encabezado.cantRegistros++;
+    if (bDatos->tablaAbierta.encabezado.iCampoAI != -1) {
+        ++bDatos->tablaAbierta.encabezado.proximoAI;
+    }
+
+    for (i = 0; i < cantParseados; i++) {
+        free(datosParseados[i].valor.dato);
+    }
+    free(registro);
+
+    return BD_TODO_OK;
+}
 
 /// SELECCIONAR jugadores (ranking TOP 3)
 /// SELECCIONAR jugadores (username IGUAL PEPE)
@@ -872,23 +924,29 @@ static int _bdatos_seleccionar(tBDatos *bDatos, tLista *listaDatos, int *cantReg
 
     lista_crear(listaDatos);
 
-    if (proximoSimbolo == IGUAL) {
+    if (proximoSimbolo == IGUAL || proximoSimbolo == DISTINTO) {
 
         if (campoEncontrado.tipo == TIPO_ENTERO) {
             if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_numeros, &valor, sizeof(int))) != BD_TODO_OK) return ret;
         } else {
             buffer = malloc(campoEncontrado.tam);
+            if (!buffer) return BD_ERROR_SIN_MEMO;
             if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_texto, buffer, campoEncontrado.tam)) != BD_TODO_OK) {
-                free(buffer); return ret;
+                free(buffer);
+                return ret;
             }
         }
 
-        if (campoEncontrado.esPK) {
-            ret = _bdatos_seleccionar_por_pk(bDatos, listaDatos, cantRegistrosDatos, &campoEncontrado, valor, buffer);
-        } else if (campoEncontrado.esIS) {
-            ret = _bdatos_seleccionar_por_is(bDatos, listaDatos, cantRegistrosDatos, &campoEncontrado, valor, buffer);
+        if (proximoSimbolo == IGUAL) {
+            if (campoEncontrado.esPK) {
+                ret = _bdatos_seleccionar_por_pk(bDatos, listaDatos, cantRegistrosDatos, &campoEncontrado, valor, buffer);
+            } else if (campoEncontrado.esIS) {
+                ret = _bdatos_seleccionar_por_is(bDatos, listaDatos, cantRegistrosDatos, &campoEncontrado, valor, buffer);
+            } else {
+                ret = _bdatos_seleccionar_por_escaneo(bDatos, listaDatos, cantRegistrosDatos, &campoEncontrado, valor, buffer, IGUAL);
+            }
         } else {
-            ret = _bdatos_seleccionar_por_escaneo(bDatos, listaDatos, cantRegistrosDatos, &campoEncontrado, valor, buffer);
+            ret = _bdatos_seleccionar_por_escaneo(bDatos, listaDatos, cantRegistrosDatos, &campoEncontrado, valor, buffer, DISTINTO);
         }
 
     } else if (proximoSimbolo == TOP) {
@@ -993,7 +1051,7 @@ static int _bdatos_seleccionar_por_pk(tBDatos *bDatos, tLista *listaDatos, int *
         indiceReg.clave[sizeof(indiceReg.clave) - 1] = '\0';
     }
 
-    if (arbol_buscar(&bDatos->tablaAbierta.arbolPK, &indiceReg, sizeof(tIndice), _bdatos_cmp_indice) == ARBOL_BD_TODO_OK) {
+    if (arbol_buscar(&bDatos->tablaAbierta.arbolPK, &indiceReg, sizeof(tIndice), _bdatos_cmp_indice) == ARBOL_TODO_OK) {
         fseek(bDatos->tablaAbierta.arch, indiceReg.offset, SEEK_SET);
         fread(registro, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
         lista_insertar_final(listaDatos, registro, bDatos->tablaAbierta.encabezado.tamRegistro);
@@ -1018,7 +1076,7 @@ static int _bdatos_seleccionar_por_is(tBDatos *bDatos, tLista *listaDatos, int *
         strncpy(indiceSecundario.clave, buffer, sizeof(indiceSecundario.clave) - 1);
     }
 
-    if (arbol_buscar(&bDatos->tablaAbierta.arbolIS, &indiceSecundario, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario) == ARBOL_BD_TODO_OK) {
+    if (arbol_buscar(&bDatos->tablaAbierta.arbolIS, &indiceSecundario, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario) == ARBOL_TODO_OK) {
         tListaIterador listaIt;
         long* offset;
 
@@ -1038,7 +1096,7 @@ static int _bdatos_seleccionar_por_is(tBDatos *bDatos, tLista *listaDatos, int *
     return BD_TODO_OK;
 }
 
-static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos, tCampo *campo, int valor, char* buffer)
+static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos, tCampo *campo, int valor, char* buffer, eSimbolo operador)
 {
     char* registro = (char*)malloc(bDatos->tablaAbierta.encabezado.tamRegistro);
     if (!registro) {
@@ -1047,12 +1105,23 @@ static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, 
 
     fseek(bDatos->tablaAbierta.arch, sizeof(tEncabezado), SEEK_SET);
     while (fread(registro, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch) == 1) {
+
         int coincidencia = 0;
 
         if (campo->tipo == TIPO_ENTERO) {
-            coincidencia = (*(int*)(registro + campo->offsetCampo) == valor);
+            int valorEnRegistro = *(int*)(registro + campo->offsetCampo);
+            if (operador == IGUAL) {
+                coincidencia = (valorEnRegistro == valor);
+            } else {
+                coincidencia = (valorEnRegistro != valor);
+            }
         } else {
-            coincidencia = (strncmp(registro + campo->offsetCampo, buffer, campo->tam) == 0);
+            int cmp = strncmp(registro + campo->offsetCampo, buffer, campo->tam);
+            if (operador == IGUAL) {
+                coincidencia = (cmp == 0);
+            } else {
+                coincidencia = (cmp != 0);
+            }
         }
 
         if (coincidencia) {
@@ -1064,10 +1133,6 @@ static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, 
     free(registro);
     return BD_TODO_OK;
 }
-
-
-
-
 
 
 static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tCampo *campos, int maxCampos, int *cantCamposLeidos)
@@ -1130,96 +1195,6 @@ static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tCampo *cam
     return BD_TODO_OK;
 }
 
-/// INSERTAR jugadores (username PEPE, record 15, cantPartidas 5)
-static int _bdatos_insertar(tBDatos *bDatos)
-{
-    long offset;
-    int ret, cantParseados = 0, i;
-    tDatoParseado datosParseados[MAX_CAMPOS_POR_TABLA];
-    char caracter, *registro = NULL;
-    tIndice nuevoIndiceReg;
-    tIndiceSecundario nuevoIndiceSec;
-
-    if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
-
-    memset(datosParseados, 0, sizeof(datosParseados));
-    ret = _bdatos_parsear_valores(&bDatos->secuencia, &bDatos->tablaAbierta.encabezado, MODO_INSERCION, datosParseados, &cantParseados);
-    if (ret != BD_TODO_OK) {
-        for (i = 0; i < cantParseados; i++) {
-            free(datosParseados[i].valor.dato);
-        }
-        return ret;
-    }
-
-    registro = (char*)malloc(bDatos->tablaAbierta.encabezado.tamRegistro);
-    if (!registro) {
-        for (i = 0; i < cantParseados; i++) {
-            free(datosParseados[i].valor.dato);
-        }
-        return BD_ERROR_SIN_MEMO;
-    }
-
-    memset(registro, 0, bDatos->tablaAbierta.encabezado.tamRegistro);
-    memset(&nuevoIndiceReg, 0, sizeof(tIndice));
-
-    for (i = 0; i < cantParseados; i++) {
-        memcpy(registro + datosParseados[i].campo.offsetCampo, datosParseados[i].valor.dato, datosParseados[i].valor.tam);
-        if (datosParseados[i].campo.esPK) {
-            if (datosParseados[i].campo.tipo == TIPO_TEXTO) {
-                strncpy(nuevoIndiceReg.clave, (char*)datosParseados[i].valor.dato, sizeof(nuevoIndiceReg.clave) - 1);
-                nuevoIndiceReg.clave[sizeof(nuevoIndiceReg.clave) - 1] = '\0';
-            } else {
-                sprintf(nuevoIndiceReg.clave, "%011d", *(int*)datosParseados[i].valor.dato);
-            }
-        }else if (datosParseados[i].campo.esIS) {
-            memset(&nuevoIndiceSec, 0, sizeof(tIndiceSecundario));
-            if (datosParseados[i].campo.tipo == TIPO_TEXTO) {
-                strncpy(nuevoIndiceSec.clave, (char*)datosParseados[i].valor.dato, sizeof(nuevoIndiceSec.clave) - 1);
-                nuevoIndiceSec.clave[sizeof(nuevoIndiceSec.clave) - 1] = '\0';
-            } else {
-                sprintf(nuevoIndiceSec.clave, "%011d", *(int*)datosParseados[i].valor.dato);
-            }
-        }
-    }
-
-    fseek(bDatos->tablaAbierta.arch, 0, SEEK_END);
-    offset = ftell(bDatos->tablaAbierta.arch);
-
-    nuevoIndiceReg.offset = offset;
-    if ((ret = arbol_insertar_rec(&bDatos->tablaAbierta.arbolPK, &nuevoIndiceReg, sizeof(tIndice), _bdatos_cmp_indice)) != ARBOL_BD_TODO_OK) {
-        for (i = 0; i < cantParseados; i++) {
-            free(datosParseados[i].valor.dato);
-        }
-        free(registro);
-        return ret == ARBOL_DATO_DUP ? BD_ERROR_DUPLICADO_PK : BD_ERROR_SIN_MEMO;
-    }
-
-    if (bDatos->tablaAbierta.encabezado.iCampoIS != -1) {
-        lista_crear(&nuevoIndiceSec.listaOffsets);
-        lista_insertar_comienzo(&nuevoIndiceSec.listaOffsets, &offset, sizeof(long));
-        nuevoIndiceSec.cantOffsets = 1;
-        if ((ret = arbol_insertar_rec_con_act(&bDatos->tablaAbierta.arbolIS, &nuevoIndiceSec, sizeof(tIndiceSecundario), _bdatos_cmp_indice_secundario, _bdatos_actualizar_indice_secundario)) != ARBOL_BD_TODO_OK) {
-            for (i = 0; i < cantParseados; i++) {
-                free(datosParseados[i].valor.dato);
-            }
-            free(registro);
-            return BD_ERROR_SIN_MEMO;
-        }
-    }
-
-    fwrite(registro, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
-    bDatos->tablaAbierta.encabezado.cantRegistros++;
-    if (bDatos->tablaAbierta.encabezado.iCampoAI != -1) {
-        ++bDatos->tablaAbierta.encabezado.proximoAI;
-    }
-
-    for (i = 0; i < cantParseados; i++) {
-        free(datosParseados[i].valor.dato);
-    }
-    free(registro);
-
-    return BD_TODO_OK;
-}
 
 static int _bdatos_parsear_valores(tSecuencia *secuencia, const tEncabezado *encabezado, eModoParseoValores modo, tDatoParseado *datosParseados, int *cantParseados)
 {
