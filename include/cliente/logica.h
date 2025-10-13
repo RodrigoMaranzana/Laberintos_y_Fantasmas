@@ -42,8 +42,6 @@ typedef struct {
     tEntidad jugador;
     tEntidad *fantasmas;
 
-    int puntajeTotal;
-
     tConfig config;
     tRonda ronda;
     eLogicaEstado estado;
@@ -63,7 +61,7 @@ void logica_procesar_movimientos(tLogica *logica);
 int logica_iniciar_juego(tLogica *logica);
 int logica_nueva_ronda(tLogica *logica);
 void logica_fin_juego(tLogica *logica);
-void logica_mostrar_historial_movs(tCola *movsJugador);
+int logica_mostrar_historial_movs(tCola *movsJugador);
 void logica_actualizar(tLogica *logica);
 
 

@@ -259,12 +259,6 @@ void logica_procesar_movimientos(tLogica *logica)
                     logica->jugador.estado = ENTIDAD_ATURDIDA;
                     logica->ronda.cantVidasActual--;
                     temporizador_iniciar(&logica->jugador.temporEstado);
-
-//                    if (logica->escenario.tablero[logica->escenario.ubicPEntrada.fila][logica->escenario.ubicPEntrada.columna].entidad != NULL) {
-//
-//                        static int _logica_encontrar_casilla_adyacente_libre(tLogica *logica, tUbicacion ubicOriginal, tUbicacion *ubicEncontrada);
-//                    }
-
                     _logica_colocar_jugador(&logica->escenario, &logica->jugador);
                 } else {
 
@@ -329,31 +323,25 @@ void logica_procesar_movimientos(tLogica *logica)
 
 
 
-void logica_mostrar_historial_movs(tCola *movsJugador)
+int logica_mostrar_historial_movs(tCola *movsJugador)
 {
     int movNro = 0;
     tMovimiento mov;
-    const char *direccion[]=
-    {
+    const char *direccion[] = {
         "ARRIBA",
         "ABAJO",
         "IZQUIERDA",
         "DERECHA",
     };
 
-    if(cola_vacia(movsJugador)){
-
-       return;
-    }
-
     printf("Tus movimientos realizados:\n");
 
-    while (cola_vacia(movsJugador) == ERR_TODO_OK) {
-
-        cola_desencolar(movsJugador, &mov, sizeof(tMovimiento));
+    while (cola_desencolar(movsJugador, &mov, sizeof(tMovimiento)) != COLA_VACIA) {
 
         printf("Movimiento numero %-4u | Fila: %3d | Columna: %3d | Direccion: %s\n", ++movNro, mov.ubic.fila, mov.ubic.columna, direccion[(int)mov.direccion]);
     }
+
+    return movNro;
 }
 
 int logica_iniciar_juego(tLogica *logica)
@@ -368,7 +356,6 @@ int logica_iniciar_juego(tLogica *logica)
     logica->ronda.numRonda = 1;
     logica->ronda.cantPremios = 0;
     logica->ronda.cantVidasActual = logica->config.vidasInicio;
-    logica->puntajeTotal = 0;
 
     logica->jugador.estado = ENTIDAD_CON_VIDA;
 
@@ -420,7 +407,7 @@ void logica_fin_juego(tLogica *logica)
     printf("Ronda maxima alcanzada: %d "
            "Puntaje obtenido: %d\n"
            ,logica->ronda.numRonda
-           ,logica->puntajeTotal
+           ,logica->ronda.cantPremios
            );
     logica->estado = LOGICA_FIN_PARTIDA;
 }
