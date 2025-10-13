@@ -16,7 +16,6 @@ typedef void (*tVentanaActualizar)(SDL_Event *event, void *datos);
 typedef void (*tVentanaDibujar)(void *datos);
 typedef void (*tVentanaDestruirDatos)(void *datos);
 
-
 typedef struct {
     tVentanaCrearDatos crearDatos;
     tVentanaActualizar actualizar;
