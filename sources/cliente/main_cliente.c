@@ -1,28 +1,16 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include "../../include/cliente/juego.h"
 #include "../../include/cliente/logica.h"
 #include "../../include/cliente/cliente.h"
 
 #define TITULO_VENTANA "Laberintos y Fantasmas"
 
-#pragma pack(push, 1)
-typedef struct {
-    char username[16];
-    int record;
-    int cantPartidas;
-} tJugador;
-typedef struct {
-    int idPartida;
-    char username[16];
-    int puntaje;
-} tPartida;
-#pragma pack(pop)
-
-static void _lote_pruebas_comunicacion_servidor(SOCKET *sock);
-
 int main(int argc, char* argv[])
 {
+    SOCKET sock;
+    char conectado;
     eRetorno ret = ERR_TODO_OK;
     tJuego juego;
 
@@ -33,22 +21,17 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    juego.sock = cliente_conectar_servidor(IP_SERVIDOR, PUERTO);
-    if (juego.sock == INVALID_SOCKET) {
+    sock = cliente_conectar_servidor(IP_SERVIDOR, PUERTO);
+    if (sock == INVALID_SOCKET) {
         puts("Error: No se pudo conectar al servidor\nIniciando el juego en modo Offline..\n");
         WSACleanup();
+        conectado = 0;
     }else{
         puts("Conectado al servidor.\n");
+        conectado = 1;
     }
 
-    /// TEST
-
-    _lote_pruebas_comunicacion_servidor(&juego.sock);
-
-    ///
-
-
-    ret = juego_inicializar(&juego, TITULO_VENTANA);
+    ret = juego_inicializar(&juego, TITULO_VENTANA, sock, conectado);
     if (ret != ERR_TODO_OK) {
         puts("Error: Ha fallado la inicializacion del juego");
         return ret;
@@ -61,112 +44,6 @@ int main(int argc, char* argv[])
     }
 
     juego_destruir(&juego);
-    cliente_cerrar_conexion(juego.sock);
+    cliente_destruir_conexion(juego.sock);
     return ret;
-}
-
-
-
-
-
-
-
-
-
-
-static void _lote_pruebas_comunicacion_servidor(SOCKET *sock)
-{
-    char *datos = NULL;
-    int cantidad = 0, retorno, i;
-
-    /* CREACIÓN DE TABLAS - CASOS VALIDOS */
-    retorno = cliente_ejecutar_solicitud(*sock, "CREAR jugadores (username TEXTO(16) PK, record ENTERO, cantPartidas ENTERO)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "CREAR partidas (idPartida ENTERO PK AI, username TEXTO(16), puntaje ENTERO)", &cantidad, &datos);
-
-    /* CREACIÓN DE TABLAS - CASOS INVALIDOS */
-    retorno = cliente_ejecutar_solicitud(*sock, "CREAR jugadores (dummy TEXTO(1))", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "CREAR puntajes (valor ENTERO)", &cantidad, &datos);
-
-
-    /* INSERCIÓN DE DATOS - CASOS VALIDOS */
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR jugadores (username PEPE, record 100, cantPartidas 3)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR jugadores (username PANCHO, record 60, cantPartidas 11)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR jugadores (cantPartidas 5, username ANA, record 250)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username PEPE, puntaje 100)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (puntaje 120, username ANA)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username PEPE, puntaje 50)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username PEPE, puntaje 21)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username PEPE, puntaje 88)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (username ANA, puntaje 120)", &cantidad, &datos);
-
-    /* INSERCIÓN DE DATOS - CASOS INVALIDOS */
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR jugadores (username PEPE, record 999, cantPartidas 9)", &cantidad, &datos);
-    retorno = cliente_ejecutar_solicitud(*sock, "INSERTAR partidas (idPartida 21, puntaje 120, username ANA)", &cantidad, &datos);
-
-
-    /* SELECCIÓN DE DATOS */
-    retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR jugadores (username IGUAL ANA)", &cantidad, &datos);
-    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
-
-        printf("Datos Recibidos:\n");
-        for (i = 0; i < cantidad; i++) {
-            tJugador* j = ((tJugador*)datos) + i;
-            printf(COLOR_AZUL"\t- Jugador: %s, Record: %d, Partidas: %d\n"COLOR_RESET, j->username, j->record, j->cantPartidas);
-        }
-
-        free(datos);
-    }
-
-    retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR jugadores (username IGUAL HOMERO)", &cantidad, &datos);
-    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
-
-        printf("Datos Recibidos:\n");
-        for (i = 0; i < cantidad; i++) {
-            tJugador* j = ((tJugador*)datos) + i;
-            printf(COLOR_AZUL"\t- Jugador: %s, Record: %d, Partidas: %d\n"COLOR_RESET, j->username, j->record, j->cantPartidas);
-        }
-
-        free(datos);
-    }
-
-    retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR partidas (idPartida IGUAL 2)", &cantidad, &datos);
-    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
-
-        printf("Datos Recibidos:\n");
-        for (i = 0; i < cantidad; i++) {
-            tPartida* p = ((tPartida*)datos) + i;
-            printf(COLOR_AZUL"\t- Partida: %d, Jugador: %s, Puntaje: %d\n"COLOR_RESET, p->idPartida, p->username, p->puntaje);
-        }
-
-        free(datos);
-    }
-
-    retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR partidas (username IGUAL PEPE)", &cantidad, &datos);
-    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
-
-        printf("Datos Recibidos:\n");
-        for (i = 0; i < cantidad; i++) {
-            tPartida* p = ((tPartida*)datos) + i;
-            printf(COLOR_AZUL"\t- Partida: %d, Jugador: %s, Puntaje: %d\n"COLOR_RESET, p->idPartida, p->username, p->puntaje);
-        }
-
-        free(datos);
-    }
-
-    /* ACTUALIZACION DE DATOS - CASOS VALIDOS */
-    retorno = cliente_ejecutar_solicitud(*sock, "ACTUALIZAR jugadores (record 2121, cantPartidas 99) DONDE (username IGUAL ANA)", &cantidad, &datos);
-
-    /* SELECCIÓN DE DATOS LUEGO DE ACTUALIZACION */
-    retorno = cliente_ejecutar_solicitud(*sock, "SELECCIONAR jugadores (username IGUAL ANA)", &cantidad, &datos);
-    if (retorno == CE_DATOS && cantidad > 0 && datos != NULL) {
-
-        printf("Datos Recibidos:\n");
-        for (i = 0; i < cantidad; i++) {
-            tJugador* j = ((tJugador*)datos) + i;
-            printf(COLOR_AZUL"\t- Jugador: %s, Record: %d, Partidas: %d\n"COLOR_RESET, j->username, j->record, j->cantPartidas);
-        }
-
-        free(datos);
-    }
-
 }
