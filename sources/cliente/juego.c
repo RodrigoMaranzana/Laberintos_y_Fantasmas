@@ -2,8 +2,9 @@
 #include "../../include/cliente/assets.h"
 #include "../../include/comun/comun.h"
 #include "../../include/cliente/dibujado.h"
+#include "../../include/comun/protocolo.h"
+#include "../../include/comun/mensaje.h"
 
-#include <stdio.h>
 
 #define FUENTE_TAM_MIN 32
 #define FUENTE_INCREMENTO 16
@@ -11,16 +12,26 @@
 #define HUD_VIDAS_Y 16
 #define HUD_PREMIOS_Y 96
 #define HUD_RONDA_Y 160
+#define WIDGET_VISIBLE 1
+#define WIDGET_OCULTO 0
 #define VENTANA_MENU_PAUSA_ANCHO 384
 #define VENTANA_MENU_PAUSA_ALTO 512
 #define VENTANA_USERNAME_ANCHO 340
 #define VENTANA_USERNAME_ALTO 128
+#define VENTANA_RANKING_ANCHO 340
+#define VENTANA_RANKING_ALTO 128
+
+typedef enum {
+    SOLICITUD_PROCESAR_TODAS = -1,
+    SOLICITUD_PROCESAR_NINGUNA = 0,
+    SOLICITUD_PROCESAR_UNA = 1
+} eModoSolicitud;
 
 typedef enum {
     M_PRI_NUEVA_PARTIDA,
     M_PRI_CONTINUAR,
     M_PRI_CAMBIAR_USUARIO,
-    M_PRI_ESTADISTICAS,
+    M_PRI_RANKING,
     M_PRI_SALIR,
     M_PRI_CANTIDAD
 } eMenuOpcionID;
@@ -42,16 +53,26 @@ typedef struct {
     eLogicaEstado *estadoLogica;
 } tDatosUsuario;
 
+typedef struct {
+    SDL_Renderer *renderer;
+    char *usuario;
+} tDatosRanking;
+
 static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
-static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tVentana *ventanaMenu, tVentana *ventanaUsername, tHud *hud);
+static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tVentana *ventanaMenu, tVentana *ventanaUsername, tVentana *ventanaRanking, tHud *hud);
 static void _juego_iniciar_partida(void* datos);
 static void _juego_salir_del_juego(void* datos);
 static void _juego_continuar_partida(void* datos);
+static void _juego_mostrar_ranking(void *datos);
 static int _juego_actualizar_hud(tHud *hud, tLogica *logica);
 static int _juego_crear_hud(tJuego *juego);
 static int _juego_cargar_assets(tJuego *juego);
 static void _juego_manejar_input(tJuego *juego, SDL_Keycode tecla);
 static void _juego_manejar_eventos(tJuego *juego);
+static int _juego_encolar_solicitud(tCola *colaSolicitudes, const char *solicitud);
+static int _juego_procesar_cola_solicitudes(SOCKET sock, char *conectado, tCola *colaSolicitudes, eModoSolicitud modo);
+void _juego_inicializar_base_datos(tJuego *juego);
+char* _juego_buscar_respuesta_datos(tJuego *juego, int *codigoRetorno, int *cantRegistros, int *tamRegistro);
 
 static int _juego_ventana_menu_crear(void *datos);
 static void _juego_ventana_menu_actualizar(SDL_Event *evento, void *datos);
@@ -63,7 +84,14 @@ static void _juego_ventana_usuario_actualizar(SDL_Event *evento, void *datos);
 static void _juego_ventana_usuario_dibujar(void *datos);
 static void _juego_ventana_usuario_destruir(void *datos);
 
-int juego_inicializar(tJuego *juego, const char *tituloVentana)
+static int _juego_ventana_ranking_crear(void *datos);
+static void _juego_ventana_ranking_actualizar(SDL_Event *evento, void *datos);
+static void _juego_ventana_ranking_dibujar(void *datos);
+static void _juego_ventana_ranking_destruir(void *datos);
+
+
+
+int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, char conectado)
 {
     int ret = ERR_TODO_OK;
 
@@ -106,15 +134,41 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana)
     if ((ret = _juego_cargar_assets(juego)) != ERR_TODO_OK) return ret;
     if ((ret = _juego_crear_hud(juego)) != ERR_TODO_OK) return ret;
 
+    cola_crear(&juego->colaSolicitudes);
+    juego->sock = sock;
+    juego->conectado = conectado;
     juego->estado = JUEGO_CORRIENDO;
     printf("Juego iniciado con exito.\n");
 
     return ret;
 }
 
+char* _juego_buscar_respuesta_datos(tJuego *juego, int *codigoRetorno, int *cantRegistros, int *tamRegistro)
+{
+    char mensaje[TAM_BUFFER], *bufferDatos;
+
+    if (cliente_recibir_respuesta(juego->sock, codigoRetorno, mensaje, cantRegistros, tamRegistro, &bufferDatos) != ERR_TODO_OK) return NULL;
+
+    return bufferDatos;
+}
+
+void _juego_inicializar_base_datos(tJuego *juego)
+{
+    char solicitud[TAM_BUFFER];
+
+    sprintf(solicitud, "CREAR partidas (idPartida ENTERO PK AI, username TEXTO(16), cantPremios ENTERO, cantMovs ENTERO, semilla ENTERO)");
+    _juego_encolar_solicitud(&juego->colaSolicitudes, solicitud);
+
+    sprintf(solicitud, "CREAR jugadores (username TEXTO(16) PK, record ENTERO IS, cantPartidas ENTERO)");
+    _juego_encolar_solicitud(&juego->colaSolicitudes, solicitud);
+
+}
+
 int juego_ejecutar(tJuego *juego)
 {
     eRetorno ret = ERR_TODO_OK;
+
+    _juego_inicializar_base_datos(juego);
 
     while (juego->estado == JUEGO_CORRIENDO) {
 
@@ -124,9 +178,20 @@ int juego_ejecutar(tJuego *juego)
 
             logica_actualizar(&juego->logica);
             _juego_actualizar_hud(&juego->hud, &juego->logica);
+        } else {
+
+            if (cola_vacia(&juego->colaSolicitudes) != COLA_VACIA) {
+                char mensaje[TAM_BUFFER];
+                int codigoRetorno;
+
+                if (_juego_procesar_cola_solicitudes(juego->sock, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_UNA) == ERR_TODO_OK) {
+
+                    cliente_recibir_respuesta(juego->sock, &codigoRetorno, mensaje, NULL, NULL, NULL);
+                }
+            }
         }
 
-        _juego_renderizar(juego->renderer, juego->imagenes, &juego->logica, juego->ventanaMenuPausa, juego->ventanaUsername, &juego->hud);
+        _juego_renderizar(juego->renderer, juego->imagenes, &juego->logica, juego->ventanaMenuPausa, juego->ventanaUsername, juego->ventanaRanking, &juego->hud);
 
         SDL_Delay(16);
     }
@@ -137,6 +202,8 @@ int juego_ejecutar(tJuego *juego)
 void juego_destruir(tJuego *juego)
 {
     int i;
+
+    _juego_procesar_cola_solicitudes(juego->sock, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS);
 
     assets_destuir_imagenes(juego->imagenes);
     assets_destuir_sonidos(juego->sonidos);
@@ -150,8 +217,8 @@ void juego_destruir(tJuego *juego)
     }
 
     if (juego->ventanaMenuPausa) ventana_destruir(juego->ventanaMenuPausa);
-
     if (juego->ventanaUsername) ventana_destruir(juego->ventanaUsername);
+    if (juego->ventanaRanking) ventana_destruir(juego->ventanaRanking);
 
     logica_destruir(&juego->logica);
 
@@ -175,6 +242,56 @@ void juego_destruir(tJuego *juego)
     FUNCIONES ESTATICAS
 *************************/
 
+static int _juego_procesar_cola_solicitudes(SOCKET sock, char *conectado, tCola *colaSolicitudes, eModoSolicitud modo)
+{
+    FILE *arch = NULL;
+    char solicitud[TAM_BUFFER] = {0};
+    int retorno, procesadas = 0;
+
+    if (modo == SOLICITUD_PROCESAR_NINGUNA) {
+        return ERR_EN_ESPERA;
+    }
+
+    while ((modo == SOLICITUD_PROCESAR_TODAS || procesadas < modo) && cola_desencolar(colaSolicitudes, solicitud, TAM_BUFFER) != COLA_VACIA) {
+
+        if (*conectado) {
+            retorno = cliente_enviar_solicitud(sock, solicitud);
+            if (retorno == CE_ERR_SOCKET) {
+                *conectado = 0;
+                mensaje_advertencia("Socket desconectado, modo offline activo");
+            }
+        }
+
+        if (!*conectado) {
+            if (!arch) {
+                arch = fopen("contingencia.txt", "a");
+                if (!arch) {
+                    return ERR_ARCHIVO;
+                }
+            }
+            if (strncmp(solicitud, "SELECCIONAR", strlen("SELECCIONAR")) != 0) {
+                fprintf(arch, "%s\n", solicitud);
+                mensaje_info("Guardado para futura conexion: ");
+                printf("%s\n", solicitud);
+            }
+        }
+        ++procesadas;
+    }
+
+    if (arch) { // puntero debe estar en juego
+        fclose(arch);
+    }
+
+    return *conectado ? ERR_TODO_OK : ERR_OFFLINE;
+}
+
+static int _juego_encolar_solicitud(tCola *colaSolicitudes, const char *solicitud)
+{
+    cola_encolar(colaSolicitudes, solicitud, strlen(solicitud));
+
+    return ERR_TODO_OK;
+}
+
 static void _juego_manejar_eventos(tJuego *juego)
 {
     SDL_Event evento;
@@ -183,16 +300,19 @@ static void _juego_manejar_eventos(tJuego *juego)
     while (SDL_PollEvent(&evento)) {
 
         if (evento.type == SDL_QUIT) {
-
             juego->estado = JUEGO_CERRANDO;
             return;
         }
+
         switch (juego->logica.estado) {
             case LOGICA_EN_LOGIN:
                 ventana_actualizar(juego->ventanaUsername, &evento);
                 if (juego->logica.estado == LOGICA_EN_ESPERA) {
-
+                    char buffer[TAM_BUFFER];
                     ventana_cerrar(juego->ventanaUsername);
+                    widget_modificar_valor(juego->hud.widgets[HUD_WIDGETS_USERNAME], juego->usuario);
+                    sprintf(buffer, "INSERTAR jugadores (username %s)", juego->usuario);
+                    _juego_encolar_solicitud(&juego->colaSolicitudes, buffer);
                 }
                 break;
 
@@ -228,16 +348,19 @@ static void _juego_manejar_input(tJuego *juego, SDL_Keycode tecla)
     }
 
     if (logica_procesar_turno(&juego->logica, tecla)) {
-
         logica_procesar_movimientos(&juego->logica);
     }
 
     if (juego->logica.estado == LOGICA_FIN_PARTIDA) {
+        char buffer[TAM_BUFFER];
+        int cantMovs = 0;
 
         juego->logica.estado = LOGICA_EN_ESPERA;
-        logica_mostrar_historial_movs(&juego->logica.movimientos);
-    }
+        cantMovs = logica_mostrar_historial_movs(&juego->logica.movsJugador);
 
+        sprintf(buffer, "INSERTAR partidas (username %s, cantPremios %d, cantMovs %d, semilla %d)", juego->usuario, juego->logica.ronda.cantPremios, cantMovs, (int)juego->logica.semillaMaestra);
+        _juego_encolar_solicitud(&juego->colaSolicitudes, buffer);
+    }
 }
 
 static int _juego_actualizar_hud(tHud *hud, tLogica *logica)
@@ -247,14 +370,12 @@ static int _juego_actualizar_hud(tHud *hud, tLogica *logica)
     widget_modificar_valor(hud->widgets[HUD_WIDGETS_RONDA], &logica->ronda.numRonda);
 
     if (logica->mostrarSigRonda) {
-
         widget_modificar_visibilidad(hud->widgets[HUD_WIDGETS_TEXTO], 1);
         logica->mostrarSigRonda = 0;
     }
 
     temporizador_actualizar(&logica->temporCambioRonda);
     if (temporizador_estado(&logica->temporCambioRonda) == TEMPOR_FINALIZADO) {
-
         widget_modificar_visibilidad(hud->widgets[HUD_WIDGETS_TEXTO], 0);
     }
 
@@ -264,14 +385,13 @@ static int _juego_actualizar_hud(tHud *hud, tLogica *logica)
 static void _juego_dibujar_hud(tHud *hud, SDL_Renderer *renderer)
 {
     int i;
-
     for (i = 0; i < HUD_WIDGETS_CANTIDAD; i++) {
 
         widget_dibujar(hud->widgets[i]);
     }
 }
 
-static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tVentana *ventanaMenu, tVentana *ventanaUsername, tHud *hud)
+static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tLogica *logica, tVentana *ventanaMenu, tVentana *ventanaUsername, tVentana *ventanaRanking, tHud *hud)
 {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
@@ -282,6 +402,7 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
     } else {
         ventana_dibujar(ventanaMenu);
         ventana_dibujar(ventanaUsername);
+        ventana_dibujar(ventanaRanking);
     }
 
     SDL_RenderPresent(renderer);
@@ -346,29 +467,12 @@ static void _juego_continuar_partida(void *datos)
     logica->estado = LOGICA_JUGANDO;
 }
 
-//static int _juego_solicitar_apertura_tabla(const char *nombreTabla)
-//{
-//    char bufferEnvio[TAM_BUFFER] = {0};
-//    char bufferRespuesta[TAM_BUFFER] = {0};
-//
-//    sprintf(bufferEnvio, "%s %s", "ABRIR TABLA", nombreTabla);
-//    printf("Solicitud: %s\n", bufferEnvio);
-//
-//    cliente_enviar_solicitud(juego.sock, bufferEnvio, bufferRespuesta);
-//    printf("Respuesta del servidor: %s\n", bufferRespuesta);
-//
-//
-//
-//    return ERR_TODO_OK;
-//}
-
-///// LONGITUD|RETORNO|MENSAJE|
-//
-//static int _juego_parsear_respuesta(const char *respuesta)
-//{
-//
-//}
-
+static void _juego_mostrar_ranking(void *datos)
+{
+    //tLogica *logica = (tLogica*)datos;
+    puts("RANKING\n");
+    //logica->estado = LOGICA_JUGANDO;
+}
 
 static int _juego_ventana_menu_crear(void *datos)
 {
@@ -410,19 +514,19 @@ static int _juego_ventana_menu_crear(void *datos)
         menu_destruir(datosMenuPausa->menu);
         return -1;
     }
-    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_CAMBIAR_USUARIO, texturaAux, 64, (tMenuAccion){NULL, datosMenuPausa->logica}, OPCION_HABILITADA) != ERR_TODO_OK) {
+    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_CAMBIAR_USUARIO, texturaAux, 64, (tMenuAccion){NULL, NULL}, OPCION_DESHABILITADA) != ERR_TODO_OK) {
         SDL_DestroyTexture(texturaAux);
         menu_destruir(datosMenuPausa->menu);
         return -1;
     }
 
-    // ESTADISTICAS
-    texturaAux = texto_crear_textura(datosMenuPausa->renderer, datosMenuPausa->fuentes[FUENTE_TAM_64], "ESTADISTICAS", SDL_COLOR_BLANCO);
+    // RANKING
+    texturaAux = texto_crear_textura(datosMenuPausa->renderer, datosMenuPausa->fuentes[FUENTE_TAM_64], "RANKING", SDL_COLOR_BLANCO);
     if (!texturaAux) {
         menu_destruir(datosMenuPausa->menu);
         return -1;
     }
-    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_ESTADISTICAS, texturaAux, 64, (tMenuAccion){NULL, NULL}, OPCION_DESHABILITADA) != ERR_TODO_OK) {
+    if (menu_agregar_opcion(datosMenuPausa->menu, M_PRI_RANKING, texturaAux, 64, (tMenuAccion){_juego_mostrar_ranking, NULL}, OPCION_HABILITADA) != ERR_TODO_OK) {
         SDL_DestroyTexture(texturaAux);
         menu_destruir(datosMenuPausa->menu);
         return -1;
@@ -450,7 +554,6 @@ static void _juego_ventana_menu_actualizar(SDL_Event *evento, void *datos)
     tMenuAccion accionProcesada = {NULL, NULL};
 
     if (evento->type != SDL_KEYDOWN) {
-
         return;
     }
 
@@ -488,7 +591,6 @@ static void _juego_ventana_menu_actualizar(SDL_Event *evento, void *datos)
         Mix_PlayChannel(0, * (datosMenuPausa->sonidos + SONIDO_MENU_CONFIRMAR), 0);
 
         if (accionProcesada.funcion) {
-
             accionProcesada.funcion(accionProcesada.datos);
         }
     }
@@ -527,17 +629,20 @@ static int _juego_crear_hud(tJuego *juego)
     int rendererW = 0, rendererH = 0;
     tDatosMenuPausa *datosMenuPausa;
     tDatosUsuario *datosUsername;
+    tDatosRanking *datosRanking;
 
     SDL_GetRendererOutputSize(juego->renderer, &rendererW, &rendererH);
 
     // Widgets HUD
-    juego->hud.widgets[HUD_WIDGET_VIDAS] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_VIDAS_Y}, juego->imagenes[IMAGEN_ICO_VIDAS], juego->fuentes[FUENTE_TAM_48], SDL_COLOR_BLANCO, 0, 1);
+    juego->hud.widgets[HUD_WIDGET_VIDAS] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_VIDAS_Y}, juego->imagenes[IMAGEN_ICO_VIDAS], juego->fuentes[FUENTE_TAM_48], SDL_COLOR_BLANCO, 0, WIDGET_VISIBLE);
     if (!juego->hud.widgets[HUD_WIDGET_VIDAS]) return ERR_SIN_MEMORIA;
-    juego->hud.widgets[HUD_WIDGETS_PREMIOS] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_PREMIOS_Y}, juego->imagenes[IMAGEN_ICO_PREMIOS], juego->fuentes[FUENTE_TAM_48], SDL_COLOR_BLANCO, 0, 1);
+    juego->hud.widgets[HUD_WIDGETS_PREMIOS] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_PREMIOS_Y}, juego->imagenes[IMAGEN_ICO_PREMIOS], juego->fuentes[FUENTE_TAM_48], SDL_COLOR_BLANCO, 0, WIDGET_VISIBLE);
     if (!juego->hud.widgets[HUD_WIDGETS_PREMIOS]) return ERR_SIN_MEMORIA;
-    juego->hud.widgets[HUD_WIDGETS_RONDA] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_RONDA_Y}, NULL, juego->fuentes[FUENTE_TAM_64], SDL_COLOR_BLANCO, 0, 1);
+    juego->hud.widgets[HUD_WIDGETS_RONDA] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_RONDA_Y}, NULL, juego->fuentes[FUENTE_TAM_64], SDL_COLOR_BLANCO, 0, WIDGET_VISIBLE);
     if (!juego->hud.widgets[HUD_WIDGETS_RONDA]) return ERR_SIN_MEMORIA;
-    juego->hud.widgets[HUD_WIDGETS_TEXTO] = widget_crear_texto(juego->renderer, "SIGUIENTE RONDA!", (SDL_Point){rendererW / 2, 24}, juego->fuentes[FUENTE_TAM_32], SDL_COLOR_BLANCO, (SDL_Color){0,0,0,0}, 0);
+    juego->hud.widgets[HUD_WIDGETS_USERNAME] = widget_crear_texto(juego->renderer, NULL, (SDL_Point){rendererW / 2, rendererH - 32}, juego->fuentes[FUENTE_TAM_32], SDL_COLOR_BLANCO, (SDL_Color){0,0,0,0}, WIDGET_VISIBLE);
+    if (!juego->hud.widgets[HUD_WIDGETS_USERNAME]) return ERR_SIN_MEMORIA;
+    juego->hud.widgets[HUD_WIDGETS_TEXTO] = widget_crear_texto(juego->renderer, "SIGUIENTE RONDA!", (SDL_Point){rendererW / 2, 24}, juego->fuentes[FUENTE_TAM_32], SDL_COLOR_BLANCO, (SDL_Color){0,0,0,0}, WIDGET_OCULTO);
     if (!juego->hud.widgets[HUD_WIDGETS_TEXTO]) return ERR_SIN_MEMORIA;
 
     // Ventana Pausa
@@ -574,6 +679,18 @@ static int _juego_crear_hud(tJuego *juego)
     juego->ventanaUsername = ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_usuario_crear, _juego_ventana_usuario_actualizar, _juego_ventana_usuario_dibujar, _juego_ventana_usuario_destruir, datosUsername}, dimsVentana, (SDL_Color){162, 200, 200, 255}, 1);
     ventana_abrir(juego->ventanaUsername);
 
+
+    dimsVentana.w = VENTANA_RANKING_ANCHO;
+    dimsVentana.h = VENTANA_RANKING_ALTO;
+    dimsVentana.x = (rendererW - dimsVentana.w) / 2;
+    dimsVentana.y = (rendererH - dimsVentana.h) / 2;
+
+    datosRanking = malloc(sizeof(tDatosRanking));
+    if (!datosRanking) return ERR_SIN_MEMORIA;
+    datosRanking->renderer = juego->renderer;
+    datosRanking->usuario = juego->usuario;
+    juego->ventanaRanking = ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_ranking_crear, _juego_ventana_ranking_actualizar, _juego_ventana_ranking_dibujar, _juego_ventana_ranking_destruir, datosRanking}, dimsVentana, (SDL_Color){162, 200, 200, 255}, 1);
+
     return ERR_TODO_OK;
 }
 
@@ -603,7 +720,7 @@ static int _juego_ventana_usuario_crear(void *datos)
     tDatosUsuario *datosUsuario = (tDatosUsuario*)(datos);
 
     datosUsuario->campoTexto = widget_crear_campo_texto(datosUsuario->renderer, (SDL_Point){166,60}, datosUsuario->fuentes[FUENTE_TAM_32], SDL_COLOR_BLANCO, (SDL_Color){100, 100, 100, 255}, 1);
-
+    SDL_StartTextInput();
     return 0;
 }
 
@@ -613,7 +730,11 @@ static void _juego_ventana_usuario_actualizar(SDL_Event *evento, void *datos)
 
     if(evento->type == SDL_TEXTINPUT){
 
-        strncat(datosUsuario->usuario, evento->text.text, TAM_USUARIO - strlen(datosUsuario->usuario) - 1);
+        char letra[2] = {*evento->text.text, '\0'};
+
+        *letra &= ~0x20;
+
+        strncat(datosUsuario->usuario, letra, TAM_USUARIO - strlen(datosUsuario->usuario) - 1);
         widget_modificar_valor(datosUsuario->campoTexto, datosUsuario->usuario);
 
     }else if(evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_BACKSPACE){
@@ -624,7 +745,7 @@ static void _juego_ventana_usuario_actualizar(SDL_Event *evento, void *datos)
             datosUsuario->usuario[longitud - 1] = '\0';
         }
         widget_modificar_valor(datosUsuario->campoTexto, datosUsuario->usuario);
-    } else if (evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN) {
+    } else if (*datosUsuario->usuario && evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN) {
 
         *datosUsuario->estadoLogica = LOGICA_EN_ESPERA;
     }
@@ -643,8 +764,42 @@ static void _juego_ventana_usuario_destruir(void *datos)
     if (!datosUsuario) {
        return;
     }
-
+    SDL_StopTextInput();
     widget_destruir(datosUsuario->campoTexto);
-
     free(datosUsuario);
+}
+
+
+static int _juego_ventana_ranking_crear(void *datos)
+{
+    //tDatosRanking *datosRanking = (tDatosRanking*)datos;
+
+    return 0;
+}
+
+static void _juego_ventana_ranking_actualizar(SDL_Event *evento, void *datos)
+{
+    tDatosRanking *datosRanking = (tDatosRanking*)datos;
+
+    if (*datosRanking->usuario && evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN) {
+
+        ///
+    }
+}
+
+static void _juego_ventana_ranking_dibujar(void *datos)
+{
+    //tDatosRanking *datosRanking = (tDatosRanking*)datos;
+
+    ///
+}
+
+static void _juego_ventana_ranking_destruir(void *datos)
+{
+    tDatosRanking *datosRanking = (tDatosRanking*)datos;
+    if (!datosRanking) {
+       return;
+    }
+
+    free(datosRanking);
 }

@@ -7,8 +7,7 @@ typedef enum {
     CE_DATOS,
     CE_SIN_RESULTADOS,
     CE_ERR_SIN_MEM,
-    CE_ERR_ENVIO_SOLICITUD,
-    CE_ERR_RECEPCION_RESPUESTA,
+    CE_ERR_SOCKET,
     CE_ERR_RECEPCION_DATOS,
     CE_ERR_SERVIDOR,
 } eErrCliente;
@@ -16,8 +15,8 @@ typedef enum {
 int cliente_inicializar();
 SOCKET cliente_conectar_servidor(const char *ipServidor, int puerto);
 int cliente_enviar_solicitud(SOCKET sock, const char *solicitud);
-void cliente_cerrar_conexion(SOCKET sock);
-int cliente_recibir_respuesta(SOCKET sock, char *respuesta, int tamBuffer);
+void cliente_destruir_conexion(SOCKET sock);
+int cliente_recibir_respuesta(SOCKET sock, int *codigoRetorno, char *mensaje, int *cantRegistros, int *tamRegistro, char **bufferDatos);
 int cliente_recibir_datos(SOCKET sock, char *bufferDatos, int bytesEsperados);
 int cliente_ejecutar_solicitud(SOCKET sock, const char *solicitud, int* cantRegistros, char** bufferDatos);
 #endif // CLIENTE_H_INCLUDED

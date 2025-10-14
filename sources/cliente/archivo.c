@@ -164,7 +164,7 @@ static int _archivo_parsear_linea_conf(char *buffer, tParam *param)
         return ERR_LINEA_LARGA;
     }
 
-    sscanf(cursor, "%d", &param->valor);
+    sscanf(cursor, "%d", &param->valor);/// REVISAR CURSOR / CURSOR + 1
     *cursor = '\0';
 
     strncpy(param->nombre, buffer, TAM_NOMBRE);

@@ -50,6 +50,9 @@ typedef enum {
     ERR_ARCH_FUENTE,
     ERR_ARCH_IMAGEN,
     ERR_ARCH_SONIDO,
+    ERR_LINEA_LARGA,
+    ERR_EN_ESPERA,
+    ERR_OFFLINE,
 } eRetorno;
 
 

@@ -3,6 +3,7 @@
 
 #include <SDL.h>
 #include <SDL_mixer.h>
+#include <stdio.h>
 #include "../../include/cliente/logica.h"
 #include "../../include/cliente/texto.h"
 #include "../../include/cliente/menu.h"
@@ -31,6 +32,7 @@ typedef enum {
     HUD_WIDGET_VIDAS,
     HUD_WIDGETS_PREMIOS,
     HUD_WIDGETS_RONDA,
+    HUD_WIDGETS_USERNAME,
     HUD_WIDGETS_TEXTO,
     HUD_WIDGETS_CANTIDAD
 } eWidgetsHud;
@@ -38,6 +40,20 @@ typedef enum {
 typedef struct {
     tWidget *widgets[HUD_WIDGETS_CANTIDAD];
 }tHud;
+
+typedef struct {
+    char username[TAM_USUARIO];
+    int record;
+    int cantPartidas;
+} tJugador;
+
+typedef struct {
+    int idPartida;
+    char username[TAM_USUARIO];
+    int puntaje;
+    int cantMovs;
+    int semilla;
+} tPartida;
 
 typedef struct {
     SDL_Window *ventana;
@@ -52,15 +68,19 @@ typedef struct {
     tHud hud;
     tVentana *ventanaMenuPausa;
     tVentana *ventanaUsername;
+    tVentana *ventanaRanking;
 
     char usuario[TAM_USUARIO];
     tLogica logica;
     eJuegoEstado estado;
 
     SOCKET sock;
+    char conectado;
+    tCola colaSolicitudes;
+    FILE *archSolicitudes;
 } tJuego;
 
-int juego_inicializar(tJuego *juego, const char *tituloVentana);
+int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, char conectado);
 int juego_ejecutar(tJuego *juego);
 void juego_destruir(tJuego *juego);
 
