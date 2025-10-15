@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include "../../include/servidor/servidor.h"
 #include "../../include/comun/comun.h"
+#include "../../include/comun/mensaje.h"
 
 #define SOCKET_ERR -10
 
@@ -15,18 +16,19 @@ int main()
     int bytesRecibidos;
 
     if ((servidorRet = servidor_inicializar(&bDatos)) != SERVIDOR_BD_TODO_OK) {
-        puts(FONDO_ROJO "Error:" COLOR_RESET " No se pudo inicializar Winsock");
+        mensaje_error("No se pudo inicializar Winsock");
         return servidorRet;
     }
 
     SOCKET serverSocket = servidor_crear_socket();
     if (serverSocket == INVALID_SOCKET) {
-        puts(FONDO_ROJO "Error:" COLOR_RESET " No se pudo crear el socket del servidor");
+        mensaje_error("No se pudo crear el socket del servidor");
         WSACleanup();
         return SOCKET_ERR;
     }
 
-    printf(FONDO_AMARILLO "Servidor escuchando en puerto %d...\n" FONDO_NEGRO, PUERTO);
+    mensaje_titulo("LyfDB - Monitor del Servicio");
+    printf("\n" FONDO_AMARILLO "Servidor escuchando en puerto %d...\n" FONDO_NEGRO, PUERTO);
 
     while (1) {
 

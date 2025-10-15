@@ -45,7 +45,7 @@ SOCKET servidor_crear_socket()
 
 void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *solicitud)
 {
-    int retorno, cantRegistrosDatos, tamRegistroDatos;
+    int retorno, cantRegistrosDatos = 0, tamRegistroDatos = 0;
     const char *mensaje;
     tLista listaDatos;
     char *serializacionDatos = NULL, *registroDatos = NULL, respuesta[TAM_BUFFER];
@@ -71,12 +71,9 @@ void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *soli
                 pSerializacionDatos += tamRegistroDatos;
             }
         }
-
-        snprintf(respuesta, TAM_BUFFER, "%d;%s;%d;%d\n", retorno, mensaje, cantRegistrosDatos, tamRegistroDatos);
-    } else {
-
-        snprintf(respuesta, TAM_BUFFER, "%d;%s\n", retorno, mensaje);
     }
+
+    snprintf(respuesta, TAM_BUFFER, "%d;%s;%d;%d\n", retorno, mensaje, cantRegistrosDatos, tamRegistroDatos);
 
     send(*sock, respuesta, strlen(respuesta), 0);
     printf(FONDO_AMARILLO "Enviado:" COLOR_RESET " %s\n", respuesta);

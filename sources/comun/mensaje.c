@@ -1,6 +1,20 @@
 #include <stdio.h>
+
 #include <string.h>
 #include "../../include/comun/mensaje.h"
+
+void mensaje_color(const char *color, const char *formato, ...)
+{
+    va_list argumentos;
+
+    fprintf(stderr, "%s", color);
+
+    va_start(argumentos, formato);
+    vfprintf(stderr, formato, argumentos);
+    va_end(argumentos);
+
+    fprintf(stderr, COLOR_RESET "\n");
+}
 
 void mensaje_info(const char *mensaje)
 {

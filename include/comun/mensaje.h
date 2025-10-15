@@ -1,5 +1,6 @@
 #ifndef MENSAJE_H_INCLUDED
 #define MENSAJE_H_INCLUDED
+#include <stdarg.h>
 
 #define TEXTO_ROJO           "\x1b[31m"
 #define TEXTO_ROJO_B         "\x1b[1;31m"
@@ -23,6 +24,7 @@
 #define PARPADEO             "\x1b[5m"
 #define COLOR_RESET          "\x1b[0m"
 
+void mensaje_color(const char *color, const char *formato, ...);
 void mensaje_info(const char *mensaje);
 void mensaje_todo_ok(const char *mensaje);
 void mensaje_advertencia(const char *mensaje);

@@ -68,15 +68,9 @@ typedef struct {
 } tEncabezado;
 
 typedef struct {
-    void *dato;
-    unsigned tam;
-} tValor;
-
-typedef struct {
     tCampo campo;
-    tValor valor;
-    int ingresado;
-} tDatoParseado;
+    void *dato;
+} tCampoValor;
 
 typedef struct {
     tEncabezado encabezado;

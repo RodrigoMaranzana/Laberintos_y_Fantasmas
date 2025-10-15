@@ -61,7 +61,7 @@ static int _bdatos_parsear_texto(tSecuencia *secuencia, void *salida, unsigned t
 static void _bdatos_crear_secuencia(tSecuencia *secuencia, const char *buffer);
 static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tVector *vecCampos);
 static int _bdatos_leer_campo_tipo(tSecuencia *secuencia, tCampo *campo);
-static int _bdatos_parsear_valores(tSecuencia *secuencia, tEncabezado *encabezado, eModoParseoValores modo, tDatoParseado *datosParseados, int *cantParseados);
+static int _bdatos_parsear_valores(tSecuencia *secuencia, tEncabezado *encabezado, eModoParseoValores modo, tVector *vecCampoValor);
 static eSimbolo _bdatos_comparar_simbolo(const char* simbolo);
 static int _bdatos_leer_indice_secundario(void **indiceIS, unsigned *tamindiceIS, FILE *arch);
 static void _bdatos_escribir_indice_secundario(void *dato, FILE *arch);
@@ -73,6 +73,7 @@ static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, 
 static tCampo* _bdatos_encabezado_buscar_campo_por_tipo(tEncabezado* encabezado, eSimbolo tipoBuscado);
 static int _bdatos_cmp_campo_por_nombre(const void* a, const void* b);
 static void _bdatos_accion_escribir_campo(void* elem, void* extra);
+static void _bdatos_accion_liberar_campo_valor(void* elem, void* extra);
 
 
 /// DEBUG
@@ -730,25 +731,194 @@ static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, 
     }
 }
 
+static int _bdatos_parsear_valores(tSecuencia *secuencia, tEncabezado *encabezado, eModoParseoValores modo, tVector *vecCampoValor)
+{
+    int retorno, fin = 0, cantPK = 0;
+    char caracter, nombreCampoLeido[TAM_IDENTIFICADOR];
+    tCampo campoEncontrado;
+    tCampoValor campoValorActual;
+
+    do {
+        memset(nombreCampoLeido, 0, sizeof(nombreCampoLeido));
+
+        if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_identificador, nombreCampoLeido, TAM_IDENTIFICADOR)) != BD_TODO_OK) return retorno;
+
+        memset(&campoEncontrado, 0, sizeof(tCampo));
+        if ((retorno = _bdatos_buscar_campo(encabezado, &campoEncontrado, nombreCampoLeido)) != BD_TODO_OK) return retorno;
+
+        if ((modo == MODO_ACTUALIZACION && campoEncontrado.esPK) || campoEncontrado.esAI){
+            return campoEncontrado.esAI ? BD_ERROR_CAMPO_ES_AI : BD_ERROR_ACTUALIZAR_PK;
+        }
+
+        if (campoEncontrado.esPK) ++cantPK;
+
+        switch (campoEncontrado.tipo) {
+            case TIPO_ENTERO: {
+
+                campoValorActual.dato = malloc(sizeof(int));
+                if (!campoValorActual.dato) return BD_ERROR_SIN_MEMO;
+                if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_numeros, (int*)campoValorActual.dato, sizeof(int))) != BD_TODO_OK) {
+                    free(campoValorActual.dato);
+                    return retorno;
+                }
+                break;
+            }
+            case TIPO_TEXTO: {
+
+                campoValorActual.dato = malloc(campoEncontrado.tam);
+                if (!campoValorActual.dato) return BD_ERROR_SIN_MEMO;
+                memset(campoValorActual.dato, 0, campoEncontrado.tam);
+                if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_texto, (char*)campoValorActual.dato, campoEncontrado.tam)) != BD_TODO_OK) {
+                    free(campoValorActual.dato);
+                    return retorno;
+                }
+                break;
+            }
+            default:
+                return BD_ERROR_CAMPO_INVALIDO;
+        }
+
+        memcpy(&campoValorActual.campo, &campoEncontrado, sizeof(tCampo));
+
+        vector_insertar_al_final(vecCampoValor, &campoValorActual);
+
+        if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char))) != BD_TODO_OK) return retorno;
+        if (caracter == ')') {
+            fin = 1;
+        } else if (caracter != ',') {
+            return BD_ERROR_SINTAXIS;
+        }
+
+    } while (!fin);
+
+    if (modo == MODO_INSERCION && cantPK < 1 && encabezado->proximoAI == 0) {
+        return BD_ERROR_SIN_PK;
+    }
+
+    return BD_TODO_OK;
+}
+
+/// INSERTAR jugadores (username PEPE, record 15, cantPartidas 5)
+static int _bdatos_insertar(tBDatos *bDatos)
+{
+    long offset;
+    int ret, cantParseados = 0, valorIS = 0;
+    char caracter, *registro = NULL;
+    tIndicePK nuevoIndiceReg;
+    tCampo *campoAI, *campoIS;
+    tCampoValor *campoValorActual;
+    tVector vecCampoValor;
+    tVectorIterador vecCampoValorIt;
+
+    if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
+
+    if (vector_crear(&vecCampoValor, sizeof(tCampoValor)) != VECTOR_TODO_OK) return BD_ERROR_SIN_MEMO;
+
+    if ((ret = _bdatos_parsear_valores(&bDatos->secuencia, &bDatos->tablaAbierta.encabezado, MODO_INSERCION, &vecCampoValor)) != BD_TODO_OK) {
+        vector_recorrer(&vecCampoValor, _bdatos_accion_liberar_campo_valor, NULL);
+        vector_destruir(&vecCampoValor);
+        return ret;
+    }
+
+    cantParseados = vector_obtener_cantidad_elem(&vecCampoValor);
+    if ((cantParseados = vector_obtener_cantidad_elem(&vecCampoValor)) == 0) {
+        vector_destruir(&vecCampoValor);
+        return BD_ERROR_CANT_CAMPOS;
+    }
+
+    registro = (char*)malloc(bDatos->tablaAbierta.encabezado.tamRegistro);
+    if (!registro) {
+        vector_recorrer(&vecCampoValor, _bdatos_accion_liberar_campo_valor, NULL);
+        vector_destruir(&vecCampoValor);
+        return BD_ERROR_SIN_MEMO;
+    }
+
+    memset(registro, 0, bDatos->tablaAbierta.encabezado.tamRegistro);
+    memset(&nuevoIndiceReg, 0, sizeof(tIndicePK));
+
+    vector_it_crear(&vecCampoValorIt, &vecCampoValor);
+
+    campoValorActual = vector_it_primero(&vecCampoValorIt);
+    while (campoValorActual) {
+
+        memcpy(registro + campoValorActual->campo.offsetCampo, campoValorActual->dato, campoValorActual->campo.tam);
+        if (campoValorActual->campo.esPK) {
+            if (campoValorActual->campo.tipo == TIPO_TEXTO) {
+                strncpy(nuevoIndiceReg.clave, (char*)campoValorActual->dato, sizeof(nuevoIndiceReg.clave) - 1);
+                nuevoIndiceReg.clave[sizeof(nuevoIndiceReg.clave) - 1] = '\0';
+            } else {
+                sprintf(nuevoIndiceReg.clave, "%011d", *(int*)campoValorActual->dato);
+            }
+        }
+
+        campoValorActual = vector_it_siguiente(&vecCampoValorIt);
+    }
+
+    campoAI = _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, AI);
+    if (campoAI) {
+        memcpy(registro + campoAI->offsetCampo, &bDatos->tablaAbierta.encabezado.proximoAI, sizeof(unsigned));
+        sprintf(nuevoIndiceReg.clave, "%011d", bDatos->tablaAbierta.encabezado.proximoAI);
+    }
+
+    fseek(bDatos->tablaAbierta.arch, 0, SEEK_END);
+    offset = ftell(bDatos->tablaAbierta.arch);
+
+    nuevoIndiceReg.offset = offset;
+    if ((ret = arbol_insertar_rec(&bDatos->tablaAbierta.arbolPK, &nuevoIndiceReg, sizeof(tIndicePK), _bdatos_cmp_indice)) != ARBOL_TODO_OK) {
+        vector_recorrer(&vecCampoValor, _bdatos_accion_liberar_campo_valor, NULL);
+        vector_destruir(&vecCampoValor);
+        free(registro);
+        return ret == ARBOL_DATO_DUP ? BD_ERROR_DUPLICADO_PK : BD_ERROR_SIN_MEMO;
+    }
+
+    /// MEJORAR PARA QUE SIRVA PARA CLAVES DE CAMPOS DE TETXO (SE DEBE CAMBIAR A _bdatos_actualizar_is)
+    campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, IS);
+    if (campoIS) {
+        if (campoIS->tipo == TIPO_ENTERO) {
+            valorIS = *(int*)(registro + campoIS->offsetCampo);
+        }
+        _bdatos_actualizar_is(&bDatos->tablaAbierta.arbolIS, valorIS, offset, AGREGAR_OFFSET);
+    }
+
+    fwrite(registro, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
+    bDatos->tablaAbierta.encabezado.cantRegistros++;
+    if ( _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, AI)) {
+        ++bDatos->tablaAbierta.encabezado.proximoAI;
+    }
+
+    vector_recorrer(&vecCampoValor, _bdatos_accion_liberar_campo_valor, NULL);
+    vector_destruir(&vecCampoValor);
+    free(registro);
+
+    return BD_TODO_OK;
+}
+
 /// ACTUALIZAR jugadores (puntajeMax 300) DONDE (username IGUAL PEPE)
 static int _bdatos_actualizar(tBDatos *bDatos)
 {
-    int ret, cantParseados = 0, i, cantRegistrosDatos;
+    int ret, cantParseados = 0, cantRegistrosDatos;
     tLista listaDatos;
     eSimbolo simboloConector;
-    tDatoParseado datosParseados[MAX_CAMPOS_POR_TABLA];
     char caracter, *registro = NULL, *registroActualizado = NULL;
+    tCampoValor *campoValorActual;
+    tVector vecCampoValor;
+    tVectorIterador vecCampoValorIt;
     tCampo *campoPK = _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, PK), *campoIS;
 
     if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
 
-    memset(datosParseados, 0, sizeof(datosParseados));
-    ret = _bdatos_parsear_valores(&bDatos->secuencia, &bDatos->tablaAbierta.encabezado, MODO_ACTUALIZACION, datosParseados, &cantParseados);
-    if (ret != BD_TODO_OK) {
-        for (i = 0; i < cantParseados; i++) {
-            free(datosParseados[i].valor.dato);
-        }
+    if (vector_crear(&vecCampoValor, sizeof(tCampoValor)) != VECTOR_TODO_OK) return BD_ERROR_SIN_MEMO;
+
+    if ((ret = _bdatos_parsear_valores(&bDatos->secuencia, &bDatos->tablaAbierta.encabezado, MODO_ACTUALIZACION, &vecCampoValor)) != BD_TODO_OK) {
+        vector_recorrer(&vecCampoValor, _bdatos_accion_liberar_campo_valor, NULL);
+        vector_destruir(&vecCampoValor);
         return ret;
+    }
+
+    cantParseados = vector_obtener_cantidad_elem(&vecCampoValor);
+    if ((cantParseados = vector_obtener_cantidad_elem(&vecCampoValor)) == 0) {
+        vector_destruir(&vecCampoValor);
+        return BD_ERROR_CANT_CAMPOS;
     }
 
     if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &simboloConector, sizeof(eSimbolo))) != BD_TODO_OK || (simboloConector != DONDE)) return BD_ERROR_SINTAXIS;
@@ -760,11 +930,12 @@ static int _bdatos_actualizar(tBDatos *bDatos)
     if (!registro || !(registroActualizado = (char*)malloc(bDatos->tablaAbierta.encabezado.tamRegistro))) {
         free(registro);
         free(registroActualizado);
-        for (i = 0; i < cantParseados; i++) {
-            free(datosParseados[i].valor.dato);
-        }
+        vector_recorrer(&vecCampoValor, _bdatos_accion_liberar_campo_valor, NULL);
+        vector_destruir(&vecCampoValor);
         return BD_ERROR_SIN_MEMO;
     }
+
+    vector_it_crear(&vecCampoValorIt, &vecCampoValor);
 
     while (lista_sacar_primero(&listaDatos, registro, bDatos->tablaAbierta.encabezado.tamRegistro) != LISTA_VACIA) {
 
@@ -787,11 +958,14 @@ static int _bdatos_actualizar(tBDatos *bDatos)
             int valorNuevoIS;
             int actualizado = 0;
 
-            for(i = 0; i < cantParseados && !actualizado; i++) {
-                if (strcmp(datosParseados[i].campo.nombre, campoIS->nombre) == 0) {
-                    valorNuevoIS = *(int*)datosParseados[i].valor.dato;
+            campoValorActual = vector_it_primero(&vecCampoValorIt);
+            while (campoValorActual && !actualizado) {
+
+                if (strcmp(campoValorActual->campo.nombre, campoIS->nombre) == 0) {
+                    valorNuevoIS = *(int*)campoValorActual->dato;
                     actualizado = 1;
                 }
+                campoValorActual = vector_it_siguiente(&vecCampoValorIt);
             }
 
             if (actualizado && valorAnteriorIS != valorNuevoIS) {
@@ -801,94 +975,20 @@ static int _bdatos_actualizar(tBDatos *bDatos)
         }
 
         memcpy(registroActualizado, registro, bDatos->tablaAbierta.encabezado.tamRegistro);
-        for (i = 0; i < cantParseados; i++) {
-            memcpy(registroActualizado + datosParseados[i].campo.offsetCampo, datosParseados[i].valor.dato, datosParseados[i].valor.tam);
+        campoValorActual = vector_it_primero(&vecCampoValorIt);
+        while (campoValorActual) {
+            memcpy(registroActualizado + campoValorActual->campo.offsetCampo, campoValorActual->dato, campoValorActual->campo.tam);
+            campoValorActual = vector_it_siguiente(&vecCampoValorIt);
         }
 
         fseek(bDatos->tablaAbierta.arch, indicePK.offset, SEEK_SET);
         fwrite(registroActualizado, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
     }
 
-    for (i = 0; i < cantParseados; i++) {
-        free(datosParseados[i].valor.dato);
-    }
+    vector_recorrer(&vecCampoValor, _bdatos_accion_liberar_campo_valor, NULL);
+    vector_destruir(&vecCampoValor);
     free(registro);
     free(registroActualizado);
-    return BD_TODO_OK;
-}
-
-/// INSERTAR jugadores (username PEPE, record 15, cantPartidas 5)
-static int _bdatos_insertar(tBDatos *bDatos)
-{
-    long offset;
-    int ret, i, cantParseados = 0, valorIS = 0;
-    tDatoParseado datosParseados[MAX_CAMPOS_POR_TABLA];
-    char caracter, *registro = NULL;
-    tIndicePK nuevoIndiceReg;
-
-    if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
-
-    memset(datosParseados, 0, sizeof(datosParseados));
-    ret = _bdatos_parsear_valores(&bDatos->secuencia, &bDatos->tablaAbierta.encabezado, MODO_INSERCION, datosParseados, &cantParseados);
-    if (ret != BD_TODO_OK) {
-        for (i = 0; i < cantParseados; i++) {
-            free(datosParseados[i].valor.dato);
-        }
-        return ret;
-    }
-
-    registro = (char*)malloc(bDatos->tablaAbierta.encabezado.tamRegistro);
-    if (!registro) {
-        for (i = 0; i < cantParseados; i++) {
-            free(datosParseados[i].valor.dato);
-        }
-        return BD_ERROR_SIN_MEMO;
-    }
-
-    memset(registro, 0, bDatos->tablaAbierta.encabezado.tamRegistro);
-    memset(&nuevoIndiceReg, 0, sizeof(tIndicePK));
-
-    for (i = 0; i < cantParseados; i++) {
-        memcpy(registro + datosParseados[i].campo.offsetCampo, datosParseados[i].valor.dato, datosParseados[i].valor.tam);
-        if (datosParseados[i].campo.esPK) {
-            if (datosParseados[i].campo.tipo == TIPO_TEXTO) {
-                strncpy(nuevoIndiceReg.clave, (char*)datosParseados[i].valor.dato, sizeof(nuevoIndiceReg.clave) - 1);
-                nuevoIndiceReg.clave[sizeof(nuevoIndiceReg.clave) - 1] = '\0';
-            } else {
-                sprintf(nuevoIndiceReg.clave, "%011d", *(int*)datosParseados[i].valor.dato);
-            }
-        }else if (datosParseados[i].campo.esIS) {
-            valorIS = *(int*)datosParseados[i].valor.dato;
-        }
-    }
-
-    fseek(bDatos->tablaAbierta.arch, 0, SEEK_END);
-    offset = ftell(bDatos->tablaAbierta.arch);
-
-    nuevoIndiceReg.offset = offset;
-    if ((ret = arbol_insertar_rec(&bDatos->tablaAbierta.arbolPK, &nuevoIndiceReg, sizeof(tIndicePK), _bdatos_cmp_indice)) != ARBOL_TODO_OK) {
-        for (i = 0; i < cantParseados; i++) {
-            free(datosParseados[i].valor.dato);
-        }
-        free(registro);
-        return ret == ARBOL_DATO_DUP ? BD_ERROR_DUPLICADO_PK : BD_ERROR_SIN_MEMO;
-    }
-
-    if ( _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, IS)) {
-        _bdatos_actualizar_is(&bDatos->tablaAbierta.arbolIS, valorIS, offset, AGREGAR_OFFSET);
-    }
-
-    fwrite(registro, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch);
-    bDatos->tablaAbierta.encabezado.cantRegistros++;
-    if ( _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, AI)) {
-        ++bDatos->tablaAbierta.encabezado.proximoAI;
-    }
-
-    for (i = 0; i < cantParseados; i++) {
-        free(datosParseados[i].valor.dato);
-    }
-    free(registro);
-
     return BD_TODO_OK;
 }
 
@@ -1084,12 +1184,16 @@ static int _bdatos_seleccionar_por_is(tBDatos *bDatos, tLista *listaDatos, int *
 
 static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, int *cantRegistrosDatos, tCampo *campo, int valor, char* buffer, eSimbolo operador)
 {
+    long posicionDatos;
+
     char* registro = (char*)malloc(bDatos->tablaAbierta.encabezado.tamRegistro);
     if (!registro) {
         return BD_ERROR_SIN_MEMO;
     }
 
-    fseek(bDatos->tablaAbierta.arch, sizeof(tEncabezado), SEEK_SET);
+    posicionDatos = sizeof(tEncabezado) - sizeof(tVector) + (bDatos->tablaAbierta.encabezado.cantCampos * sizeof(tCampo));
+    fseek(bDatos->tablaAbierta.arch, posicionDatos, SEEK_SET);
+
     while (fread(registro, bDatos->tablaAbierta.encabezado.tamRegistro, 1, bDatos->tablaAbierta.arch) == 1) {
 
         int coincidencia = 0;
@@ -1184,107 +1288,10 @@ static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tVector *ve
     return BD_TODO_OK;
 }
 
-
-static int _bdatos_parsear_valores(tSecuencia *secuencia, tEncabezado *encabezado, eModoParseoValores modo, tDatoParseado *datosParseados, int *cantParseados)
+static void _bdatos_accion_liberar_campo_valor(void* elem, void* extra)
 {
-    int retorno, i = 0, j, fin = 0, cantPK = 0;
-    char caracter, nombreCampoLeido[TAM_IDENTIFICADOR];
-    tCampo *campoAI, campoEncontrado;
-
-    memset(nombreCampoLeido, 0, sizeof(nombreCampoLeido));
-    *cantParseados = 0;
-
-    do {
-
-        if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_identificador, nombreCampoLeido, TAM_IDENTIFICADOR)) != BD_TODO_OK) return retorno;
-
-        memset(&campoEncontrado, 0, sizeof(tCampo));
-        if ((retorno = _bdatos_buscar_campo(encabezado, &campoEncontrado, nombreCampoLeido)) != BD_TODO_OK) return retorno;
-
-        if ((modo == MODO_ACTUALIZACION && campoEncontrado.esPK) || campoEncontrado.esAI){
-            for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
-            return campoEncontrado.esAI ? BD_ERROR_CAMPO_ES_AI : BD_ERROR_ACTUALIZAR_PK;
-        }
-
-        if (campoEncontrado.esPK) ++cantPK;
-
-        switch (campoEncontrado.tipo) {
-            case TIPO_ENTERO: {
-
-                datosParseados[i].valor.dato = malloc(sizeof(int));
-                if (!datosParseados[i].valor.dato) {
-                    for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
-                    return BD_ERROR_SIN_MEMO;
-                }
-
-                datosParseados[i].valor.tam = sizeof(int);
-                if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_numeros, (int*)datosParseados[i].valor.dato, sizeof(int))) != BD_TODO_OK) {
-                    for (j = 0; j <= i; j++) free(datosParseados[j].valor.dato);
-                    return retorno;
-                }
-                break;
-            }
-            case TIPO_TEXTO: {
-
-                datosParseados[i].valor.dato = malloc(campoEncontrado.tam);
-                if (!datosParseados[i].valor.dato) {
-                    for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
-                    return BD_ERROR_SIN_MEMO;
-                }
-
-                memset(datosParseados[i].valor.dato, 0, campoEncontrado.tam);
-                datosParseados[i].valor.tam = campoEncontrado.tam;
-                if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_texto, (char*)datosParseados[i].valor.dato, campoEncontrado.tam)) != BD_TODO_OK) {
-                    for (j = 0; j <= i; j++) free(datosParseados[j].valor.dato);
-                    return retorno;
-                }
-                break;
-            }
-            default:
-                for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
-                return BD_ERROR_CAMPO_INVALIDO;
-        }
-
-        memcpy(&datosParseados[i].campo, &campoEncontrado, sizeof(tCampo));
-        ++i;
-
-        if ((retorno = _bdatos_parsear(secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char))) != BD_TODO_OK) {
-            for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
-            return retorno;
-        }
-
-        if (caracter == ')') {
-            fin = 1;
-        } else if (caracter != ',') {
-            for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
-            return BD_ERROR_SINTAXIS;
-        }
-
-    } while (!fin);
-
-    if (modo == MODO_INSERCION && cantPK < 1 && encabezado->proximoAI == 0) {
-        for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
-        return BD_ERROR_SIN_PK;
-    }
-
-    campoAI = _bdatos_encabezado_buscar_campo_por_tipo(encabezado, AI);
-    if (campoAI) {
-
-        memcpy(&datosParseados[i].campo, campoAI, sizeof(tCampo));
-        datosParseados[i].valor.dato = malloc(sizeof(int));
-        if (!datosParseados[i].valor.dato) {
-            for (j = 0; j < i; j++) free(datosParseados[j].valor.dato);
-            return BD_ERROR_SIN_MEMO;
-        }
-
-        memset(datosParseados[i].valor.dato, 0, sizeof(int));
-        datosParseados[i].valor.tam = sizeof(int);
-        *(int*)datosParseados[i].valor.dato = encabezado->proximoAI;
-        i++;
-    }
-
-    *cantParseados = i;
-    return BD_TODO_OK;
+    tCampoValor *campoValor = (tCampoValor*)elem;
+    free(campoValor->dato);
 }
 
 static int _bdatos_cmp_campo_por_nombre(const void* a, const void* b)
