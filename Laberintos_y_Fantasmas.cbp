@@ -48,7 +48,6 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
-		<Unit filename="../../Algoritmos_y_Estructuras_de_Datos/Bibliotecas/lista/lista.cbp" />
 		<Unit filename="include/cliente/archivo.h">
 			<Option target="Cliente" />
 		</Unit>
@@ -93,6 +92,7 @@
 		<Unit filename="include/comun/comun.h" />
 		<Unit filename="include/comun/lista.h" />
 		<Unit filename="include/comun/matriz.h" />
+		<Unit filename="include/comun/mensaje.h" />
 		<Unit filename="include/comun/pila.h" />
 		<Unit filename="include/comun/protocolo.h" />
 		<Unit filename="include/comun/vector.h" />
@@ -168,6 +168,9 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/comun/matriz.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/mensaje.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="sources/comun/pila.c">
