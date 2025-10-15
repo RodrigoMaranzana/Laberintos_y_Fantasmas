@@ -53,6 +53,7 @@ typedef enum {
     ERR_LINEA_LARGA,
     ERR_EN_ESPERA,
     ERR_OFFLINE,
+    ERR_LOGICA,
 } eRetorno;
 
 

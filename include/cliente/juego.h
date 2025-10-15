@@ -22,6 +22,22 @@ typedef enum {
 } eJuegoEstado;
 
 typedef enum {
+    CONTEXTO_IRRELEVANTE,
+    CONTEXTO_CREAR_BASE,
+    CONTEXTO_INSERTAR_JUGADOR,
+    CONTEXTO_DATOS_JUGADOR,
+    CONTEXTO_RANKING,
+    CONTEXTO_DATOS_RANKING,
+}eColaContexto;
+
+typedef enum {
+    SESION_PENDIENTE,
+    SESION_INICIADA,
+    SESION_OFFLINE,
+    SESION_ERROR,
+}eEstadoSesion;
+
+typedef enum {
     FUENTE_TAM_32,
     FUENTE_TAM_48,
     FUENTE_TAM_64,
@@ -45,6 +61,7 @@ typedef struct {
     char username[TAM_USUARIO];
     int record;
     int cantPartidas;
+    eEstadoSesion estadoSesion;
 } tJugador;
 
 typedef struct {
@@ -71,13 +88,16 @@ typedef struct {
     tVentana *ventanaRanking;
 
     char usuario[TAM_USUARIO];
+    tJugador jugador;
     tLogica logica;
     eJuegoEstado estado;
 
     SOCKET sock;
     char conectado;
+    tCola colaRespuestas;
+    tCola colaContextos;
     tCola colaSolicitudes;
-    FILE *archSolicitudes;
+    FILE *archContingencia;
 } tJuego;
 
 int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, char conectado);

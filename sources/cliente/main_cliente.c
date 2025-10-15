@@ -4,6 +4,7 @@
 #include "../../include/cliente/juego.h"
 #include "../../include/cliente/logica.h"
 #include "../../include/cliente/cliente.h"
+#include "../../include/comun/mensaje.h"
 
 #define TITULO_VENTANA "Laberintos y Fantasmas"
 
@@ -14,32 +15,36 @@ int main(int argc, char* argv[])
     eRetorno ret = ERR_TODO_OK;
     tJuego juego;
 
-    puts("Laberintos y Fantasmas\n");
+    mensaje_titulo("Laberintos y Fantasmas");
 
     if (cliente_inicializar() != 0) {
-        puts("Error: No se pudo inicializar Winsock\n");
+        mensaje_error("No se pudo inicializar Winsock.");
+        juego_destruir(&juego);
         return 1;
     }
 
     sock = cliente_conectar_servidor(IP_SERVIDOR, PUERTO);
     if (sock == INVALID_SOCKET) {
-        puts("Error: No se pudo conectar al servidor\nIniciando el juego en modo Offline..\n");
+        mensaje_error("No se pudo conectar al servidor.");
+        mensaje_advertencia("Iniciando el juego en modo Offline.");
         WSACleanup();
         conectado = 0;
     }else{
-        puts("Conectado al servidor.\n");
+        mensaje_todo_ok("Conectado al servidor.");
         conectado = 1;
     }
 
     ret = juego_inicializar(&juego, TITULO_VENTANA, sock, conectado);
     if (ret != ERR_TODO_OK) {
-        puts("Error: Ha fallado la inicializacion del juego");
+        mensaje_error("Ha fallado la inicializacion del juego");
+        juego_destruir(&juego);
         return ret;
     }
 
     ret = juego_ejecutar(&juego);
     if (ret != ERR_TODO_OK) {
-        puts("Error: Ha fallado la ejecucion del juego");
+        mensaje_error("Ha fallado la ejecucion del juego");
+        juego_destruir(&juego);
         return ret;
     }
 

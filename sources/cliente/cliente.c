@@ -6,6 +6,8 @@
 #include <string.h>
 
 static int _cliente_recibir_respuesta(SOCKET sock, char *respuesta, int tamBuffer);
+static int _cliente_recibir_datos(SOCKET sock, char *bufferDatos, int bytesEsperados);
+
 
 int cliente_inicializar()
 {
@@ -46,6 +48,67 @@ void cliente_destruir_conexion(SOCKET sock)
     WSACleanup();
 }
 
+int cliente_enviar_solicitud(SOCKET sock, const char *solicitud)
+{
+    if (send(sock, solicitud, strlen(solicitud), 0) < 0) {
+        mensaje_error("La solcitud al servidor ha fallado");
+        closesocket(sock);
+        return CE_ERR_SOCKET;
+    }
+    return CE_TODO_OK;
+}
+
+int cliente_recibir_respuesta(SOCKET sock, tCola *colaRespuestas)
+{
+    char respuesta[TAM_BUFFER], *datos = NULL, *cursor;
+    int cantReg, tamReg;
+
+    if (_cliente_recibir_respuesta(sock, respuesta, sizeof(respuesta)) != 0) {
+        mensaje_error("El servidor no ha respondido");
+        closesocket(sock);
+        return CE_ERR_SOCKET;
+    }
+
+    cola_encolar(colaRespuestas, respuesta, strlen(respuesta));
+
+    cursor = strchr(respuesta, '\n');
+    if (!*cursor) {
+        return CE_ERR_RESPUESTA_CORRUPTA;
+    }
+    *cursor = '\0';
+
+    cursor = strrchr(respuesta, ';');
+    sscanf(cursor + 1, "%d", &tamReg);
+    *cursor = '\0';
+
+    cursor = strrchr(respuesta, ';');
+    sscanf(cursor + 1, "%d", &cantReg);
+    *cursor = '\0';
+
+    if (cantReg > 0 && tamReg > 0) {
+
+        unsigned tamDatos = (cantReg) * (tamReg);
+        datos = (char*)malloc(tamDatos);
+        if (!datos) {
+            return CE_ERR_SIN_MEM;
+        }
+
+        if (_cliente_recibir_datos(sock, datos, tamDatos) != 0) {
+            free(datos);
+            datos = NULL;
+            return CE_ERR_SOCKET;
+        }
+
+        cola_encolar(colaRespuestas, &datos, sizeof(char*));
+
+        return CE_DATOS;
+    }
+
+    return CE_ERR_SERVIDOR;
+}
+
+
+
 static int _cliente_recibir_respuesta(SOCKET sock, char *respuesta, int tamBuffer)
 {
     int bytesRecibidos = recv(sock, respuesta, tamBuffer - 1, 0);
@@ -58,7 +121,7 @@ static int _cliente_recibir_respuesta(SOCKET sock, char *respuesta, int tamBuffe
     return 0;
 }
 
-int cliente_recibir_datos(SOCKET sock, char *bufferDatos, int bytesEsperados)
+static int _cliente_recibir_datos(SOCKET sock, char *bufferDatos, int bytesEsperados)
 {
     int bytesRestantes = bytesEsperados;
     char *pBuffer = bufferDatos;
@@ -76,86 +139,3 @@ int cliente_recibir_datos(SOCKET sock, char *bufferDatos, int bytesEsperados)
     }
     return 0;
 }
-
-int cliente_enviar_solicitud(SOCKET sock, const char *solicitud)
-{
-    if (send(sock, solicitud, strlen(solicitud), 0) < 0) {
-        mensaje_error("La solcitud al servidor ha fallado");
-        closesocket(sock);
-        return CE_ERR_SOCKET;
-    }
-    return CE_TODO_OK;
-}
-
-int cliente_recibir_respuesta(SOCKET sock, int *codigoRetorno, char *mensaje, int *cantRegistros, int *tamRegistro, char **bufferDatos)
-{
-    char mnsj[TAM_BUFFER], respuesta[TAM_BUFFER], *datos = NULL, *cursor;
-    int codigoRet, cantReg, tamReg;
-
-    if (_cliente_recibir_respuesta(sock, respuesta, sizeof(respuesta)) != 0) {
-        mensaje_error("El servidor no ha respondido");
-        closesocket(sock);
-        return CE_ERR_SOCKET;
-    }
-
-    cursor = strchr(respuesta, '\n');
-    if (!*cursor) {
-        return ERR_LINEA_LARGA;
-    }
-    *cursor = '\0';
-
-    cursor = strrchr(respuesta, ';');
-    sscanf(cursor + 1, "%d", &tamReg);
-    *cursor = '\0';
-
-    cursor = strrchr(respuesta, ';');
-    sscanf(cursor + 1, "%d", &cantReg);
-    *cursor = '\0';
-
-    cursor = strrchr(respuesta, ';');
-    strncpy(mnsj, cursor + 1, TAM_BUFFER);
-    mnsj[TAM_BUFFER - 1] = '\0';
-
-    *cursor = '\0';
-    sscanf(respuesta, "%d", &codigoRet);
-
-    printf(COLOR_AMARILLO "Respuesta:" COLOR_RESET " retorno: %d, %s Mensaje: %s\n" COLOR_RESET, codigoRet, codigoRet > BD_ERROR_SIN_RESULTADOS ? COLOR_ROJO : COLOR_VERDE, mnsj);
-
-    if (codigoRet == BD_DATOS_OBTENIDOS && cantReg > 0 && tamReg > 0) {
-
-        int tamDatos = (cantReg) * (tamReg);
-        datos = (char*)malloc(tamDatos);
-        if (!datos) {
-            return CE_ERR_SIN_MEM;
-        }
-
-        if (cliente_recibir_datos(sock, datos, tamDatos) != 0) {
-            free(datos);
-            datos = NULL;
-            return CE_ERR_SOCKET;
-        }
-
-        return CE_DATOS;
-
-    } else if (codigoRet == BD_ERROR_SIN_RESULTADOS) {
-
-        return CE_SIN_RESULTADOS;
-    }
-
-    if (codigoRetorno) {
-        *codigoRetorno = codigoRet;
-    }
-    if (mensaje) {
-        strcpy(mensaje, mnsj);
-    }
-    if (cantRegistros) {
-        *cantRegistros = cantReg;
-    }
-    if (bufferDatos) {
-        *bufferDatos = datos;
-    }
-
-    return CE_ERR_SERVIDOR;
-}
-
-

@@ -25,45 +25,32 @@ int archivo_leer_conf(FILE* arch, tConf *conf)
         tParam paramAux;
 
         ret = _archivo_parsear_linea_conf(buffer, &paramAux);
-        if(ret == ERR_LINEA_LARGA)
-        {
+        if (ret == ERR_LINEA_LARGA) {
             return ERR_CONF;
         }
 
-        if(strcmp(paramAux.nombre, "FILAS") == 0)
-        {
+        if (strcmp(paramAux.nombre, "FILAS") == 0) {
             conf->filas = paramAux.valor;
             paramValidos |= MASC_FILAS;
-
-        }else if(strcmp(paramAux.nombre, "COLUMNAS") == 0)
-        {
+        } else if (strcmp(paramAux.nombre, "COLUMNAS") == 0) {
             conf->columnas = paramAux.valor;
             paramValidos |= MASC_COLUMNAS;
-
-        }else if(strcmp(paramAux.nombre, "VIDAS_INICIO") == 0)
-        {
+        } else if (strcmp(paramAux.nombre, "VIDAS_INICIO") == 0) {
             conf->vidas_inicio = paramAux.valor;
             paramValidos |= MASC_VIDAS_INI;
-
-        }else if(strcmp(paramAux.nombre, "MAXIMO_NUMERO_FANTASMAS") == 0)
-        {
+        } else if (strcmp(paramAux.nombre, "MAXIMO_NUMERO_FANTASMAS") == 0) {
             conf->max_num_fantasmas = paramAux.valor;
             paramValidos |= MASC_MAX_NUM_FANTASMAS;
-
-        }else if(strcmp(paramAux.nombre, "MAXIMO_NUMERO_PREMIOS") == 0)
-        {
+        } else if (strcmp(paramAux.nombre, "MAXIMO_NUMERO_PREMIOS") == 0) {
             conf->max_num_premios = paramAux.valor;
             paramValidos |= MASC_MAX_NUM_PREMIOS;
-
-        }else if(strcmp(paramAux.nombre, "MAXIMO_VIDAS_EXTRA") == 0)
-        {
+        } else if (strcmp(paramAux.nombre, "MAXIMO_VIDAS_EXTRA") == 0) {
             conf->max_vidas_extra = paramAux.valor;
             paramValidos |= MASC_MAX_VIDAS_EXTRA;
         }
     }
 
-    if(paramValidos != CANT_PARAM)
-    {
+    if (paramValidos != CANT_PARAM) {
         return ERR_CONF;
     }
 
@@ -101,34 +88,24 @@ int archivo_escribir_escenario(tEscenario *escenario, int numRonda, long semilla
         {
             if (escenario->tablero[fila][columna].tile->tileTipo == TILE_TIPO_PARED) {
                 c = '#';
-
-            }else if (escenario->tablero[fila][columna].tile->tileTipo == TILE_TIPO_PUERTA_ENTRADA) {
+            } else if (escenario->tablero[fila][columna].tile->tileTipo == TILE_TIPO_PUERTA_ENTRADA) {
                 c = 'E';
-
-            }else if (escenario->tablero[fila][columna].tile->tileTipo == TILE_TIPO_PUERTA_SALIDA) {
+            } else if (escenario->tablero[fila][columna].tile->tileTipo == TILE_TIPO_PUERTA_SALIDA) {
                 c = 'S';
-
-            }else if (escenario->tablero[fila][columna].entidad
-                     && escenario->tablero[fila][columna].entidad->tipo != ENTIDAD_JUGADOR) {
+            } else if (escenario->tablero[fila][columna].entidad && escenario->tablero[fila][columna].entidad->tipo != ENTIDAD_JUGADOR) {
                 c = 'F';
-
-
             }else if (escenario->tablero[fila][columna].extra) {
                 if (escenario->tablero[fila][columna].extra == EXTRA_VIDA) {
                     c = 'V';
-                }else{
+                } else {
                     c = 'P';
                 }
-
-            }else {
+            } else {
                 c = '.';
             }
-
             fputc(c,arch);
         }
-
          fputc('\n',arch);
-
     }
 
     fclose(arch);
@@ -142,29 +119,24 @@ int archivo_escribir_escenario(tEscenario *escenario, int numRonda, long semilla
 static int _archivo_parsear_linea_conf(char *buffer, tParam *param)
 {
     char* cursor = strchr(buffer, '\n');
-    if(!cursor)
-    {
+    if (!cursor) {
         return ERR_LINEA_LARGA;
     }
     *cursor = '\0';
 
     cursor = strrchr(buffer, ':');
     if (!cursor) {
-
         return ERR_LINEA_LARGA;
     }
 
-    while(*cursor != '\0' && !ES_DIGITO(*cursor))
-    {
+    while (*cursor != '\0' && !ES_DIGITO(*cursor)) {
         cursor++;
     }
-
-    if(*cursor == '\0')
-    {
+    if (*cursor == '\0') {
         return ERR_LINEA_LARGA;
     }
 
-    sscanf(cursor, "%d", &param->valor);/// REVISAR CURSOR / CURSOR + 1
+    sscanf(cursor, "%d", &param->valor);
     *cursor = '\0';
 
     strncpy(param->nombre, buffer, TAM_NOMBRE);
@@ -173,7 +145,6 @@ static int _archivo_parsear_linea_conf(char *buffer, tParam *param)
     cursor = param->nombre;
 
     while(*cursor && (ES_LETRA(*cursor) || *cursor == '_')) {
-
         *cursor = toupper(*cursor);
         cursor++;
     }

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "../../include/comun/comun.h"
+#include "../../include/comun/mensaje.h"
 #include "../../include/cliente/assets.h"
 
 int assets_cargar_imagenes(SDL_Renderer *renderer, SDL_Texture **imagenes)
@@ -24,8 +25,8 @@ int assets_cargar_imagenes(SDL_Renderer *renderer, SDL_Texture **imagenes)
 
         *pImagenes = IMG_LoadTexture(renderer, *pPaths);
         if (!*pImagenes) {
-
-            printf("Error cargando imagen %s: %s\n", *pPaths, IMG_GetError());
+            mensaje_error("No se pudo cargar la imagen:");
+            mensaje_color(TEXTO_ROJO_B, "%s\n%s", *pPaths, IMG_GetError());
             return ERR_ARCH_IMAGEN;
         }
 
@@ -60,8 +61,8 @@ int assets_cargar_sonidos(Mix_Chunk **sonidos)
 
         *pSonidos = Mix_LoadWAV(*pPaths);
         if (!*pSonidos) {
-
-            printf("Error cargando sonido %s: %s\n", *pPaths, Mix_GetError());
+            mensaje_error("No se pudo cargar el sonido:");
+            mensaje_color(TEXTO_ROJO_B, "%s\n%s", *pPaths, Mix_GetError());
             return ERR_ARCH_SONIDO;
         }
 
@@ -76,21 +77,19 @@ int assets_cargar_fuente(TTF_Font **fuente, int tamFuente)
 {
     *fuente = TTF_OpenFont("assets/fnt/fuente.ttf", tamFuente);
     if (!*fuente) {
-
-        printf("ERROR: %s\n", TTF_GetError());
+        mensaje_error("No se pudo cargar la fuente:");
+        mensaje_color(TEXTO_ROJO_B, "%s\n%s", "assets/fnt/fuente.ttf", TTF_GetError());
         return ERR_ARCH_FUENTE;
     }
 
     return ERR_TODO_OK;
 }
 
-
 void assets_destuir_imagenes(SDL_Texture **imagenes)
 {
     SDL_Texture **pImagenes = imagenes, **pImagenesUlt = (imagenes + IMAGEN_CANTIDAD - 1);
 
     while (pImagenes <= pImagenesUlt) {
-
         SDL_DestroyTexture(*pImagenes);
         *pImagenes = NULL;
         pImagenes++;
@@ -102,7 +101,6 @@ void assets_destuir_sonidos(Mix_Chunk **sonidos)
     Mix_Chunk **pSonidos = sonidos, **pSonidosUlt = (sonidos + SONIDO_CANTIDAD - 1);
 
     while (pSonidos <= pSonidosUlt) {
-
         Mix_FreeChunk(*pSonidos);
         *pSonidos = NULL;
         pSonidos++;

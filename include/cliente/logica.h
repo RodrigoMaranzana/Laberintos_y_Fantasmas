@@ -8,6 +8,7 @@ typedef enum {
     LOGICA_JUGANDO,
     LOGICA_EN_PAUSA,
     LOGICA_EN_LOGIN,
+    LOGICA_EN_RANKING,
     LOGICA_FIN_PARTIDA
 } eLogicaEstado;
 

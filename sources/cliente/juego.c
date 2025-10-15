@@ -5,7 +5,6 @@
 #include "../../include/comun/protocolo.h"
 #include "../../include/comun/mensaje.h"
 
-
 #define FUENTE_TAM_MIN 32
 #define FUENTE_INCREMENTO 16
 #define HUD_X 16
@@ -49,13 +48,15 @@ typedef struct {
     SDL_Renderer *renderer;
     TTF_Font **fuentes;
     tWidget *campoTexto;
-    char *usuario;
+    tJugador *jugador;
+    tCola *colaContextos;
+    tCola *colaSolicitudes;
     eLogicaEstado *estadoLogica;
 } tDatosUsuario;
 
 typedef struct {
     SDL_Renderer *renderer;
-    char *usuario;
+    char *username;
 } tDatosRanking;
 
 static int _juego_crear_ventana(SDL_Window **ventana, SDL_Renderer **renderer, unsigned anchoRes, unsigned altoRes, const char *tituloVentana);
@@ -69,10 +70,10 @@ static int _juego_crear_hud(tJuego *juego);
 static int _juego_cargar_assets(tJuego *juego);
 static void _juego_manejar_input(tJuego *juego, SDL_Keycode tecla);
 static void _juego_manejar_eventos(tJuego *juego);
-static int _juego_encolar_solicitud(tCola *colaSolicitudes, const char *solicitud);
-static int _juego_procesar_cola_solicitudes(SOCKET sock, char *conectado, tCola *colaSolicitudes, eModoSolicitud modo);
+static int _juego_encolar_solicitud(tCola *colaSolicitudes, tCola *colaContexto, const char *solicitud, eColaContexto contexto);
+static int _juego_procesar_cola_solicitudes(SOCKET sock, FILE *archContingencia, char *conectado, tCola *colaSolicitudes, eModoSolicitud modo);
 void _juego_inicializar_base_datos(tJuego *juego);
-char* _juego_buscar_respuesta_datos(tJuego *juego, int *codigoRetorno, int *cantRegistros, int *tamRegistro);
+int _juego_buscar_respuesta_datos(tJuego *juego, int *codigoRetorno, int *cantRegistros, int *tamRegistro);
 
 static int _juego_ventana_menu_crear(void *datos);
 static void _juego_ventana_menu_actualizar(SDL_Event *evento, void *datos);
@@ -89,6 +90,9 @@ static void _juego_ventana_ranking_actualizar(SDL_Event *evento, void *datos);
 static void _juego_ventana_ranking_dibujar(void *datos);
 static void _juego_ventana_ranking_destruir(void *datos);
 
+int _juego_procesar_contingencia(tJuego *juego);
+static void _juego_procesar_cola_respuestas(tJuego *juego);
+static char* _juego_procesar_elem_cola_respuestas(tCola *colaRespuestas, tCola *colaContextos, int *codigoRet, int *cantReg, int *tamReg, eColaContexto *contexto);
 
 
 int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, char conectado)
@@ -99,35 +103,40 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, cha
     juego->estado = JUEGO_NO_INICIADO;
     printf("Iniciando SDL\n");
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != ERR_TODO_OK) {
-        printf("SDL_Init() ERROR: %s\n", SDL_GetError());
+        mensaje_error("No se pudo inicializar SDL");
+        mensaje_color(TEXTO_ROJO_B, "%s", SDL_GetError());
         return ERR_SDL_INI;
     }
 
     if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
-        printf("Mix_OpenAudio() ERROR: %s\n", Mix_GetError());
+        mensaje_error("No se pudo inicializar SDL_mixer");
+        mensaje_color(TEXTO_ROJO_B, "%s", Mix_GetError());
         SDL_Quit();
         return ERR_SDL_INI;
     }
 
     if (TTF_Init() < 0) {
-        printf("TTF_Init() ERROR: %s\n", TTF_GetError());
+        mensaje_error("No se pudo inicializar SDL_ttf");
+        mensaje_color(TEXTO_ROJO_B, "%s", TTF_GetError());
         return ERR_SDL_INI;
     }
 
     if (IMG_Init(IMG_INIT_PNG) != IMG_INIT_PNG) {
-        printf("IMG_Init() ERROR: %s\n", IMG_GetError());
+        mensaje_error("No se pudo inicializar SDL_image");
+        mensaje_color(TEXTO_ROJO_B, "%s", IMG_GetError());
         ret = ERR_SDL_INI;
     }
 
-    logica_inicializar(&juego->logica);
+    if (logica_inicializar(&juego->logica) != ERR_TODO_OK) {
+        mensaje_error("No se pudo inicializar la logica del juego");
+        return ERR_LOGICA;
+    }
     logica_calc_min_res(&juego->logica, &juego->anchoRes, &juego->altoRes);
     juego->anchoRes += PADDING_MARGEN * 2;
     juego->altoRes += PADDING_MARGEN * 2;
 
     if (_juego_crear_ventana(&juego->ventana, &juego->renderer, juego->anchoRes, juego->altoRes, tituloVentana) != ERR_TODO_OK) {
-        printf("Error: No se pudo crear la ventana.\n");
-        Mix_CloseAudio();
-        SDL_Quit();
+        mensaje_error("No se pudo crear la ventana");
         return ERR_VENTANA;
     }
 
@@ -135,21 +144,20 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, cha
     if ((ret = _juego_crear_hud(juego)) != ERR_TODO_OK) return ret;
 
     cola_crear(&juego->colaSolicitudes);
+    cola_crear(&juego->colaContextos);
+    cola_crear(&juego->colaRespuestas);
     juego->sock = sock;
     juego->conectado = conectado;
     juego->estado = JUEGO_CORRIENDO;
-    printf("Juego iniciado con exito.\n");
+
+    juego->archContingencia = fopen("contingencia.txt", "a+");
+    if (!juego->archContingencia) {
+        return ERR_ARCHIVO;
+    }
+
+    mensaje_todo_ok("Juego iniciado con exito.");
 
     return ret;
-}
-
-char* _juego_buscar_respuesta_datos(tJuego *juego, int *codigoRetorno, int *cantRegistros, int *tamRegistro)
-{
-    char mensaje[TAM_BUFFER], *bufferDatos;
-
-    if (cliente_recibir_respuesta(juego->sock, codigoRetorno, mensaje, cantRegistros, tamRegistro, &bufferDatos) != ERR_TODO_OK) return NULL;
-
-    return bufferDatos;
 }
 
 void _juego_inicializar_base_datos(tJuego *juego)
@@ -157,18 +165,114 @@ void _juego_inicializar_base_datos(tJuego *juego)
     char solicitud[TAM_BUFFER];
 
     sprintf(solicitud, "CREAR partidas (idPartida ENTERO PK AI, username TEXTO(16), cantPremios ENTERO, cantMovs ENTERO, semilla ENTERO)");
-    _juego_encolar_solicitud(&juego->colaSolicitudes, solicitud);
+    _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, solicitud, CONTEXTO_CREAR_BASE);
 
     sprintf(solicitud, "CREAR jugadores (username TEXTO(16) PK, record ENTERO IS, cantPartidas ENTERO)");
-    _juego_encolar_solicitud(&juego->colaSolicitudes, solicitud);
+    _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, solicitud, CONTEXTO_CREAR_BASE);
+}
 
+
+/// OPCION 1 - QUE EL SERVIDOR ACEPTE UNA ETIQUETA MAX LUEGO DE UNA VARIABLE EN ACTUALIZAR
+
+/// PREFERIDA
+/// OPCION 2 - AL ENCONTRAR UN ACTUALIZAR EN _juego_procesar_contingencia SOLICITAR UN SELECT CON EL NOMBRE DEL JUGADOR
+///            Y SOLO ENCOLAR EL COMANDO SI EL VALOR ES MAYOR
+
+/// ACTUALIZAR jugadores (record %d, cantPartidas %d) DONDE (username IGUAL %s)
+
+int _juego_procesar_contingencia(tJuego *juego)
+{
+    char solicitud[TAM_BUFFER], solicitudAux[TAM_BUFFER];
+    tJugador jugadorAux = {0};
+
+    fseek(juego->archContingencia, 0, SEEK_SET);
+
+    while (juego->conectado && fgets(solicitud, TAM_BUFFER, juego->archContingencia)) {
+
+        if (strstr(solicitud, "ACTUALIZAR jugadores")) {
+            char username[TAM_USUARIO], campos[256], *cursor;
+            int record = -1, cantPartidas = -1;
+
+            cursor = strstr(solicitud, "username IGUAL ");
+            if (cursor && sscanf(cursor, "username IGUAL %[^)]", username) != 1) {
+                return ERR_ARCHIVO;
+            }
+
+            cursor = strstr(solicitud, "record ");
+            if (cursor) {
+                 sscanf(cursor, "record %d", &record);
+            }
+
+            cursor = strstr(solicitud, "cantPartidas ");
+            if (cursor) {
+                 sscanf(cursor, "cantPartidas %d", &cantPartidas);
+            }
+
+            if (*jugadorAux.username == '\0' || strcmp(jugadorAux.username, username) != 0) {
+
+                char *datos = NULL;
+                int codigoRet, cantReg, tamReg;
+                eColaContexto contexto;
+
+                sprintf(solicitudAux, "SELECCIONAR jugadores (username IGUAL %s)", username);
+                if (cliente_enviar_solicitud(juego->sock, solicitudAux) == CE_ERR_SOCKET || cliente_recibir_respuesta(juego->sock, &juego->colaRespuestas) == CE_ERR_SOCKET) {
+                    juego->conectado = 0;
+                    mensaje_advertencia("Socket desconectado, modo offline activo");
+                }
+
+                datos = _juego_procesar_elem_cola_respuestas(&juego->colaRespuestas,&juego->colaContextos, &codigoRet, &cantReg, &tamReg, &contexto);
+                if (datos) {
+                    memcpy(&jugadorAux, datos, sizeof(tJugador) - sizeof(eEstadoSesion));
+                    free(datos);
+                }
+
+            }
+
+            if (record > jugadorAux.record) {
+                sprintf(campos, "record %d", record);
+            }
+
+            if (cantPartidas > jugadorAux.cantPartidas) {
+                char aux[64];
+                if (*campos != '\0') {
+                    strcat(campos, ", ");
+                }
+                sprintf(aux, "cantPartidas %d", cantPartidas);
+                strcat(campos, aux);
+            }
+
+            if (*campos != '\0') {
+                snprintf(solicitud, TAM_BUFFER, "ACTUALIZAR jugadores (%s) DONDE (username IGUAL %s)", campos, username);
+                _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, solicitud, CONTEXTO_IRRELEVANTE);
+            }
+
+        } else {
+
+            _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, solicitud, CONTEXTO_IRRELEVANTE);
+        }
+    }
+
+    if (juego->conectado && _juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS) == ERR_TODO_OK) {
+
+        fclose(juego->archContingencia);
+        juego->archContingencia = fopen("contingencia.txt", "w");
+        if (!juego->archContingencia) {
+            return ERR_ARCHIVO;
+        }
+    }
+
+    return ERR_TODO_OK;
 }
 
 int juego_ejecutar(tJuego *juego)
 {
     eRetorno ret = ERR_TODO_OK;
-
-    _juego_inicializar_base_datos(juego);
+    if (juego->conectado) {
+        _juego_inicializar_base_datos(juego);
+        _juego_procesar_contingencia(juego);
+    } else {
+        juego->jugador.estadoSesion = SESION_OFFLINE;
+    }
 
     while (juego->estado == JUEGO_CORRIENDO) {
 
@@ -181,12 +285,14 @@ int juego_ejecutar(tJuego *juego)
         } else {
 
             if (cola_vacia(&juego->colaSolicitudes) != COLA_VACIA) {
-                char mensaje[TAM_BUFFER];
-                int codigoRetorno;
 
-                if (_juego_procesar_cola_solicitudes(juego->sock, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_UNA) == ERR_TODO_OK) {
+                if (_juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_UNA) == ERR_TODO_OK) {
 
-                    cliente_recibir_respuesta(juego->sock, &codigoRetorno, mensaje, NULL, NULL, NULL);
+                    cliente_recibir_respuesta(juego->sock, &juego->colaRespuestas); // revisar retorno
+
+                    if (juego->conectado) {
+                        _juego_procesar_cola_respuestas(juego);
+                    }
                 }
             }
         }
@@ -196,6 +302,8 @@ int juego_ejecutar(tJuego *juego)
         SDL_Delay(16);
     }
 
+    _juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS);
+
     return ret;
 }
 
@@ -203,17 +311,19 @@ void juego_destruir(tJuego *juego)
 {
     int i;
 
-    _juego_procesar_cola_solicitudes(juego->sock, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS);
-
-    assets_destuir_imagenes(juego->imagenes);
-    assets_destuir_sonidos(juego->sonidos);
+    if (juego->imagenes) assets_destuir_imagenes(juego->imagenes);
+    if (juego->sonidos) assets_destuir_sonidos(juego->sonidos);
 
     for (i = 0; i < FUENTE_CANTIDAD; i++){
-        assets_destruir_fuente(juego->fuentes[i]);
+        if (juego->fuentes[i]) {
+            assets_destruir_fuente(juego->fuentes[i]);
+        }
     }
 
     for (i = 0; i < HUD_WIDGETS_CANTIDAD; i++) {
-        widget_destruir(juego->hud.widgets[i]);
+        if (juego->hud.widgets[i]) {
+            widget_destruir(juego->hud.widgets[i]);
+        }
     }
 
     if (juego->ventanaMenuPausa) ventana_destruir(juego->ventanaMenuPausa);
@@ -222,17 +332,17 @@ void juego_destruir(tJuego *juego)
 
     logica_destruir(&juego->logica);
 
-    if (juego->renderer) {
-        SDL_DestroyRenderer(juego->renderer);
-    }
-    if (juego->ventana) {
-        SDL_DestroyWindow(juego->ventana);
-    }
+    if (juego->renderer) SDL_DestroyRenderer(juego->renderer);
+    if (juego->ventana) SDL_DestroyWindow(juego->ventana);
 
     IMG_Quit();
     TTF_Quit();
     Mix_CloseAudio();
     SDL_Quit();
+
+    cola_vaciar(&juego->colaContextos);
+    cola_vaciar(&juego->colaSolicitudes);
+    cola_vaciar(&juego->colaRespuestas);
 
     juego->estado = JUEGO_CERRANDO;
 }
@@ -242,9 +352,8 @@ void juego_destruir(tJuego *juego)
     FUNCIONES ESTATICAS
 *************************/
 
-static int _juego_procesar_cola_solicitudes(SOCKET sock, char *conectado, tCola *colaSolicitudes, eModoSolicitud modo)
+static int _juego_procesar_cola_solicitudes(SOCKET sock, FILE *archContingencia, char *conectado, tCola *colaSolicitudes, eModoSolicitud modo)
 {
-    FILE *arch = NULL;
     char solicitud[TAM_BUFFER] = {0};
     int retorno, procesadas = 0;
 
@@ -263,14 +372,8 @@ static int _juego_procesar_cola_solicitudes(SOCKET sock, char *conectado, tCola 
         }
 
         if (!*conectado) {
-            if (!arch) {
-                arch = fopen("contingencia.txt", "a");
-                if (!arch) {
-                    return ERR_ARCHIVO;
-                }
-            }
             if (strncmp(solicitud, "SELECCIONAR", strlen("SELECCIONAR")) != 0) {
-                fprintf(arch, "%s\n", solicitud);
+                fprintf(archContingencia, "%s\n", solicitud);
                 mensaje_info("Guardado para futura conexion: ");
                 printf("%s\n", solicitud);
             }
@@ -278,16 +381,13 @@ static int _juego_procesar_cola_solicitudes(SOCKET sock, char *conectado, tCola 
         ++procesadas;
     }
 
-    if (arch) { // puntero debe estar en juego
-        fclose(arch);
-    }
-
     return *conectado ? ERR_TODO_OK : ERR_OFFLINE;
 }
 
-static int _juego_encolar_solicitud(tCola *colaSolicitudes, const char *solicitud)
+static int _juego_encolar_solicitud(tCola *colaSolicitudes, tCola *colaContexto, const char *solicitud, eColaContexto contexto)
 {
     cola_encolar(colaSolicitudes, solicitud, strlen(solicitud));
+    cola_encolar(colaContexto, &contexto, sizeof(eColaContexto));
 
     return ERR_TODO_OK;
 }
@@ -308,11 +408,14 @@ static void _juego_manejar_eventos(tJuego *juego)
             case LOGICA_EN_LOGIN:
                 ventana_actualizar(juego->ventanaUsername, &evento);
                 if (juego->logica.estado == LOGICA_EN_ESPERA) {
+
                     char buffer[TAM_BUFFER];
+
+                    sprintf(buffer, "SELECCIONAR jugadores (username IGUAL %s)", juego->jugador.username);
+                    _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, buffer, CONTEXTO_DATOS_JUGADOR);
+
                     ventana_cerrar(juego->ventanaUsername);
-                    widget_modificar_valor(juego->hud.widgets[HUD_WIDGETS_USERNAME], juego->usuario);
-                    sprintf(buffer, "INSERTAR jugadores (username %s)", juego->usuario);
-                    _juego_encolar_solicitud(&juego->colaSolicitudes, buffer);
+                    widget_modificar_valor(juego->hud.widgets[HUD_WIDGETS_USERNAME], juego->jugador.username);
                 }
                 break;
 
@@ -358,8 +461,18 @@ static void _juego_manejar_input(tJuego *juego, SDL_Keycode tecla)
         juego->logica.estado = LOGICA_EN_ESPERA;
         cantMovs = logica_mostrar_historial_movs(&juego->logica.movsJugador);
 
-        sprintf(buffer, "INSERTAR partidas (username %s, cantPremios %d, cantMovs %d, semilla %d)", juego->usuario, juego->logica.ronda.cantPremios, cantMovs, (int)juego->logica.semillaMaestra);
-        _juego_encolar_solicitud(&juego->colaSolicitudes, buffer);
+        ++juego->jugador.cantPartidas;
+
+        sprintf(buffer, "INSERTAR partidas (username %s, cantPremios %d, cantMovs %d, semilla %d)", juego->jugador.username, juego->logica.ronda.cantPremios, cantMovs, (int)juego->logica.semillaMaestra);
+        _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, buffer, CONTEXTO_IRRELEVANTE);
+        if (juego->logica.ronda.cantPremios > juego->jugador.record) {
+            juego->jugador.record = juego->logica.ronda.cantPremios;
+            sprintf(buffer, "ACTUALIZAR jugadores (record %d, cantPartidas %d) DONDE (username IGUAL %s)", juego->jugador.record, juego->jugador.cantPartidas, juego->jugador.username);
+        } else {
+            sprintf(buffer, "ACTUALIZAR jugadores (cantPartidas %d) DONDE (username IGUAL %s)", juego->jugador.cantPartidas, juego->jugador.username);
+        }
+
+         _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, buffer, CONTEXTO_IRRELEVANTE);
     }
 }
 
@@ -471,7 +584,7 @@ static void _juego_mostrar_ranking(void *datos)
 {
     //tLogica *logica = (tLogica*)datos;
     puts("RANKING\n");
-    //logica->estado = LOGICA_JUGANDO;
+    //logica->estado = LOGICA_EN_RANKING;
 }
 
 static int _juego_ventana_menu_crear(void *datos)
@@ -670,11 +783,13 @@ static int _juego_crear_hud(tJuego *juego)
 
     datosUsername = malloc(sizeof(tDatosUsuario));
     if (!datosUsername) return ERR_SIN_MEMORIA;
-    *juego->usuario = '\0';
+    *juego->jugador.username = '\0';
     datosUsername->renderer = juego->renderer;
     datosUsername->fuentes = juego->fuentes;
     datosUsername->campoTexto = NULL;
-    datosUsername->usuario = juego->usuario;
+    datosUsername->jugador = &juego->jugador;
+    datosUsername->colaContextos = &juego->colaContextos;
+    datosUsername->colaSolicitudes = &juego->colaSolicitudes;
     datosUsername->estadoLogica = &juego->logica.estado;
     juego->ventanaUsername = ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_usuario_crear, _juego_ventana_usuario_actualizar, _juego_ventana_usuario_dibujar, _juego_ventana_usuario_destruir, datosUsername}, dimsVentana, (SDL_Color){162, 200, 200, 255}, 1);
     ventana_abrir(juego->ventanaUsername);
@@ -688,7 +803,7 @@ static int _juego_crear_hud(tJuego *juego)
     datosRanking = malloc(sizeof(tDatosRanking));
     if (!datosRanking) return ERR_SIN_MEMORIA;
     datosRanking->renderer = juego->renderer;
-    datosRanking->usuario = juego->usuario;
+    datosRanking->username = juego->jugador.username;
     juego->ventanaRanking = ventana_crear(juego->renderer, (tVentanaAccion){_juego_ventana_ranking_crear, _juego_ventana_ranking_actualizar, _juego_ventana_ranking_dibujar, _juego_ventana_ranking_destruir, datosRanking}, dimsVentana, (SDL_Color){162, 200, 200, 255}, 1);
 
     return ERR_TODO_OK;
@@ -714,7 +829,6 @@ static void _juego_ventana_menu_destruir(void *datos)
     free(datosMenuPausa);
 }
 
-
 static int _juego_ventana_usuario_crear(void *datos)
 {
     tDatosUsuario *datosUsuario = (tDatosUsuario*)(datos);
@@ -724,9 +838,11 @@ static int _juego_ventana_usuario_crear(void *datos)
     return 0;
 }
 
+
 static void _juego_ventana_usuario_actualizar(SDL_Event *evento, void *datos)
 {
     tDatosUsuario *datosUsuario = (tDatosUsuario*)datos;
+    char buffer[TAM_BUFFER];
 
     if(evento->type == SDL_TEXTINPUT){
 
@@ -734,20 +850,107 @@ static void _juego_ventana_usuario_actualizar(SDL_Event *evento, void *datos)
 
         *letra &= ~0x20;
 
-        strncat(datosUsuario->usuario, letra, TAM_USUARIO - strlen(datosUsuario->usuario) - 1);
-        widget_modificar_valor(datosUsuario->campoTexto, datosUsuario->usuario);
+        strncat(datosUsuario->jugador->username, letra, TAM_USUARIO - strlen(datosUsuario->jugador->username) - 1);
+        widget_modificar_valor(datosUsuario->campoTexto, datosUsuario->jugador->username);
 
     }else if(evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_BACKSPACE){
 
-        size_t longitud = strlen(datosUsuario->usuario);
+        size_t longitud = strlen(datosUsuario->jugador->username);
 
         if (longitud > 0) {
-            datosUsuario->usuario[longitud - 1] = '\0';
+            datosUsuario->jugador->username[longitud - 1] = '\0';
         }
-        widget_modificar_valor(datosUsuario->campoTexto, datosUsuario->usuario);
-    } else if (*datosUsuario->usuario && evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN) {
+        widget_modificar_valor(datosUsuario->campoTexto, datosUsuario->jugador->username);
+    } else if (*datosUsuario->jugador->username && evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN
+               && (datosUsuario->jugador->estadoSesion == SESION_PENDIENTE || datosUsuario->jugador->estadoSesion == SESION_OFFLINE)) {
+
+        sprintf(buffer, "INSERTAR jugadores (username %s)", datosUsuario->jugador->username);
+        _juego_encolar_solicitud(datosUsuario->colaSolicitudes, datosUsuario->colaContextos, buffer, CONTEXTO_INSERTAR_JUGADOR);
 
         *datosUsuario->estadoLogica = LOGICA_EN_ESPERA;
+    }
+}
+
+
+static char* _juego_procesar_elem_cola_respuestas(tCola *colaRespuestas, tCola *colaContextos, int *codigoRet, int *cantReg, int *tamReg, eColaContexto *contexto)
+{
+    char mensaje[TAM_BUFFER], respuesta[TAM_BUFFER], *cursor, *datos = NULL;
+
+    if (cola_desencolar(colaRespuestas, &respuesta, TAM_BUFFER) == COLA_VACIA
+        || cola_desencolar(colaContextos, contexto, sizeof(eColaContexto)) == COLA_VACIA) {
+        return NULL;
+    }
+
+    cursor = strchr(respuesta, '\n');
+    if (!cursor) {
+        return NULL;
+    }
+    *cursor = '\0';
+
+    cursor = strrchr(respuesta, ';');
+    sscanf(cursor + 1, "%d", tamReg);
+    *cursor = '\0';
+
+    cursor = strrchr(respuesta, ';');
+    sscanf(cursor + 1, "%d", cantReg);
+    *cursor = '\0';
+
+    cursor = strrchr(respuesta, ';');
+    strncpy(mensaje, cursor + 1, TAM_BUFFER);
+    mensaje[TAM_BUFFER - 1] = '\0';
+
+    *cursor = '\0';
+    sscanf(respuesta, "%d", codigoRet);
+
+    mensaje_color(*codigoRet > BD_ERROR_SIN_RESULTADOS ? TEXTO_ROJO : TEXTO_VERDE, "Respuesta: retorno = %d,  mensaje = %s", *codigoRet, mensaje);
+
+    if (*codigoRet == BD_DATOS_OBTENIDOS && *cantReg > 0 && *tamReg > 0) {
+
+        cola_desencolar(colaRespuestas, &datos, sizeof(void*));
+    }
+
+    return datos;
+}
+
+
+static void _juego_procesar_cola_respuestas(tJuego *juego)
+{
+    char *datos = NULL;
+    int codigoRet, cantReg, tamReg;
+    eColaContexto contexto;
+
+    datos = _juego_procesar_elem_cola_respuestas(&juego->colaRespuestas, &juego->colaContextos, &codigoRet, &cantReg, &tamReg, &contexto);
+
+    switch (contexto) {
+
+        case CONTEXTO_INSERTAR_JUGADOR: {
+
+//            if (codigoRet == BD_ERR_CLAVE_DUPLICADA) {
+//                juego->jugador.estadoSesion = SESION_RECONFIRMAR;
+//                /// COLOCAR MENSAJE WIDGET PIDIENDO RECONFIRMACIÓN DEL NOMBRE
+//
+//            } else if (codigoRet == BD_TODO_OK) {
+//                juego->jugador.estadoSesion = SESION_VALIDANDO;
+//            }
+            juego->jugador.estadoSesion = SESION_INICIADA;
+            break;
+        }
+        case CONTEXTO_DATOS_JUGADOR: {
+            if (codigoRet == BD_DATOS_OBTENIDOS) {
+                memcpy(&juego->jugador, datos, sizeof(tJugador) - sizeof(eEstadoSesion));
+                juego->jugador.estadoSesion = SESION_INICIADA;
+                free(datos);
+            }
+            break;
+        }
+        case CONTEXTO_DATOS_RANKING: {
+            if (codigoRet == BD_DATOS_OBTENIDOS) {
+                free(datos);
+            }
+            break;
+        }
+        default:
+            break;
     }
 }
 
@@ -781,7 +984,9 @@ static void _juego_ventana_ranking_actualizar(SDL_Event *evento, void *datos)
 {
     tDatosRanking *datosRanking = (tDatosRanking*)datos;
 
-    if (*datosRanking->usuario && evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN) {
+    /// REVISAR SI LA SESION ES OFFLINE
+
+    if (*datosRanking->username && evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN) {
 
         ///
     }
