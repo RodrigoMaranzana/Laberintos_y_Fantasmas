@@ -31,10 +31,8 @@ typedef enum {
 }eColaContexto;
 
 typedef enum {
-    SESION_PENDIENTE,
     SESION_INICIADA,
     SESION_OFFLINE,
-    SESION_ERROR,
 }eEstadoSesion;
 
 typedef enum {
@@ -61,7 +59,6 @@ typedef struct {
     char username[TAM_USUARIO];
     int record;
     int cantPartidas;
-    eEstadoSesion estadoSesion;
 } tJugador;
 
 typedef struct {
@@ -93,14 +90,14 @@ typedef struct {
     eJuegoEstado estado;
 
     SOCKET sock;
-    char conectado;
+    eEstadoSesion sesion;
     tCola colaRespuestas;
     tCola colaContextos;
     tCola colaSolicitudes;
     FILE *archContingencia;
 } tJuego;
 
-int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, char conectado);
+int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, eEstadoSesion sesion);
 int juego_ejecutar(tJuego *juego);
 void juego_destruir(tJuego *juego);
 

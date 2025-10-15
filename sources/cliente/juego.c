@@ -71,7 +71,7 @@ static int _juego_cargar_assets(tJuego *juego);
 static void _juego_manejar_input(tJuego *juego, SDL_Keycode tecla);
 static void _juego_manejar_eventos(tJuego *juego);
 static int _juego_encolar_solicitud(tCola *colaSolicitudes, tCola *colaContexto, const char *solicitud, eColaContexto contexto);
-static int _juego_procesar_cola_solicitudes(SOCKET sock, FILE *archContingencia, char *conectado, tCola *colaSolicitudes, eModoSolicitud modo);
+static int _juego_procesar_cola_solicitudes(SOCKET sock, FILE *archContingencia, eEstadoSesion *sesion, tCola *colaSolicitudes, eModoSolicitud modo);
 void _juego_inicializar_base_datos(tJuego *juego);
 int _juego_buscar_respuesta_datos(tJuego *juego, int *codigoRetorno, int *cantRegistros, int *tamRegistro);
 
@@ -95,7 +95,7 @@ static void _juego_procesar_cola_respuestas(tJuego *juego);
 static char* _juego_procesar_elem_cola_respuestas(tCola *colaRespuestas, tCola *colaContextos, int *codigoRet, int *cantReg, int *tamReg, eColaContexto *contexto);
 
 
-int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, char conectado)
+int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, eEstadoSesion sesion)
 {
     int ret = ERR_TODO_OK;
 
@@ -147,7 +147,7 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, cha
     cola_crear(&juego->colaContextos);
     cola_crear(&juego->colaRespuestas);
     juego->sock = sock;
-    juego->conectado = conectado;
+    juego->sesion = sesion;
     juego->estado = JUEGO_CORRIENDO;
 
     juego->archContingencia = fopen("contingencia.txt", "a+");
@@ -187,7 +187,7 @@ int _juego_procesar_contingencia(tJuego *juego)
 
     fseek(juego->archContingencia, 0, SEEK_SET);
 
-    while (juego->conectado && fgets(solicitud, TAM_BUFFER, juego->archContingencia)) {
+    while (juego->sesion && fgets(solicitud, TAM_BUFFER, juego->archContingencia)) {
 
         if (strstr(solicitud, "ACTUALIZAR jugadores")) {
             char username[TAM_USUARIO], campos[256], *cursor;
@@ -216,13 +216,13 @@ int _juego_procesar_contingencia(tJuego *juego)
 
                 sprintf(solicitudAux, "SELECCIONAR jugadores (username IGUAL %s)", username);
                 if (cliente_enviar_solicitud(juego->sock, solicitudAux) == CE_ERR_SOCKET || cliente_recibir_respuesta(juego->sock, &juego->colaRespuestas) == CE_ERR_SOCKET) {
-                    juego->conectado = 0;
-                    mensaje_advertencia("Socket desconectado, modo offline activo");
+                    juego->sesion = 0;
+                    mensaje_advertencia("Socket dessesion, modo offline activo");
                 }
 
                 datos = _juego_procesar_elem_cola_respuestas(&juego->colaRespuestas,&juego->colaContextos, &codigoRet, &cantReg, &tamReg, &contexto);
                 if (datos) {
-                    memcpy(&jugadorAux, datos, sizeof(tJugador) - sizeof(eEstadoSesion));
+                    memcpy(&jugadorAux, datos, sizeof(tJugador));
                     free(datos);
                 }
 
@@ -252,7 +252,8 @@ int _juego_procesar_contingencia(tJuego *juego)
         }
     }
 
-    if (juego->conectado && _juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS) == ERR_TODO_OK) {
+    /// REVISAR CONDICIONES
+    if (juego->sesion == SESION_OFFLINE && _juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->sesion, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS) == ERR_TODO_OK) {
 
         fclose(juego->archContingencia);
         juego->archContingencia = fopen("contingencia.txt", "w");
@@ -267,11 +268,9 @@ int _juego_procesar_contingencia(tJuego *juego)
 int juego_ejecutar(tJuego *juego)
 {
     eRetorno ret = ERR_TODO_OK;
-    if (juego->conectado) {
+    if (juego->sesion == SESION_INICIADA) {
         _juego_inicializar_base_datos(juego);
         _juego_procesar_contingencia(juego);
-    } else {
-        juego->jugador.estadoSesion = SESION_OFFLINE;
     }
 
     while (juego->estado == JUEGO_CORRIENDO) {
@@ -286,11 +285,11 @@ int juego_ejecutar(tJuego *juego)
 
             if (cola_vacia(&juego->colaSolicitudes) != COLA_VACIA) {
 
-                if (_juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_UNA) == ERR_TODO_OK) {
+                if (_juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->sesion, &juego->colaSolicitudes, SOLICITUD_PROCESAR_UNA) == ERR_TODO_OK) {
 
                     cliente_recibir_respuesta(juego->sock, &juego->colaRespuestas); // revisar retorno
 
-                    if (juego->conectado) {
+                    if (juego->sesion == SESION_INICIADA) {
                         _juego_procesar_cola_respuestas(juego);
                     }
                 }
@@ -302,7 +301,7 @@ int juego_ejecutar(tJuego *juego)
         SDL_Delay(16);
     }
 
-    _juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->conectado, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS);
+    _juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->sesion, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS);
 
     return ret;
 }
@@ -352,7 +351,7 @@ void juego_destruir(tJuego *juego)
     FUNCIONES ESTATICAS
 *************************/
 
-static int _juego_procesar_cola_solicitudes(SOCKET sock, FILE *archContingencia, char *conectado, tCola *colaSolicitudes, eModoSolicitud modo)
+static int _juego_procesar_cola_solicitudes(SOCKET sock, FILE *archContingencia, eEstadoSesion *sesion, tCola *colaSolicitudes, eModoSolicitud modo)
 {
     char solicitud[TAM_BUFFER] = {0};
     int retorno, procesadas = 0;
@@ -363,15 +362,15 @@ static int _juego_procesar_cola_solicitudes(SOCKET sock, FILE *archContingencia,
 
     while ((modo == SOLICITUD_PROCESAR_TODAS || procesadas < modo) && cola_desencolar(colaSolicitudes, solicitud, TAM_BUFFER) != COLA_VACIA) {
 
-        if (*conectado) {
+        if (*sesion == SESION_INICIADA) {
             retorno = cliente_enviar_solicitud(sock, solicitud);
             if (retorno == CE_ERR_SOCKET) {
-                *conectado = 0;
-                mensaje_advertencia("Socket desconectado, modo offline activo");
+                *sesion = SESION_OFFLINE;
+                mensaje_advertencia("Socket dessesion, modo offline activo");
             }
         }
 
-        if (!*conectado) {
+        if (*sesion == SESION_INICIADA) {
             if (strncmp(solicitud, "SELECCIONAR", strlen("SELECCIONAR")) != 0) {
                 fprintf(archContingencia, "%s\n", solicitud);
                 mensaje_info("Guardado para futura conexion: ");
@@ -381,7 +380,7 @@ static int _juego_procesar_cola_solicitudes(SOCKET sock, FILE *archContingencia,
         ++procesadas;
     }
 
-    return *conectado ? ERR_TODO_OK : ERR_OFFLINE;
+    return *sesion == SESION_INICIADA ? ERR_TODO_OK : ERR_OFFLINE;
 }
 
 static int _juego_encolar_solicitud(tCola *colaSolicitudes, tCola *colaContexto, const char *solicitud, eColaContexto contexto)
@@ -861,8 +860,7 @@ static void _juego_ventana_usuario_actualizar(SDL_Event *evento, void *datos)
             datosUsuario->jugador->username[longitud - 1] = '\0';
         }
         widget_modificar_valor(datosUsuario->campoTexto, datosUsuario->jugador->username);
-    } else if (*datosUsuario->jugador->username && evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN
-               && (datosUsuario->jugador->estadoSesion == SESION_PENDIENTE || datosUsuario->jugador->estadoSesion == SESION_OFFLINE)) {
+    } else if (*datosUsuario->jugador->username && evento->type == SDL_KEYDOWN && evento->key.keysym.sym == SDLK_RETURN) {
 
         sprintf(buffer, "INSERTAR jugadores (username %s)", datosUsuario->jugador->username);
         _juego_encolar_solicitud(datosUsuario->colaSolicitudes, datosUsuario->colaContextos, buffer, CONTEXTO_INSERTAR_JUGADOR);
@@ -924,23 +922,6 @@ static void _juego_procesar_cola_respuestas(tJuego *juego)
     switch (contexto) {
 
         case CONTEXTO_INSERTAR_JUGADOR: {
-
-//            if (codigoRet == BD_ERR_CLAVE_DUPLICADA) {
-//                juego->jugador.estadoSesion = SESION_RECONFIRMAR;
-//                /// COLOCAR MENSAJE WIDGET PIDIENDO RECONFIRMACIÓN DEL NOMBRE
-//
-//            } else if (codigoRet == BD_TODO_OK) {
-//                juego->jugador.estadoSesion = SESION_VALIDANDO;
-//            }
-            juego->jugador.estadoSesion = SESION_INICIADA;
-            break;
-        }
-        case CONTEXTO_DATOS_JUGADOR: {
-            if (codigoRet == BD_DATOS_OBTENIDOS) {
-                memcpy(&juego->jugador, datos, sizeof(tJugador) - sizeof(eEstadoSesion));
-                juego->jugador.estadoSesion = SESION_INICIADA;
-                free(datos);
-            }
             break;
         }
         case CONTEXTO_DATOS_RANKING: {

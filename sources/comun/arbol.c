@@ -22,7 +22,7 @@ void arbol_crear(tArbol *arbol)
 
 int arbol_insertar_rec(tArbol *arbol, const void *dato, unsigned tamDato, tCmp cmp)
 {
-    tNodoArbol *nodoNuevo;
+    tNodoArbol *nodoNuevo; // no es necesaria
 
     if (*arbol) {
 
@@ -56,6 +56,42 @@ int arbol_insertar_rec(tArbol *arbol, const void *dato, unsigned tamDato, tCmp c
     nodoNuevo->izq = NULL;
     nodoNuevo->der = NULL;
     *arbol = nodoNuevo;
+
+    return ARBOL_TODO_OK;
+}
+
+int arbol_insertar_it(tArbol *arbol, const void *dato, unsigned tamDato, tCmp cmp)
+{
+    while (*arbol) {
+
+        int comp;
+
+        if ((comp = cmp(dato, (*arbol)->dato)) < 0) {
+            arbol = &(*arbol)->izq;
+        } else if (comp > 0) {
+            arbol = &(*arbol)->der;
+        } else if (comp == 0){
+            return ARBOL_DATO_DUP;
+        }
+    }
+
+    *arbol = malloc(sizeof(tNodoArbol));
+    if (!*arbol) {
+        return ARBOL_SIN_MEM;
+    }
+
+    (*arbol)->dato = malloc(tamDato);
+    if (!(*arbol)->dato) {
+        free(*arbol);
+        *arbol = NULL;
+        return ARBOL_SIN_MEM;
+    }
+
+    memcpy((*arbol)->dato, dato, tamDato);
+
+    (*arbol)->tamDato = tamDato;
+    (*arbol)->izq = NULL;
+    (*arbol)->der = NULL;
 
     return ARBOL_TODO_OK;
 }

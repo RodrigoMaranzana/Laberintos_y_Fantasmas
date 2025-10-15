@@ -21,6 +21,7 @@ typedef struct sNodoArbol {
 }tNodoArbol;
 
 typedef tNodoArbol *tArbol;
+
 typedef int (*tCmp)(const void *a, const void *b);
 typedef void (*tAccion)(void *elem, void *extra);
 typedef int (*tAccionLimite)(void *elem, void *extra);
@@ -32,6 +33,7 @@ typedef void (*tDestruir)(void *dato);
 void arbol_crear(tArbol *arbol);
 int arbol_buscar(const tArbol *arbol, void *dato, unsigned tamDato, tCmp cmp);
 int arbol_insertar_rec(tArbol *arbol, const void *dato, unsigned tamDato, tCmp cmp);
+int arbol_insertar_it(tArbol *arbol, const void *dato, unsigned tamDato, tCmp cmp);
 void arbol_recorrer_orden_inverso(const tArbol *arbol, void *extra, tAccion accion);
 void arbol_recorrer_orden_inverso_con_limite(const tArbol *arbol, void *extra, tAccionLimite accionLimite);
 void arbol_recorrer_preorden(const tArbol *arbol, void *extra, tAccion accion);
