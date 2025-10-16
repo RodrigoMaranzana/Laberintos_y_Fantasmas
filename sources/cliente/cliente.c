@@ -72,7 +72,7 @@ int cliente_recibir_respuesta(SOCKET sock, tCola *colaRespuestas)
     cola_encolar(colaRespuestas, respuesta, strlen(respuesta));
 
     cursor = strchr(respuesta, '\n');
-    if (!*cursor) {
+    if (!cursor) {
         return CE_ERR_RESPUESTA_CORRUPTA;
     }
     *cursor = '\0';

@@ -184,82 +184,103 @@ int _juego_procesar_contingencia(tJuego *juego)
 {
     char solicitud[TAM_BUFFER], solicitudAux[TAM_BUFFER];
     tJugador jugadorAux = {0};
-
+    FILE *archContingenciaTmp = NULL;
     fseek(juego->archContingencia, 0, SEEK_SET);
 
-    while (juego->sesion && fgets(solicitud, TAM_BUFFER, juego->archContingencia)) {
+    mensaje_advertencia("Sincronizando progreso Offline de partidas anteriores. Espere" PARPADEO "..." TEXTO_RESET "\n");
 
-        if (strstr(solicitud, "ACTUALIZAR jugadores")) {
-            char username[TAM_USUARIO], campos[256], *cursor;
-            int record = -1, cantPartidas = -1;
+    while (fgets(solicitud, TAM_BUFFER, juego->archContingencia)) {
 
-            cursor = strstr(solicitud, "username IGUAL ");
-            if (cursor && sscanf(cursor, "username IGUAL %[^)]", username) != 1) {
-                return ERR_ARCHIVO;
-            }
+        if (juego->sesion == SESION_ONLINE) {
 
-            cursor = strstr(solicitud, "record ");
-            if (cursor) {
-                 sscanf(cursor, "record %d", &record);
-            }
+            if (strstr(solicitud, "ACTUALIZAR jugadores")) {
 
-            cursor = strstr(solicitud, "cantPartidas ");
-            if (cursor) {
-                 sscanf(cursor, "cantPartidas %d", &cantPartidas);
-            }
+                char username[TAM_USUARIO], campos[256], *cursor;
+                int record = -1, cantPartidas = -1;
 
-            if (*jugadorAux.username == '\0' || strcmp(jugadorAux.username, username) != 0) {
-
-                char *datos = NULL;
-                int codigoRet, cantReg, tamReg;
-                eColaContexto contexto;
-
-                sprintf(solicitudAux, "SELECCIONAR jugadores (username IGUAL %s)", username);
-                if (cliente_enviar_solicitud(juego->sock, solicitudAux) == CE_ERR_SOCKET || cliente_recibir_respuesta(juego->sock, &juego->colaRespuestas) == CE_ERR_SOCKET) {
-                    juego->sesion = 0;
-                    mensaje_advertencia("Socket dessesion, modo offline activo");
+                cursor = strstr(solicitud, "username IGUAL ");
+                if (cursor && sscanf(cursor, "username IGUAL %[^)]", username) != 1) {
+                    return ERR_ARCHIVO;
                 }
 
-                datos = _juego_procesar_elem_cola_respuestas(&juego->colaRespuestas,&juego->colaContextos, &codigoRet, &cantReg, &tamReg, &contexto);
-                if (datos) {
-                    memcpy(&jugadorAux, datos, sizeof(tJugador));
-                    free(datos);
+                cursor = strstr(solicitud, "record ");
+                if (cursor) {
+                     sscanf(cursor, "record %d", &record);
                 }
 
-            }
+                cursor = strstr(solicitud, "cantPartidas ");
+                if (cursor) {
+                     sscanf(cursor, "cantPartidas %d", &cantPartidas);
+                }
 
-            if (record > jugadorAux.record) {
-                sprintf(campos, "record %d", record);
-            }
+                if (*jugadorAux.username == '\0' || strcmp(jugadorAux.username, username) != 0) {
 
-            if (cantPartidas > jugadorAux.cantPartidas) {
-                char aux[64];
+                    char *datos = NULL;
+                    int codigoRet, cantReg, tamReg;
+                    eColaContexto contexto;
+
+                    sprintf(solicitudAux, "SELECCIONAR jugadores (username IGUAL %s)", username);
+                    if (cliente_enviar_solicitud(juego->sock, solicitudAux) == CE_ERR_SOCKET || cliente_recibir_respuesta(juego->sock, &juego->colaRespuestas) == CE_ERR_SOCKET) {
+                        juego->sesion = 0;
+                        mensaje_advertencia("Socket dessesion, modo offline activo");
+                    }
+
+                    datos = _juego_procesar_elem_cola_respuestas(&juego->colaRespuestas,&juego->colaContextos, &codigoRet, &cantReg, &tamReg, &contexto);
+                    if (datos) {
+                        memcpy(&jugadorAux, datos, tamReg);
+                        free(datos);
+                    }
+
+                }
+
+                if (record > jugadorAux.record) {
+                    sprintf(campos, "record %d", record);
+                }
+
+                if (cantPartidas > jugadorAux.cantPartidas) {
+                    char aux[64];
+                    if (*campos != '\0') {
+                        strcat(campos, ", ");
+                    }
+                    sprintf(aux, "cantPartidas %d", cantPartidas);
+                    strcat(campos, aux);
+                }
+
                 if (*campos != '\0') {
-                    strcat(campos, ", ");
+                    snprintf(solicitud, TAM_BUFFER, "ACTUALIZAR jugadores (%s) DONDE (username IGUAL %s)", campos, username);
+                    _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, solicitud, CONTEXTO_IRRELEVANTE);
                 }
-                sprintf(aux, "cantPartidas %d", cantPartidas);
-                strcat(campos, aux);
-            }
 
-            if (*campos != '\0') {
-                snprintf(solicitud, TAM_BUFFER, "ACTUALIZAR jugadores (%s) DONDE (username IGUAL %s)", campos, username);
+            } else {
+
                 _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, solicitud, CONTEXTO_IRRELEVANTE);
             }
-
         } else {
 
-            _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, solicitud, CONTEXTO_IRRELEVANTE);
+            if (!archContingenciaTmp) {
+                archContingenciaTmp = fopen("contingenciaTmp.txt", "w");
+                if (!archContingenciaTmp) {
+                    return ERR_ARCHIVO;
+                }
+            }
+
+            fprintf(archContingenciaTmp, "%s", solicitud);
+            mensaje_info("Guardado para futura conexion: ");
+            printf("%s\n", solicitud);
         }
     }
 
-    /// REVISAR CONDICIONES
-    if (juego->sesion == SESION_OFFLINE && _juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->sesion, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS) == ERR_TODO_OK) {
+    fclose(juego->archContingencia);
 
-        fclose(juego->archContingencia);
+    if (archContingenciaTmp) {
+        fclose(archContingenciaTmp);
+        if (remove("contingencia.txt") != 0) return ERR_ARCHIVO;
+        if (rename("contingencia.tmp", "contingencia.txt") != 0) return ERR_ARCHIVO;
+        juego->archContingencia = fopen("contingencia.txt", "a+");
+        if (!juego->archContingencia) return ERR_ARCHIVO;
+    } else {
         juego->archContingencia = fopen("contingencia.txt", "w");
-        if (!juego->archContingencia) {
-            return ERR_ARCHIVO;
-        }
+        if (!juego->archContingencia) return ERR_ARCHIVO;
     }
 
     return ERR_TODO_OK;
@@ -268,7 +289,7 @@ int _juego_procesar_contingencia(tJuego *juego)
 int juego_ejecutar(tJuego *juego)
 {
     eRetorno ret = ERR_TODO_OK;
-    if (juego->sesion == SESION_INICIADA) {
+    if (juego->sesion == SESION_ONLINE) {
         _juego_inicializar_base_datos(juego);
         _juego_procesar_contingencia(juego);
     }
@@ -289,7 +310,7 @@ int juego_ejecutar(tJuego *juego)
 
                     cliente_recibir_respuesta(juego->sock, &juego->colaRespuestas); // revisar retorno
 
-                    if (juego->sesion == SESION_INICIADA) {
+                    if (juego->sesion == SESION_ONLINE) {
                         _juego_procesar_cola_respuestas(juego);
                     }
                 }
@@ -362,25 +383,29 @@ static int _juego_procesar_cola_solicitudes(SOCKET sock, FILE *archContingencia,
 
     while ((modo == SOLICITUD_PROCESAR_TODAS || procesadas < modo) && cola_desencolar(colaSolicitudes, solicitud, TAM_BUFFER) != COLA_VACIA) {
 
-        if (*sesion == SESION_INICIADA) {
+        if (strlen(solicitud) + 1 < TAM_BUFFER) {
+            strcat(solicitud, "\n");
+        } else {
+            mensaje_advertencia("La solicitud excede el tamaño del buffer y no puede enviarse");
+        }
+
+        if (*sesion == SESION_ONLINE) {
             retorno = cliente_enviar_solicitud(sock, solicitud);
             if (retorno == CE_ERR_SOCKET) {
                 *sesion = SESION_OFFLINE;
-                mensaje_advertencia("Socket dessesion, modo offline activo");
+                mensaje_advertencia("Socket desconectado, modo offline activo");
             }
         }
 
-        if (*sesion == SESION_INICIADA) {
-            if (strncmp(solicitud, "SELECCIONAR", strlen("SELECCIONAR")) != 0) {
-                fprintf(archContingencia, "%s\n", solicitud);
-                mensaje_info("Guardado para futura conexion: ");
-                printf("%s\n", solicitud);
-            }
+        if (*sesion == SESION_OFFLINE && (strncmp(solicitud, "SELECCIONAR", strlen("SELECCIONAR")) != 0 && strncmp(solicitud, "CREAR", strlen("CREAR")) != 0)) {
+            fprintf(archContingencia, "%s", solicitud);
+            mensaje_info("Guardado para futura conexion: ");
+            printf("%s\n", solicitud);
         }
         ++procesadas;
     }
 
-    return *sesion == SESION_INICIADA ? ERR_TODO_OK : ERR_OFFLINE;
+    return *sesion == SESION_ONLINE ? ERR_TODO_OK : ERR_OFFLINE;
 }
 
 static int _juego_encolar_solicitud(tCola *colaSolicitudes, tCola *colaContexto, const char *solicitud, eColaContexto contexto)

@@ -31,7 +31,7 @@ typedef enum {
 }eColaContexto;
 
 typedef enum {
-    SESION_INICIADA,
+    SESION_ONLINE,
     SESION_OFFLINE,
 }eEstadoSesion;
 

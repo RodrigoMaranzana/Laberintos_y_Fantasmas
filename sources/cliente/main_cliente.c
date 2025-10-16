@@ -28,10 +28,10 @@ int main(int argc, char* argv[])
         mensaje_error("No se pudo conectar al servidor.");
         mensaje_advertencia("Iniciando el juego en modo Offline.");
         WSACleanup();
-        conectado = 0;
+        conectado = SESION_OFFLINE;
     }else{
         mensaje_todo_ok("Conectado al servidor.");
-        conectado = 1;
+        conectado = SESION_ONLINE;
     }
 
     ret = juego_inicializar(&juego, TITULO_VENTANA, sock, conectado);
