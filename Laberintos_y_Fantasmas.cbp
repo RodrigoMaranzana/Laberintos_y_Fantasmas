@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Laberintos_y_Fantasmas" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Juego">
+				<Option output="bin/Juego/Laberintos_y_Fantasmas_Juego" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Juego/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DMODO_DEBUG" />
+					<Add directory="libraries/SDL2-2.32.8/x86_64-w64-mingw32/include/SDL2" />
+					<Add directory="libraries/SDL2_image-2.8.8/x86_64-w64-mingw32/include/SDL2" />
+					<Add directory="libraries/SDL2_mixer-2.8.1/x86_64-w64-mingw32/include/SDL2" />
+					<Add directory="libraries/SDL2_ttf-2.24.0/x86_64-w64-mingw32/include/SDL2" />
+				</Compiler>
+				<Linker>
+					<Add option="-lmingw32" />
+					<Add option="-lSDL2main" />
+					<Add option="-lSDL2" />
+					<Add option="-lSDL2_image" />
+					<Add option="-lSDL2_ttf" />
+					<Add option="-lSDL2_mixer" />
+					<Add library="ws2_32" />
+					<Add directory="libraries/SDL2-2.32.8/x86_64-w64-mingw32/lib" />
+					<Add directory="libraries/SDL2_image-2.8.8/x86_64-w64-mingw32/lib" />
+					<Add directory="libraries/SDL2_mixer-2.8.1/x86_64-w64-mingw32/lib" />
+					<Add directory="libraries/SDL2_ttf-2.24.0/x86_64-w64-mingw32/lib" />
+				</Linker>
+			</Target>
+			<Target title="Servidor">
+				<Option output="bin/Servidor/Laberintos_y_Fantasmas_Servidor" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Servidor/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DMODO_DEBUG" />
+				</Compiler>
+				<Linker>
+					<Add library="ws2_32" />
+				</Linker>
+			</Target>
+			<Target title="Terminal">
+				<Option output="bin/Terminal/Laberintos_y_Fantasmas_Terminal" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Terminal/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add option="-DMODO_DEBUG" />
+				</Compiler>
+				<Linker>
+					<Add library="ws2_32" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="include/comun/arbol.h" />
+		<Unit filename="include/comun/cliente.h">
+			<Option target="Juego" />
+			<Option target="Terminal" />
+		</Unit>
+		<Unit filename="include/comun/cola.h" />
+		<Unit filename="include/comun/comun.h" />
+		<Unit filename="include/comun/lista.h" />
+		<Unit filename="include/comun/matriz.h">
+			<Option target="Juego" />
+			<Option target="Servidor" />
+		</Unit>
+		<Unit filename="include/comun/mensaje.h" />
+		<Unit filename="include/comun/pila.h" />
+		<Unit filename="include/comun/protocolo.h" />
+		<Unit filename="include/comun/vector.h" />
+		<Unit filename="include/juego/archivo.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/assets.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/dibujado.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/escenario.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/graficos.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/juego.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/logica.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/menu.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/temporizador.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/texto.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/ventana.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/juego/widget.h">
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="include/servidor/bdatos.h">
+			<Option target="Servidor" />
+			<Option target="Terminal" />
+		</Unit>
+		<Unit filename="include/servidor/servidor.h">
+			<Option target="Servidor" />
+		</Unit>
+		<Unit filename="sources/comun/arbol.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/cliente.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+			<Option target="Terminal" />
+		</Unit>
+		<Unit filename="sources/comun/cola.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/comun.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/lista.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/matriz.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+			<Option target="Servidor" />
+		</Unit>
+		<Unit filename="sources/comun/mensaje.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/pila.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/comun/vector.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="sources/juego/archivo.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/assets.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/dibujado.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/escenario.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/graficos.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/juego.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/logica.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/main_juego.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/menu.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/temporizador.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/texto.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/ventana.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/juego/widget.c">
+			<Option compilerVar="CC" />
+			<Option target="Juego" />
+		</Unit>
+		<Unit filename="sources/servidor/bdatos.c">
+			<Option compilerVar="CC" />
+			<Option target="Servidor" />
+			<Option target="Terminal" />
+		</Unit>
+		<Unit filename="sources/servidor/main_servidor.c">
+			<Option compilerVar="CC" />
+			<Option target="Servidor" />
+		</Unit>
+		<Unit filename="sources/servidor/servidor.c">
+			<Option compilerVar="CC" />
+			<Option target="Servidor" />
+		</Unit>
+		<Unit filename="sources/terminal/main_terminal.c">
+			<Option compilerVar="CC" />
+			<Option target="Terminal" />
+		</Unit>
+		<Extensions />
+	</Project>
+</CodeBlocks_project_file>

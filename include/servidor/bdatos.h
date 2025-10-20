@@ -85,7 +85,7 @@ typedef struct {
 } tBDatos;
 
 int bdatos_iniciar(tBDatos *bDatos);
-int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud, tLista *listaDatos, int *cantRegistrosDatos, int *tamRegistroDatos);
+int bdatos_procesar_solicitud(tBDatos *bDatos, const char *solicitud, tLista *listaDatos, int *cantRegistrosDatos);
 eSimbolo bdatos_parsear_comando(tSecuencia *secuencia);
 int bdatos_apagar(tBDatos *bDatos);
 int bdatos_insertar(tBDatos *bDatos);
@@ -93,6 +93,7 @@ int bdatos_actualizar(tBDatos *bDatos);
 int bdatos_seleccionar(tBDatos *bDatos);
 const char* bdatos_obtener_mensaje(eBDRetorno codigoError);
 int bdatos_cargar_idx(tBDatos *bDatos);
+char* bdatos_registro_a_texto(const tEncabezado *encabezado, const char *registro);
 
 int bdatos_dummy();
 

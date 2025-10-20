@@ -6,9 +6,12 @@
 #include "../../include/comun/comun.h"
 #include "../../include/comun/arbol.h"
 #include "../../include/comun/lista.h"
+#include "../../include/comun/mensaje.h"
 
 /// Salto de linea omitido intencionalmente
 #define ES_BLANCO(c) ((c) == ' ' || (c) == '\t' || (c) == '\r' || (c) == '\v' || (c) == '\f')
+
+#define BDATOS_DIR "bdatos"
 
 typedef enum {
     MODO_INSERCION,
@@ -72,9 +75,10 @@ static int _bdatos_seleccionar_por_top(tBDatos *bDatos, tLista *listaDatos, int 
 static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, eModoOffset modo);
 static tCampo* _bdatos_encabezado_buscar_campo_por_tipo(tEncabezado* encabezado, eSimbolo tipoBuscado);
 static int _bdatos_cmp_campo_por_nombre(const void* a, const void* b);
+static int _bdatos_cmp_campo_por_offset(const void* a, const void* b);
 static void _bdatos_accion_escribir_campo(void* elem, void* extra);
 static void _bdatos_accion_liberar_campo_valor(void* elem, void* extra);
-
+static void _bdatos_obtener_ruta_archivo(char* buffer, size_t tamBuffer, const char* nombreTabla, const char* extension, const char* nombreCampo);
 
 /// DEBUG
 void _bdatos_reset_metricas() {
@@ -111,14 +115,14 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
     int ret = BD_TODO_OK;
     FILE *archIdx;
     tCampo* campoIS;
-    char nombreIdx[TAM_NOMBRE_ARCH];
+    char rutaIdx[TAM_RUTA];
 
     if (!bDatos->tablaAbierta.arch) return BD_TODO_OK;
 
     printf("Cerrando y guardando tabla: %s\n", bDatos->tablaAbierta.encabezado.nombreTabla);
 
-    sprintf(nombreIdx, "%s.idx", bDatos->tablaAbierta.encabezado.nombreTabla);
-    archIdx = fopen(nombreIdx, "wb");
+    _bdatos_obtener_ruta_archivo(rutaIdx, sizeof(rutaIdx), bDatos->tablaAbierta.encabezado.nombreTabla, ".idx", NULL);
+    archIdx = fopen(rutaIdx, "wb");
 
     if (archIdx) {
         if (arbol_escribir_en_arch(archIdx, &bDatos->tablaAbierta.arbolPK) != ARBOL_TODO_OK) {
@@ -131,10 +135,10 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
 
     if (ret == BD_TODO_OK && (campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, IS))) {
 
-        char nombreIdxS[TAM_NOMBRE_ARCH + TAM_IDENTIFICADOR + 2];
+        char rutaIdxs[TAM_RUTA];
 
-        sprintf(nombreIdxS, "%s_%s.idxs", bDatos->tablaAbierta.encabezado.nombreTabla, campoIS->nombre);
-        archIdx = fopen(nombreIdxS, "wb");
+        _bdatos_obtener_ruta_archivo(rutaIdxs, sizeof(rutaIdxs), bDatos->tablaAbierta.encabezado.nombreTabla, ".idxs", campoIS->nombre);
+        archIdx = fopen(rutaIdxs, "wb");
         if (archIdx) {
 
             if (arbol_escribir_en_arch_con_escritor(archIdx, &bDatos->tablaAbierta.arbolIS, _bdatos_escribir_indice_secundario) != ARBOL_TODO_OK) {
@@ -383,12 +387,12 @@ static eSimbolo _bdatos_comparar_simbolo(const char* simbolo)
 
 static int _bdatos_tabla_existe(const char *nombreTabla)
 {
-    char nombreDat[TAM_NOMBRE_ARCH];
+    char rutaDat[TAM_RUTA];
     FILE *arch;
 
-    sprintf(nombreDat,"%s.dat", nombreTabla);
+    _bdatos_obtener_ruta_archivo(rutaDat, sizeof(rutaDat), nombreTabla, ".dat", NULL);
 
-    arch = fopen(nombreDat, "rb");
+    arch = fopen(rutaDat, "rb");
 
     if (arch) {
         fclose(arch);
@@ -398,7 +402,7 @@ static int _bdatos_tabla_existe(const char *nombreTabla)
     return 0;
 }
 
-int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud, tLista *listaDatos, int *cantRegistrosDatos, int *tamRegistroDatos)
+int bdatos_procesar_solicitud(tBDatos *bDatos, const char *solicitud, tLista *listaDatos, int *cantRegistrosDatos)
 {
     int ret;
     eSimbolo simboloComando;
@@ -438,7 +442,6 @@ int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud, tLista *lis
                 break;
             case SELECCIONAR: {
                 ret = _bdatos_seleccionar(bDatos, listaDatos, cantRegistrosDatos);
-                *tamRegistroDatos = (ret == BD_DATOS_OBTENIDOS) ? bDatos->tablaAbierta.encabezado.tamRegistro : 0;
                 break;
             }
             case ACTUALIZAR:
@@ -459,6 +462,8 @@ int bdatos_procesar_solcitud(tBDatos *bDatos, const char *solicitud, tLista *lis
     }
     printf("-- La operacion ha demorado: %f milisegundos --\n", gMetricas.tiempoMs);
     /// DEBUG
+
+    fflush(bDatos->tablaAbierta.arch);
 
     return ret;
 }
@@ -514,12 +519,12 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
     FILE *archDat, *archIdx;
     tEncabezado encabezado;
     tCampo* campoIS;
-    char nombreArch[TAM_NOMBRE_ARCH];
+    char rutaArch[TAM_RUTA];
 
     if (bDatos->tablaAbierta.arch && strcmp(bDatos->tablaAbierta.encabezado.nombreTabla, nombreTabla) == 0) return BD_TODO_OK;
 
-    sprintf(nombreArch, "%s.dat", nombreTabla);
-    archDat = fopen(nombreArch, "r+b");
+    _bdatos_obtener_ruta_archivo(rutaArch, sizeof(rutaArch), nombreTabla, ".dat", NULL);
+    archDat = fopen(rutaArch, "r+b");
     if (!archDat) return BD_ERROR_TABLA_NO_EXISTE;
 
     if (_bdatos_leer_encabezado(archDat, &encabezado) != BD_TODO_OK) {
@@ -534,8 +539,8 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
     }
 
     arbol_crear(&arbolPK);
-    sprintf(nombreArch, "%s.idx", nombreTabla);
-    archIdx = fopen(nombreArch, "rb");
+    _bdatos_obtener_ruta_archivo(rutaArch, sizeof(rutaArch), nombreTabla, ".idx", NULL);
+    archIdx = fopen(rutaArch, "rb");
     if (!archIdx) {
         fclose(archDat);
         vector_destruir(&encabezado.vecCampos);
@@ -554,10 +559,10 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
     campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&encabezado, IS);
     if (campoIS) {
         FILE* archIdxS;
-        char nombreIdxS[TAM_NOMBRE_ARCH + TAM_IDENTIFICADOR + 2];
-        sprintf(nombreIdxS, "%s_%s.idxs", encabezado.nombreTabla, campoIS->nombre);
 
-        archIdxS = fopen(nombreIdxS, "rb");
+        _bdatos_obtener_ruta_archivo(rutaArch, sizeof(rutaArch), nombreTabla, ".idxs", campoIS->nombre);
+
+        archIdxS = fopen(rutaArch, "rb");
         if (!archIdxS) {
             fclose(archDat);
             vector_destruir(&encabezado.vecCampos);
@@ -604,16 +609,23 @@ static int _bdatos_crear_tabla(tBDatos *bDatos, const char *nombreTabla)
     tCampo *campoIS, *campoActual;
     tEncabezado encabezado = {0};
     tVectorIterador vecIt;
-    char caracter, nombreDat[TAM_NOMBRE_ARCH], nombreIdx[TAM_NOMBRE_ARCH];
+    char caracter, directorio[TAM_DIRECTORIO], rutaDat[TAM_RUTA], rutaIdx[TAM_RUTA];
 
     if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
     if (vector_crear(&encabezado.vecCampos, sizeof(tCampo)) != VECTOR_TODO_OK) return BD_ERROR_SIN_MEMO;
     if ((ret = _bdatos_parsear_declaracion_campos(&bDatos->secuencia, &encabezado.vecCampos)) != BD_TODO_OK) return ret;
 
-    sprintf(nombreDat, "%s.dat", nombreTabla);
-    sprintf(nombreIdx, "%s.idx", nombreTabla);
+    snprintf(directorio, sizeof(directorio), "%s/%s", BDATOS_DIR, nombreTabla);
+    if (comun_crear_directorio(directorio) != ERR_TODO_OK) {
 
-    bDatos->tablaAbierta.arch = fopen(nombreDat, "w+b");
+        vector_destruir(&encabezado.vecCampos);
+        return BD_ERROR_ESCRITURA;
+    }
+
+    _bdatos_obtener_ruta_archivo(rutaDat, sizeof(rutaDat), nombreTabla, ".dat", NULL);
+    _bdatos_obtener_ruta_archivo(rutaIdx, sizeof(rutaIdx), nombreTabla, ".idx", NULL);
+
+    bDatos->tablaAbierta.arch = fopen(rutaDat, "w+b");
     if (!bDatos->tablaAbierta.arch) {
         vector_destruir(&encabezado.vecCampos);
         return BD_ERROR_ARCHIVO;
@@ -636,18 +648,18 @@ static int _bdatos_crear_tabla(tBDatos *bDatos, const char *nombreTabla)
     if (fwrite(&encabezado, sizeof(tEncabezado) - sizeof(tVector), 1, bDatos->tablaAbierta.arch) != 1) {
         fclose(bDatos->tablaAbierta.arch);
         bDatos->tablaAbierta.arch = NULL;
-        remove(nombreDat);
+        remove(rutaDat);
         return BD_ERROR_ESCRITURA;
     }
     vector_recorrer(&encabezado.vecCampos, _bdatos_accion_escribir_campo, bDatos->tablaAbierta.arch);
     fflush(bDatos->tablaAbierta.arch);
 
-    archIdx = fopen(nombreIdx, "w+b");
+    archIdx = fopen(rutaIdx, "w+b");
     if (!archIdx) {
         vector_destruir(&encabezado.vecCampos);
         fclose(bDatos->tablaAbierta.arch);
         bDatos->tablaAbierta.arch = NULL;
-        remove(nombreDat);
+        remove(rutaDat);
         return BD_ERROR_ARCHIVO;
     }
     fclose(archIdx);
@@ -655,14 +667,16 @@ static int _bdatos_crear_tabla(tBDatos *bDatos, const char *nombreTabla)
     campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&encabezado, IS);
     if (campoIS) {
         FILE *archIdxS;
-        char nombreIdxS[TAM_NOMBRE_ARCH + TAM_IDENTIFICADOR + 2];
-        sprintf(nombreIdxS, "%s_%s.idxs", nombreTabla, campoIS->nombre);
-        archIdxS = fopen(nombreIdxS, "w+b");
+        char rutaIdxs[TAM_RUTA];
+
+        _bdatos_obtener_ruta_archivo(rutaIdxs, sizeof(rutaIdxs), nombreTabla, ".idxs", campoIS->nombre);
+
+        archIdxS = fopen(rutaIdxs, "w+b");
         if (!archIdxS) {
             fclose(bDatos->tablaAbierta.arch);
             bDatos->tablaAbierta.arch = NULL;
-            remove(nombreDat);
-            remove(nombreIdx);
+            remove(rutaDat);
+            remove(rutaIdx);
             return BD_ERROR_ARCHIVO;
         }
         fclose(archIdxS);
@@ -871,7 +885,7 @@ static int _bdatos_insertar(tBDatos *bDatos)
         return ret == ARBOL_DATO_DUP ? BD_ERROR_DUPLICADO_PK : BD_ERROR_SIN_MEMO;
     }
 
-    /// MEJORAR PARA QUE SIRVA PARA CLAVES DE CAMPOS DE TETXO (SE DEBE CAMBIAR A _bdatos_actualizar_is)
+    /// MEJORAR PARA QUE SIRVA PARA CLAVES DE CAMPOS DE TEXTO (SE DEBE CAMBIAR A _bdatos_actualizar_is)
     campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, IS);
     if (campoIS) {
         if (campoIS->tipo == TIPO_ENTERO) {
@@ -898,7 +912,6 @@ static int _bdatos_actualizar(tBDatos *bDatos)
 {
     int ret, cantParseados = 0, cantRegistrosDatos;
     tLista listaDatos;
-    eSimbolo simboloConector;
     char caracter, *registro = NULL, *registroActualizado = NULL;
     tCampoValor *campoValorActual;
     tVector vecCampoValor;
@@ -920,8 +933,6 @@ static int _bdatos_actualizar(tBDatos *bDatos)
         vector_destruir(&vecCampoValor);
         return BD_ERROR_CANT_CAMPOS;
     }
-
-    if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &simboloConector, sizeof(eSimbolo))) != BD_TODO_OK || (simboloConector != DONDE)) return BD_ERROR_SINTAXIS;
 
     lista_crear(&listaDatos);
     _bdatos_seleccionar(bDatos, &listaDatos, &cantRegistrosDatos);
@@ -955,7 +966,7 @@ static int _bdatos_actualizar(tBDatos *bDatos)
         campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&bDatos->tablaAbierta.encabezado, IS);
         if (campoIS) {
             int valorAnteriorIS = *(int*)(registro + campoIS->offsetCampo);
-            int valorNuevoIS;
+            int valorNuevoIS = valorAnteriorIS;
             int actualizado = 0;
 
             campoValorActual = vector_it_primero(&vecCampoValorIt);
@@ -1003,6 +1014,7 @@ static int _bdatos_seleccionar(tBDatos *bDatos, tLista *listaDatos, int *cantReg
 
     *cantRegistrosDatos = 0;
 
+    if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_simbolo, &proximoSimbolo, sizeof(eSimbolo))) != BD_TODO_OK || (proximoSimbolo != DONDE)) return BD_ERROR_SINTAXIS;
     if (_bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_caracter, &caracter, sizeof(char)) != BD_TODO_OK || caracter != '(') return BD_ERROR_SINTAXIS;
     if ((ret = _bdatos_parsear(&bDatos->secuencia, _bdatos_parsear_identificador, nombreCampoLeido, TAM_IDENTIFICADOR)) != BD_TODO_OK) return ret;
     if ((ret = _bdatos_buscar_campo(&bDatos->tablaAbierta.encabezado, &campoEncontrado, nombreCampoLeido)) != BD_TODO_OK) return ret;
@@ -1224,7 +1236,6 @@ static int _bdatos_seleccionar_por_escaneo(tBDatos *bDatos, tLista *listaDatos, 
     return BD_TODO_OK;
 }
 
-
 static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tVector *vecCampos)
 {
     int ret, fin = 0, hayPK = 0;
@@ -1288,6 +1299,64 @@ static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tVector *ve
     return BD_TODO_OK;
 }
 
+char* bdatos_registro_a_texto(const tEncabezado *encabezado, const char *registro)
+{
+    char buffer[TAM_BUFFER], *cursor = buffer;
+    int bytesEscritos = 0, primerCampo = 1;
+
+    tVector vecCamposOrdOffset;
+    tVectorIterador vecCamposIt;
+    tCampo *campoActual;
+
+    vector_crear(&vecCamposOrdOffset, sizeof(tCampo));
+    vector_it_crear(&vecCamposIt, (tVector*)&encabezado->vecCampos);
+    campoActual = vector_it_primero(&vecCamposIt);
+    while(campoActual) {
+        vector_ord_insertar(&vecCamposOrdOffset, campoActual, _bdatos_cmp_campo_por_offset, NULL);
+        campoActual = vector_it_siguiente(&vecCamposIt);
+    }
+
+    vector_it_crear(&vecCamposIt, &vecCamposOrdOffset);
+    campoActual = vector_it_primero(&vecCamposIt);
+
+    while (campoActual) {
+
+        if (!primerCampo) {
+            bytesEscritos = snprintf(cursor, sizeof(buffer) - (cursor - buffer), ";");
+            cursor += bytesEscritos;
+        }
+        primerCampo = 0;
+
+        switch (campoActual->tipo) {
+            case TIPO_ENTERO: {
+                int valor = *(int*)(registro + campoActual->offsetCampo);
+                bytesEscritos = snprintf(cursor, sizeof(buffer) - (cursor - buffer), "%d", valor);
+                break;
+            }
+            case TIPO_TEXTO: {
+                bytesEscritos = snprintf(cursor, sizeof(buffer) - (cursor - buffer), "%.*s", campoActual->tam, registro + campoActual->offsetCampo);
+                break;
+            }
+            default:
+                break;
+        }
+
+        cursor += bytesEscritos;
+        campoActual = vector_it_siguiente(&vecCamposIt);
+    }
+
+    vector_destruir(&vecCamposOrdOffset);
+
+    snprintf(cursor, sizeof(buffer) - (cursor - buffer), "\n");
+
+    char *resultado = malloc(strlen(buffer) + 1);
+    if (resultado) {
+        strcpy(resultado, buffer);
+    }
+
+    return resultado;
+}
+
 static void _bdatos_accion_liberar_campo_valor(void* elem, void* extra)
 {
     tCampoValor *campoValor = (tCampoValor*)elem;
@@ -1296,10 +1365,24 @@ static void _bdatos_accion_liberar_campo_valor(void* elem, void* extra)
 
 static int _bdatos_cmp_campo_por_nombre(const void* a, const void* b)
 {
-    tCampo* campoA = (tCampo*)a;
-    tCampo* campoB = (tCampo*)b;
+    const tCampo* campoA = (const tCampo*)a;
+    const tCampo* campoB = (const tCampo*)b;
 
     return strcmp(campoA->nombre, campoB->nombre);
+}
+
+static int _bdatos_cmp_campo_por_offset(const void* a, const void* b)
+{
+    const tCampo *campoA = (const tCampo *)a;
+    const tCampo *campoB = (const tCampo *)b;
+
+    if (campoA->offsetCampo < campoB->offsetCampo) {
+        return -1;
+    }
+    if (campoA->offsetCampo > campoB->offsetCampo) {
+        return 1;
+    }
+    return 0;
 }
 
 static tCampo* _bdatos_encabezado_buscar_campo_por_tipo(tEncabezado* encabezado, eSimbolo tipoBuscado)
@@ -1317,6 +1400,15 @@ static tCampo* _bdatos_encabezado_buscar_campo_por_tipo(tEncabezado* encabezado,
         campoActual = vector_it_siguiente(&vecIt);
     }
     return NULL;
+}
+
+static void _bdatos_obtener_ruta_archivo(char* buffer, size_t tamBuffer, const char* nombreTabla, const char* extension, const char* nombreCampo)
+{
+    if (nombreCampo) {
+        snprintf(buffer, tamBuffer, "%s/%s/%s_%s%s", BDATOS_DIR, nombreTabla, nombreTabla, nombreCampo, extension);
+    } else {
+        snprintf(buffer, tamBuffer, "%s/%s/%s%s", BDATOS_DIR, nombreTabla, nombreTabla, extension);
+    }
 }
 
 const char* bdatos_obtener_mensaje(eBDRetorno codigoError)
@@ -1356,6 +1448,11 @@ const char* bdatos_obtener_mensaje(eBDRetorno codigoError)
 int bdatos_iniciar(tBDatos *bDatos)
 {
     memset(bDatos, 0, sizeof(tBDatos));
+
+    if (comun_crear_directorio(BDATOS_DIR) != ERR_TODO_OK) {
+        mensaje_error("No se pudo crear el directorio " BDATOS_DIR ". El sistema no puede iniciar.");
+        return BD_ERROR_ESCRITURA;
+    }
 
     return BD_TODO_OK;
 }
