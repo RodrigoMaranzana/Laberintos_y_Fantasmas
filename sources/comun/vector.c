@@ -111,7 +111,6 @@ void _ordenar_seleccion(tVector* vector, Cmp cmp)
     void *ult, *limiteInf, *menor, *cursor;
     void* aux = malloc(vector->tamElem);
     if (!aux) {
-
         return;
     }
 
@@ -124,7 +123,6 @@ void _ordenar_seleccion(tVector* vector, Cmp cmp)
         for (cursor = limiteInf + vector->tamElem; cursor <= ult; cursor += vector->tamElem) {
 
             if (cmp(menor, cursor) > 0) {
-
                 menor = cursor;
             }
         }
@@ -132,11 +130,9 @@ void _ordenar_seleccion(tVector* vector, Cmp cmp)
         memcpy(aux, limiteInf, vector->tamElem);
         memcpy(limiteInf, menor, vector->tamElem);
         memcpy(menor, aux, vector->tamElem);
-
     }
 
     free(aux);
-
 }
 
 int vector_ord_buscar(tVector* vector, void* elem, Cmp cmp)
