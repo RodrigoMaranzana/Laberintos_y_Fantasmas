@@ -1,10 +1,27 @@
-# Ignora archivos objeto
-obj/
-
-# Ignora archivos layout y depend de Code::Blocks
+# Codeblocks
 *.layout
 *.depend
-*.txt
+*.cscope_file_list
+
+# Ejecutables
 *.exe
+
+# Bibliotecas
+*.a
+
+# Objeto
+*.o
+
+# LyfDB
 *.dat
 *.idx
+*.idxs
+
+# Texto
+*.txt
+
+# Directorios
+bin/
+obj/
+rondas/
+bdatos/
