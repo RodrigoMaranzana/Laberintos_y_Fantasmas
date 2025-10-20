@@ -8,7 +8,7 @@ typedef enum {
 }eServidorRet;
 
 int servidor_inicializar();
-SOCKET servidor_crear_socket();
+SOCKET servidor_crear_socket(int puerto);
 void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *solicitud);
 
 #endif // SERVIDOR_H_INCLUDED

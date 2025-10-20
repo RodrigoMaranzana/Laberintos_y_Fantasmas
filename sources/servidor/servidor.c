@@ -1,4 +1,5 @@
 #include "../../include/comun/comun.h"
+#include "../../include/comun/mensaje.h"
 #include "../../include/servidor/servidor.h"
 #include <stdio.h>
 #include <string.h>
@@ -20,7 +21,7 @@ int servidor_inicializar(tBDatos *bDatos)
     return retorno;
 }
 
-SOCKET servidor_crear_socket()
+SOCKET servidor_crear_socket(int puerto)
 {
     SOCKET skt = socket(AF_INET, SOCK_STREAM, 0);
     if (skt == INVALID_SOCKET) return INVALID_SOCKET;
@@ -28,7 +29,7 @@ SOCKET servidor_crear_socket()
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(PUERTO);
+    server_addr.sin_port = htons(puerto);
 
     if (bind(skt, (struct sockaddr *)&server_addr, sizeof(server_addr)) == SOCKET_ERROR) {
         closesocket(skt);
@@ -45,52 +46,41 @@ SOCKET servidor_crear_socket()
 
 void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *solicitud)
 {
-    int retorno, cantRegistrosDatos = 0, tamRegistroDatos = 0;
+    int retorno, cantRegistros = 0;
+    char respuesta[TAM_BUFFER];
     const char *mensaje;
-    tLista listaDatos;
-    char *serializacionDatos = NULL, *registroDatos = NULL, respuesta[TAM_BUFFER];
+    tLista listaRegistros;
 
-    lista_crear(&listaDatos);
+    printf(FONDO_MAGENTA "Recibido:" COLOR_RESET " %s\n", solicitud);
 
-    retorno = bdatos_procesar_solcitud(bDatos, solicitud, &listaDatos, &cantRegistrosDatos, &tamRegistroDatos);
+    lista_crear(&listaRegistros);
+
+    retorno = bdatos_procesar_solicitud(bDatos, solicitud, &listaRegistros, &cantRegistros);
     mensaje = bdatos_obtener_mensaje(retorno);
+
+    snprintf(respuesta, TAM_BUFFER, "%d;%s;%d\n", retorno, mensaje, cantRegistros);
+    send(*sock, respuesta, strlen(respuesta), 0);
+    printf(FONDO_AMARILLO "Enviado:" COLOR_RESET " %s", respuesta);
 
     if (retorno == BD_DATOS_OBTENIDOS) {
 
-        serializacionDatos = malloc(cantRegistrosDatos * tamRegistroDatos);
-        if (!serializacionDatos || !(registroDatos = malloc(tamRegistroDatos))) {
-            mensaje = bdatos_obtener_mensaje(BD_ERROR_SIN_MEMO);
-            free(serializacionDatos);
-            lista_vaciar(&listaDatos);
-        } else{
-            char *pSerializacionDatos = serializacionDatos;
-            memset(serializacionDatos, 0, cantRegistrosDatos * tamRegistroDatos);
-            while (lista_sacar_primero(&listaDatos, registroDatos, tamRegistroDatos) != LISTA_VACIA) {
+        char registroBinario[bDatos->tablaAbierta.encabezado.tamRegistro];
 
-                memcpy(pSerializacionDatos, registroDatos, tamRegistroDatos);
-                pSerializacionDatos += tamRegistroDatos;
+        mensaje_color(FONDO_BLANCO, "Enviando %d registro%s.", cantRegistros, cantRegistros > 1 ? "s" : "");
+
+        while (lista_sacar_primero(&listaRegistros, registroBinario, bDatos->tablaAbierta.encabezado.tamRegistro) != LISTA_VACIA) {
+
+            char *registroTexto = bdatos_registro_a_texto(&bDatos->tablaAbierta.encabezado, registroBinario);
+
+            if (registroTexto) {
+
+                mensaje_color(FONDO_CIAN, "%s", registroTexto);
+                send(*sock, registroTexto, strlen(registroTexto), 0);
+                free(registroTexto);
             }
         }
     }
-
-    snprintf(respuesta, TAM_BUFFER, "%d;%s;%d;%d\n", retorno, mensaje, cantRegistrosDatos, tamRegistroDatos);
-
-    send(*sock, respuesta, strlen(respuesta), 0);
-    printf(FONDO_AMARILLO "Enviado:" COLOR_RESET " %s\n", respuesta);
-
-    if (serializacionDatos) {
-
-        unsigned tamSerializacion = cantRegistrosDatos * tamRegistroDatos;
-
-        send(*sock, serializacionDatos, tamSerializacion, 0);
-        printf(FONDO_BLANCO "Datos enviados:" COLOR_RESET " %d bytes\n", tamSerializacion);
-    }
-
-    free(serializacionDatos);
-    free(registroDatos);
 }
-
-
 
 
 
