@@ -56,7 +56,7 @@ typedef int (*tParsear)(tSecuencia *secuencia, void *salida, unsigned tamSalida)
 
 static int _terminal_parsear_texto(tSecuencia *secuencia, void *salida, unsigned tamSalida);
 static int _terminal_parsear(tSecuencia *secuencia, tParsear parsear, void *salida, unsigned tamSalida);
-void terminal_actualizar_parentesis(const char* linea, int *parentesis);
+void terminal_actualizar_llave(const char* linea, int *llave);
 void terminal_imprimir_sintaxis(const char* linea);
 static void _terminal_crear_secuencia(tSecuencia *secuencia, const char *buffer);
 static const char* _terminal_simbolo_color(const char* simbolo);
@@ -64,11 +64,11 @@ static int _terminal_cmp_color_simbolo(const void* a, const void* b);
 
 int main()
 {
-    int corriendo = 1, parentesis = 0;
+    int corriendo = 1, llave = 0;
     SOCKET sock;
-    char conectado = SESION_OFFLINE, bufferLinea[1024], bufferComandos[8192] = {0}, *cursor;
+    char conectado = SESION_OFFLINE, bufferLinea[1024], *cursor ;
     eModoTerminal modo = MODO_TERMINAL;
-    tCola colaRespuestas;
+    tCola colaRespuestas, colaLineas;
 
     mensaje_titulo("LyfDB - Terminal del Servicio");
 
@@ -78,10 +78,11 @@ int main()
     }
 
     cola_crear(&colaRespuestas);
+    cola_crear(&colaLineas);
 
     while (corriendo) {
 
-        if (modo == MODO_BDATOS && parentesis > 0) {
+        if (modo == MODO_BDATOS && llave > 0) {
             printf(TEXTO_AMARILLO "... " TEXTO_RESET);
         } else if (modo == MODO_BDATOS) {
             printf(TEXTO_VERDE "%s%s%s", "LyfDB", TEXTO_RESET, "> ");
@@ -89,49 +90,79 @@ int main()
             printf(TEXTO_VERDE "%s%s%s", "terminal", TEXTO_RESET, "> ");
         }
 
+
         fgets(bufferLinea, sizeof(bufferLinea), stdin);
         cursor = strchr(bufferLinea, '\n');
-        if (cursor) {
-            *cursor = '\0';
+        if (!cursor) {
+            return -1;
         }
+        *cursor = '\0';
+
 
         if (modo == MODO_BDATOS) {
 
-            strncat(bufferComandos, bufferLinea, sizeof(bufferComandos) - strlen(bufferComandos) - 1);
-            strncat(bufferComandos, "\n", sizeof(bufferComandos) - strlen(bufferComandos) - 1);
+            strncat(bufferLinea, "\n", 2);
 
-            terminal_actualizar_parentesis(bufferLinea, &parentesis);
+            cola_encolar(&colaLineas, bufferLinea, strlen(bufferLinea) + 1);
+            printf("\x1b[1A\r\x1b[2K");
 
-            if (strlen(bufferComandos) > 0 && parentesis == 0) {
-
-                printf("\x1b[1A\r\x1b[2K");
+            if (llave == 0) {
                 printf(TEXTO_VERDE "LyfDB" TEXTO_RESET "> ");
-                terminal_imprimir_sintaxis(bufferComandos);
-
-                if (cliente_enviar_solicitud(sock, bufferComandos) == CE_ERR_SOCKET) {
-                    conectado = SESION_OFFLINE;
-                    mensaje_advertencia("Socket desconectado.");
-                }
-
-                memset(bufferComandos, 0, sizeof(bufferComandos));
+            } else {
+                printf(TEXTO_AMARILLO "... " TEXTO_RESET);
             }
 
-            if (cliente_recibir_respuesta(sock, &colaRespuestas) == CE_DATOS) {
+            terminal_imprimir_sintaxis(bufferLinea);
 
-                int i = 1;
-                char buffer[TAM_BUFFER];
-                puts("");
-                if (cola_desencolar(&colaRespuestas, buffer, sizeof(buffer)) != COLA_VACIA) {
-                    printf(TEXTO_CIAN "[RESPUESTA]\n" TEXTO_AMARILLO "  %s" ,buffer);
+            terminal_actualizar_llave(bufferLinea, &llave);
+
+            if (cola_vacia(&colaLineas) != COLA_VACIA && llave == 0) {
+
+                while (cola_desencolar(&colaLineas, bufferLinea, sizeof(bufferLinea)) != COLA_VACIA) {
+
+                    cursor = strchr(bufferLinea, '{');
+                    if (cursor) {
+                        *cursor = ' ';
+                    }
+                    cursor = strchr(bufferLinea, '}');
+                    if (cursor) {
+                        *cursor = ' ';
+                    }
+                    cursor = strchr(bufferLinea, '\n');
+                    if (!cursor) {
+                        return -1;
+                    }
+                    *cursor = '\0';
+
+                    if (strlen(bufferLinea) > 0) {
+
+                        if (cliente_enviar_solicitud(sock, bufferLinea) == CE_ERR_SOCKET) {
+                            conectado = SESION_OFFLINE;
+                            mensaje_advertencia("Socket desconectado.");
+                            modo = MODO_TERMINAL;
+                            break;
+                        }
+
+                        if (cliente_recibir_respuesta(sock, &colaRespuestas) == CE_DATOS) {
+
+                            int i = 1;
+                            char buffer[TAM_BUFFER];
+                            puts("");
+                            if (cola_desencolar(&colaRespuestas, buffer, sizeof(buffer)) != COLA_VACIA) {
+                                printf(TEXTO_CIAN "[RESPUESTA]\n" TEXTO_AMARILLO "  %s" ,buffer);
+                                *buffer = '\0';
+                            }
+                            while (cola_desencolar(&colaRespuestas, buffer, sizeof(buffer)) != COLA_VACIA) {
+                                printf(TEXTO_MAGENTA "  %d. " TEXTO_AMARILLO "%s", i++, buffer);
+                            }
+                            puts("");
+                        }
+                    }
                 }
-                printf(TEXTO_CIAN "[REGISTROS]\n" TEXTO_RESET);
-                while (cola_desencolar(&colaRespuestas, buffer, sizeof(buffer)) != COLA_VACIA) {
-                    printf(TEXTO_MAGENTA "  %d. " TEXTO_AMARILLO "%s", i++, buffer);
-                }
-                puts("");
+
+                cola_vaciar(&colaLineas);
+                cola_vaciar(&colaRespuestas);
             }
-
-            cola_vaciar(&colaRespuestas);
 
         } else {
 
@@ -224,14 +255,14 @@ static int _terminal_cmp_color_simbolo(const void* a, const void* b) {
 }
 
 
-void terminal_actualizar_parentesis(const char* linea, int *parentesis) {
+void terminal_actualizar_llave(const char* linea, int *llave) {
 
     for (int i = 0; linea[i] != '\0'; ++i) {
 
         switch (linea[i]) {
-            case '(': ++(*parentesis);
+            case '{': ++(*llave);
                 break;
-            case ')': --(*parentesis);
+            case '}': --(*llave);
                 break;
         }
     }
