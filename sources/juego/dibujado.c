@@ -1,6 +1,6 @@
-#include "../../include/cliente/dibujado.h"
-#include "../../include/cliente/temporizador.h"
-#include "../../include/cliente/graficos.h"
+#include "../../include/juego/dibujado.h"
+#include "../../include/juego/temporizador.h"
+#include "../../include/juego/graficos.h"
 
 #include <math.h>
 #include <stdio.h>

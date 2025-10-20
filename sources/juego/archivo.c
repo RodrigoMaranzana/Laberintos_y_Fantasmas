@@ -1,8 +1,8 @@
-#include "../../include/cliente/archivo.h"
+#include "../../include/juego/archivo.h"
 #include "../../include/comun/comun.h"
+#include "../../include/comun/mensaje.h"
 
 #include <string.h>
-#include <ctype.h>
 
 #define MASC_FILAS              0b000001
 #define MASC_COLUMNAS           0b000010
@@ -74,9 +74,9 @@ int archivo_escribir_conf(FILE* arch, const tConf *conf)
 int archivo_escribir_escenario(tEscenario *escenario, int numRonda, long semillaRonda)
 {
     int fila, columna, c;
-    char nombreArch[TAM_NOMBRE_ARCH];
+    char nombreArch[TAM_NOMBRE_ARCH_CONF];
 
-    sprintf(nombreArch, "laberinto-ronda-%d_%ld.txt", numRonda, semillaRonda);
+    sprintf(nombreArch, "rondas/laberinto-ronda-%d_%ld.txt", numRonda, semillaRonda);
     FILE *arch = fopen(nombreArch, "w");
     if (!arch){
         return ERR_ARCHIVO;
@@ -112,6 +112,7 @@ int archivo_escribir_escenario(tEscenario *escenario, int numRonda, long semilla
     return ERR_TODO_OK;
 }
 
+
 /*************************
     FUNCIONES ESTATICAS
 *************************/
@@ -145,7 +146,7 @@ static int _archivo_parsear_linea_conf(char *buffer, tParam *param)
     cursor = param->nombre;
 
     while(*cursor && (ES_LETRA(*cursor) || *cursor == '_')) {
-        *cursor = toupper(*cursor);
+        *cursor &= ~0x20;
         cursor++;
     }
 

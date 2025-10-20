@@ -4,12 +4,12 @@
 #include <SDL.h>
 #include <SDL_mixer.h>
 #include <stdio.h>
-#include "../../include/cliente/logica.h"
-#include "../../include/cliente/texto.h"
-#include "../../include/cliente/menu.h"
+#include "../../include/juego/logica.h"
+#include "../../include/juego/texto.h"
+#include "../../include/juego/menu.h"
 #include "../../include/comun/cliente.h"
-#include "../../include/cliente/widget.h"
-#include "../../include/cliente/ventana.h"
+#include "../../include/juego/widget.h"
+#include "../../include/juego/ventana.h"
 
 #define TECLA_VALIDA(k)( k == SDLK_ESCAPE || k == SDLK_RETURN || k == SDLK_BACKSPACE || k == SDLK_UP || k == SDLK_DOWN || k == SDLK_LEFT || k == SDLK_RIGHT ? 1 : 0)
 

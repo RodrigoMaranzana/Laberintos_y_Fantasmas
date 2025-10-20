@@ -2,15 +2,13 @@
 #define ARCHIVO_H_INCLUDED
 
 #include <stdio.h>
-#include "../../include/cliente/escenario.h"
+#include "../../include/juego/escenario.h"
 
 //MACROS
 #define ERR_LINEA_LARGA         1
 #define TAM_NOMBRE              23
 #define TAM_LINEA               64
-
-#define TAM_NOMBRE_ARCH         64
-
+#define TAM_NOMBRE_ARCH_CONF    64
 
 typedef struct {
     char nombre[TAM_NOMBRE + 1];
@@ -25,7 +23,6 @@ typedef struct {
     int max_num_premios;
     int max_vidas_extra;
 } tConf;
-
 
 int archivo_leer_conf(FILE* arch, tConf *conf);
 int archivo_escribir_conf(FILE* arch, const tConf *conf);

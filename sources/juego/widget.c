@@ -1,6 +1,6 @@
-#include "../../include/cliente/widget.h"
-#include "../../include/cliente/graficos.h"
-#include "../../include/cliente/texto.h"
+#include "../../include/juego/widget.h"
+#include "../../include/juego/graficos.h"
+#include "../../include/juego/texto.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -187,26 +187,6 @@ void widget_alternar_visibilidad(tWidget *widget)
 {
     widget->visible = !widget->visible;
 }
-
-//void widget_obtener_valor(tWidget *widget, void *valor, unsigned tamValor)
-//{
-//    switch (widget->tipo) {
-//
-//        case WIDGET_CAMPO_TEXTO: {
-//
-//            strncpy(valor, , tamValor);
-//            valor[tamValor - 1] = '\0';
-//            break;
-//        }
-//        case WIDGET_CONTADOR: {
-//
-//            *valor = contador->valor;
-//            break;
-//        }
-//        default:
-//            return WIDGET_INCORRECTO;
-//    }
-//}
 
 int widget_modificar_valor(tWidget *widget, void *valor)
 {

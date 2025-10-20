@@ -14,6 +14,11 @@ typedef enum {
     CE_ERR_SERVIDOR,
 } eErrCliente;
 
+typedef enum {
+    SESION_ONLINE,
+    SESION_OFFLINE,
+}eEstadoSesion;
+
 int cliente_inicializar();
 SOCKET cliente_conectar_servidor(const char *ipServidor, int puerto);
 int cliente_enviar_solicitud(SOCKET sock, const char *solicitud);

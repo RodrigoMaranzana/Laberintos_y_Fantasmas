@@ -1,4 +1,4 @@
-#include "../../include/cliente/ventana.h"
+#include "../../include/juego/ventana.h"
 
 #include <math.h>
 #include <string.h>
@@ -78,7 +78,6 @@ void ventana_dibujar(tVentana *ventana)
     SDL_RenderSetViewport(ventana->renderer, &area);
 
     if (ventana->accion.dibujar) {
-
         ventana->accion.dibujar(ventana->accion.datos);
     }
 

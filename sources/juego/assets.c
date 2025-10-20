@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "../../include/comun/comun.h"
 #include "../../include/comun/mensaje.h"
-#include "../../include/cliente/assets.h"
+#include "../../include/juego/assets.h"
 
 int assets_cargar_imagenes(SDL_Renderer *renderer, SDL_Texture **imagenes)
 {

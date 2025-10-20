@@ -1,6 +1,6 @@
 #ifndef LOGICA_H_INCLUDED
 #define LOGICA_H_INCLUDED
-#include "../../include/cliente/escenario.h"
+#include "../../include/juego/escenario.h"
 #include "../../include/comun/cola.h"
 
 typedef enum {

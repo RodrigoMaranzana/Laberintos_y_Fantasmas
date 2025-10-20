@@ -1,4 +1,4 @@
-#include "../../include/cliente/cliente.h"
+#include "../../include/comun/cliente.h"
 #include "../../include/comun/comun.h"
 #include "../../include/comun/protocolo.h"
 #include "../../include/comun/mensaje.h"
@@ -6,8 +6,6 @@
 #include <string.h>
 
 static int _cliente_recibir_respuesta(SOCKET sock, char *respuesta, int tamBuffer);
-static int _cliente_recibir_datos(SOCKET sock, char *bufferDatos, int bytesEsperados);
-
 
 int cliente_inicializar()
 {
@@ -60,8 +58,8 @@ int cliente_enviar_solicitud(SOCKET sock, const char *solicitud)
 
 int cliente_recibir_respuesta(SOCKET sock, tCola *colaRespuestas)
 {
-    char respuesta[TAM_BUFFER], *datos = NULL, *cursor;
-    int cantReg, tamReg;
+    char respuesta[TAM_BUFFER], *cursor;
+    int cantReg = 0, codigoRetorno;
 
     if (_cliente_recibir_respuesta(sock, respuesta, sizeof(respuesta)) != 0) {
         mensaje_error("El servidor no ha respondido");
@@ -69,45 +67,37 @@ int cliente_recibir_respuesta(SOCKET sock, tCola *colaRespuestas)
         return CE_ERR_SOCKET;
     }
 
-    cola_encolar(colaRespuestas, respuesta, strlen(respuesta));
+    cola_encolar(colaRespuestas, respuesta, strlen(respuesta) + 1);
 
-    cursor = strchr(respuesta, '\n');
-    if (!cursor) {
-        return CE_ERR_RESPUESTA_CORRUPTA;
+    sscanf(respuesta, "%d", &codigoRetorno);
+    cursor = strrchr(respuesta, ';');
+    if (cursor) {
+        sscanf(cursor + 1, "%d", &cantReg);
     }
-    *cursor = '\0';
 
-    cursor = strrchr(respuesta, ';');
-    sscanf(cursor + 1, "%d", &tamReg);
-    *cursor = '\0';
+    if (codigoRetorno == BD_DATOS_OBTENIDOS && cantReg > 0) {
 
-    cursor = strrchr(respuesta, ';');
-    sscanf(cursor + 1, "%d", &cantReg);
-    *cursor = '\0';
+        for (int i = 0; i < cantReg; i++) {
 
-    if (cantReg > 0 && tamReg > 0) {
+            if (_cliente_recibir_respuesta(sock, respuesta, sizeof(respuesta))!= 0) {
 
-        unsigned tamDatos = (cantReg) * (tamReg);
-        datos = (char*)malloc(tamDatos);
-        if (!datos) {
-            return CE_ERR_SIN_MEM;
+                mensaje_error("No se pudo recibir los datos.");
+                return CE_ERR_SOCKET;
+            }
+
+            cola_encolar(colaRespuestas, respuesta, strlen(respuesta) + 1);
         }
-
-        if (_cliente_recibir_datos(sock, datos, tamDatos) != 0) {
-            free(datos);
-            datos = NULL;
-            return CE_ERR_SOCKET;
-        }
-
-        cola_encolar(colaRespuestas, &datos, sizeof(char*));
 
         return CE_DATOS;
     }
 
+    if (codigoRetorno == BD_TODO_OK) {
+
+        return CE_TODO_OK;
+    }
+
     return CE_ERR_SERVIDOR;
 }
-
-
 
 static int _cliente_recibir_respuesta(SOCKET sock, char *respuesta, int tamBuffer)
 {
@@ -118,24 +108,5 @@ static int _cliente_recibir_respuesta(SOCKET sock, char *respuesta, int tamBuffe
     }
 
     respuesta[bytesRecibidos] = '\0';
-    return 0;
-}
-
-static int _cliente_recibir_datos(SOCKET sock, char *bufferDatos, int bytesEsperados)
-{
-    int bytesRestantes = bytesEsperados;
-    char *pBuffer = bufferDatos;
-
-    while (bytesRestantes > 0) {
-
-        int leidos = recv(sock, pBuffer, bytesRestantes, 0);
-
-        if (leidos <= 0) {
-            return -1;
-        }
-
-        pBuffer += leidos;
-        bytesRestantes -= leidos;
-    }
     return 0;
 }

@@ -1,8 +1,8 @@
-#include "../../include/cliente/juego.h"
-#include "../../include/cliente/assets.h"
+#include "../../include/juego/juego.h"
+#include "../../include/juego/assets.h"
 #include "../../include/comun/comun.h"
-#include "../../include/cliente/dibujado.h"
-#include "../../include/cliente/graficos.h"
+#include "../../include/juego/dibujado.h"
+#include "../../include/juego/graficos.h"
 #include "../../include/comun/protocolo.h"
 #include "../../include/comun/mensaje.h"
 
@@ -53,7 +53,6 @@ void _juego_inicializar_base_datos(tJuego *juego);
 int _juego_buscar_respuesta_datos(tJuego *juego, int *codigoRetorno, int *cantRegistros, int *tamRegistro);
 int _juego_procesar_contingencia(tJuego *juego);
 static void _juego_procesar_cola_respuestas(tJuego *juego);
-static char* _juego_procesar_elem_cola_respuestas(tCola *colaRespuestas, tCola *colaContextos, int *codigoRet, int *cantReg, int *tamReg, eColaContexto *contexto);
 static void _juego_configurar_menu(tJuego *juego);
 
 static int _juego_ventana_menu_crear(void *datos);
@@ -74,9 +73,10 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, eEs
 {
     int ret = ERR_TODO_OK;
 
+    mensaje_subtitulo("Inicializando juego");
+
     memset(juego, 0, sizeof(tJuego));
     juego->estado = JUEGO_NO_INICIADO;
-    mensaje_debug("Iniciando SDL\n");
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != ERR_TODO_OK) {
         mensaje_error("No se pudo inicializar SDL");
         mensaje_color(TEXTO_ROJO_B, "%s", SDL_GetError());
@@ -124,6 +124,10 @@ int juego_inicializar(tJuego *juego, const char *tituloVentana, SOCKET sock, eEs
     juego->sock = sock;
     juego->sesion = sesion;
     juego->estado = JUEGO_CORRIENDO;
+
+    if (comun_crear_directorio("rondas") != ERR_TODO_OK) {
+        mensaje_advertencia("No se pudo crear el directorio /rondas. Los .txt de la ronda no se guardaran.");
+    }
 
     juego->archContingencia = fopen("contingencia.txt", "a+");
     if (!juego->archContingencia) {
@@ -181,20 +185,27 @@ int _juego_procesar_contingencia(tJuego *juego)
 
                 if (*jugadorAux.username == '\0' || strcmp(jugadorAux.username, username) != 0) {
 
-                    char *datos = NULL;
-                    int codigoRet, cantReg, tamReg;
-                    eColaContexto contexto;
+                    cola_vaciar(&juego->colaRespuestas);
 
                     sprintf(solicitudAux, "SELECCIONAR jugadores DONDE (username IGUAL %s)", username);
                     if (cliente_enviar_solicitud(juego->sock, solicitudAux) == CE_ERR_SOCKET || cliente_recibir_respuesta(juego->sock, &juego->colaRespuestas) == CE_ERR_SOCKET) {
-                        juego->sesion = 0;
+                        juego->sesion = SESION_OFFLINE;
                         mensaje_advertencia("Socket desconectado, modo offline activo");
-                    }
+                    } else {
 
-                    datos = _juego_procesar_elem_cola_respuestas(&juego->colaRespuestas,&juego->colaContextos, &codigoRet, &cantReg, &tamReg, &contexto);
-                    if (datos) {
-                        memcpy(&jugadorAux, datos, tamReg);
-                        free(datos);
+                        char cabecera[TAM_BUFFER];
+                        int codigoRet, cantReg;
+
+                        if (cola_desencolar(&juego->colaRespuestas, cabecera, TAM_BUFFER) != COLA_VACIA) {
+                            sscanf(cabecera, "%d;%*[^;];%d", &codigoRet, &cantReg);
+
+                            if (codigoRet == BD_DATOS_OBTENIDOS && cantReg == 1) {
+                                char registroStr[TAM_BUFFER];
+                                if (cola_desencolar(&juego->colaRespuestas, registroStr, TAM_BUFFER) != COLA_VACIA) {
+                                    sscanf(registroStr, "%[^;];%d;%d", jugadorAux.username, &jugadorAux.record, &jugadorAux.cantPartidas);
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -255,7 +266,7 @@ int juego_ejecutar(tJuego *juego)
     eRetorno ret = ERR_TODO_OK;
     if (juego->sesion == SESION_ONLINE) {
         _juego_inicializar_base_datos(juego);
-        _juego_procesar_contingencia(juego);
+        //_juego_procesar_contingencia(juego);
        // _juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->sesion, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS);
         menu_estado_opcion(juego->hud.menu, M_PRI_RANKING, OPCION_HABILITADA);
     }
@@ -863,73 +874,53 @@ static void _juego_ventana_usuario_actualizar(SDL_Event *evento, void *datos)
     }
 }
 
-
-static char* _juego_procesar_elem_cola_respuestas(tCola *colaRespuestas, tCola *colaContextos, int *codigoRet, int *cantReg, int *tamReg, eColaContexto *contexto)
-{
-    char mensaje[TAM_BUFFER], respuesta[TAM_BUFFER], *cursor, *datos = NULL;
-
-    if (cola_desencolar(colaRespuestas, &respuesta, TAM_BUFFER) == COLA_VACIA
-        || cola_desencolar(colaContextos, contexto, sizeof(eColaContexto)) == COLA_VACIA) {
-        return NULL;
-    }
-
-    cursor = strchr(respuesta, '\n');
-    if (!cursor) {
-        return NULL;
-    }
-    *cursor = '\0';
-
-    cursor = strrchr(respuesta, ';');
-    sscanf(cursor + 1, "%d", tamReg);
-    *cursor = '\0';
-
-    cursor = strrchr(respuesta, ';');
-    sscanf(cursor + 1, "%d", cantReg);
-    *cursor = '\0';
-
-    cursor = strrchr(respuesta, ';');
-    strncpy(mensaje, cursor + 1, TAM_BUFFER);
-    mensaje[TAM_BUFFER - 1] = '\0';
-
-    *cursor = '\0';
-    sscanf(respuesta, "%d", codigoRet);
-
-    mensaje_color(*codigoRet > BD_ERROR_SIN_RESULTADOS ? TEXTO_ROJO : TEXTO_VERDE, "Respuesta: retorno = %d,  mensaje = %s", *codigoRet, mensaje);
-
-    if (*codigoRet == BD_DATOS_OBTENIDOS && *cantReg > 0 && *tamReg > 0) {
-
-        cola_desencolar(colaRespuestas, &datos, sizeof(void*));
-    }
-
-    return datos;
-}
-
-/// DEBE CAMBIAR
 static void _juego_procesar_cola_respuestas(tJuego *juego)
 {
-    char *datos = NULL;
-    int codigoRet, cantReg, tamReg;
+    char cabecera[TAM_BUFFER];
+    char registroStr[TAM_BUFFER];
+    int codigoRet, cantReg;
+    char mensaje[TAM_BUFFER];
     eColaContexto contexto;
 
-    datos = _juego_procesar_elem_cola_respuestas(&juego->colaRespuestas, &juego->colaContextos, &codigoRet, &cantReg, &tamReg, &contexto);
+    if (cola_desencolar(&juego->colaContextos, &contexto, sizeof(eColaContexto)) == COLA_VACIA) {
+        return;
+    }
+
+    if (cola_desencolar(&juego->colaRespuestas, cabecera, TAM_BUFFER) == COLA_VACIA) {
+        return;
+    }
+
+    sscanf(cabecera, "%d;%[^;];%d", &codigoRet, mensaje, &cantReg);
+    mensaje_color(codigoRet > BD_ERROR_SIN_RESULTADOS ? TEXTO_ROJO : TEXTO_VERDE, "Respuesta: %d, %s, %d", codigoRet, mensaje, cantReg);
+
+    if (codigoRet < BD_TODO_OK || cantReg == 0) {
+
+        if (contexto == CONTEXTO_RANKING) {
+
+            juego->rankingCant = 0;
+        }
+        return;
+    }
 
     switch (contexto) {
         case CONTEXTO_DATOS_JUGADOR:
             if (codigoRet == BD_DATOS_OBTENIDOS && cantReg == 1) {
-                memcpy(&juego->jugador, datos, tamReg);
+
+                cola_desencolar(&juego->colaRespuestas, registroStr, TAM_BUFFER);
+                sscanf(registroStr, "%[^;];%d;%d", juego->jugador.username, &juego->jugador.record, &juego->jugador.cantPartidas);
             }
             break;
         case CONTEXTO_RANKING: {
-            if (codigoRet == BD_DATOS_OBTENIDOS && cantReg > 0) {
-                memcpy(juego->ranking, datos, MIN(cantReg, TOP_CANT) * tamReg);
-                juego->rankingCant = cantReg;
-            } else {
-                juego->rankingCant = 0;
+            juego->rankingCant = MIN(cantReg, TOP_CANT);
+            for (int i = 0; i < juego->rankingCant; i++) {
+
+                cola_desencolar(&juego->colaRespuestas, registroStr, TAM_BUFFER);
+                sscanf(registroStr, "%[^;];%d", juego->ranking[i].username, &juego->ranking[i].record);
             }
-            free(datos);
             break;
         }
         default:
+            cola_vaciar(&juego->colaRespuestas);
             break;
     }
 }
@@ -944,7 +935,7 @@ static void _juego_ventana_usuario_dibujar(void *datos)
     tWidget* widget = juego->hud.widgets[HUD_WIDGET_LINEA];
     widget_modificar_visibilidad(widget, WIDGET_VISIBLE);
 
-    sprintf(buffer, "Ingrese su nombre");
+    sprintf(buffer, " Ingrese su nombre ");
     widget_modificar_valor(widget, buffer);
     widget_modificar_posicion(widget, nuevaPos);
     widget_dibujar(juego->hud.widgets[HUD_WIDGET_LINEA]);

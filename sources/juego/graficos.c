@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "../../include/cliente/graficos.h"
+#include "../../include/juego/graficos.h"
 #include "../../include/comun/mensaje.h"
 
 SDL_Texture* graficos_crear_textura(SDL_Renderer *renderer, int ancho, int alto, int modoAcceso, unsigned formato)

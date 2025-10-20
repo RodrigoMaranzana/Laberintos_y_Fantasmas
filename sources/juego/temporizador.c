@@ -1,4 +1,4 @@
-#include "../../include/cliente/temporizador.h"
+#include "../../include/juego/temporizador.h"
 #include <SDL.h>
 #include <stdlib.h>
 

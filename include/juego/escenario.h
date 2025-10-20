@@ -2,8 +2,8 @@
 #define ESCENARIO_H_INCLUDED
 
 #include <SDL.h>
-#include "../../include/cliente/assets.h"
-#include "../../include/cliente/temporizador.h"
+#include "../../include/juego/assets.h"
+#include "../../include/juego/temporizador.h"
 #include "../../include/comun/comun.h"
 
 #define CAPAS_X_CASILLA 2

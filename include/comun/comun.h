@@ -15,26 +15,12 @@
 //Servidor
 #define IP_SERVIDOR "127.0.0.1"
 #define PUERTO 12345
+#define PUERTO_TERMINAL 23456
 #define TAM_BUFFER 1024
 #define TAM_COMANDO_MAX 17
 #define TAM_USUARIO 16
-
-#define COLOR_ROJO         "\x1b[31m"
-#define COLOR_VERDE        "\x1b[32m"
-#define COLOR_AMARILLO     "\x1b[33m"
-#define COLOR_AZUL         "\x1b[34m"
-#define COLOR_MAGENTA      "\x1b[35m"
-#define COLOR_CIAN         "\x1b[36m"
-#define COLOR_BLANCO       "\x1b[37m"
-#define COLOR_RESET        "\x1b[0m"
-#define FONDO_NEGRO        "\x1b[40m"
-#define FONDO_ROJO         "\x1b[30m\x1b[41m"
-#define FONDO_VERDE        "\x1b[30m\x1b[42m"
-#define FONDO_AMARILLO     "\x1b[30m\x1b[43m"
-#define FONDO_AZUL         "\x1b[30m\x1b[44m"
-#define FONDO_MAGENTA      "\x1b[30m\x1b[45m"
-#define FONDO_CIAN         "\x1b[30m\x1b[46m"
-#define FONDO_BLANCO       "\x1b[30m\x1b[47m"
+#define TAM_DIRECTORIO 256
+#define TAM_RUTA 256
 
 typedef enum {
     ERR_TODO_OK,
@@ -55,6 +41,9 @@ typedef enum {
     ERR_OFFLINE,
     ERR_LOGICA,
 } eRetorno;
+
+int comun_crear_directorio(const char *directorio);
+
 
 
 #endif // COMUN_H_INCLUDED

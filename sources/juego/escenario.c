@@ -1,4 +1,4 @@
-#include "../../include/cliente/escenario.h"
+#include "../../include/juego/escenario.h"
 #include "../../include/comun/matriz.h"
 #include "../../include/comun/pila.h"
 #include "../../include/comun/mensaje.h"

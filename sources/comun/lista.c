@@ -9,7 +9,6 @@ void lista_crear(tLista *lista)
     *lista = NULL;
 }
 
-
 void lista_recorrer(const tLista *lista, tAccion accion, void *extra)
 {
     while (*lista) {

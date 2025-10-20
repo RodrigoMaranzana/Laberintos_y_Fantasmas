@@ -31,5 +31,6 @@ void mensaje_advertencia(const char *mensaje);
 void mensaje_error(const char *mensaje);
 void mensaje_debug(const char *mensaje);
 void mensaje_titulo(const char *mensaje);
+void mensaje_subtitulo(const char *mensaje);
 
 #endif // MENSAJE_H_INCLUDED

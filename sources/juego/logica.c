@@ -1,7 +1,7 @@
-#include "../../include/cliente/logica.h"
-#include "../../include/cliente/archivo.h"
+#include "../../include/juego/logica.h"
+#include "../../include/juego/archivo.h"
 #include "../../include/comun/matriz.h"
-#include "../../include/cliente/temporizador.h"
+#include "../../include/juego/temporizador.h"
 #include "../../include/comun/pila.h"
 #include "../../include/comun/mensaje.h"
 
@@ -134,7 +134,7 @@ int logica_procesar_turno(tLogica *logica, SDL_Keycode tecla)
             logica->jugador.orientacion = MIRANDO_DERECHA;
             break;
         default:
-            return 0; // Tecla invalida
+            return 0;
     }
 
     if (logica_ubicacion_valida(&logica->escenario, nuevaUbicJugador)) {
@@ -224,12 +224,11 @@ void logica_procesar_movimientos(tLogica *logica)
     tMovimiento mov;
     tUbicacion ubicNueva;
 
-    while (cola_vacia(&logica->movimientos) == COLA_TODO_OK) {
+    while (cola_desencolar(&logica->movimientos, &mov, sizeof(tMovimiento)) == COLA_TODO_OK) {
 
         int puedeMoverse = 1;
         tEntidad *entidadEnMov, *entidadEnCasilla;
 
-        cola_desencolar(&logica->movimientos, &mov, sizeof(tMovimiento));
         if (mov.entidad->tipo == ENTIDAD_JUGADOR) {
 
             cola_encolar(&logica->movsJugador, &mov, sizeof(tMovimiento));
@@ -239,41 +238,38 @@ void logica_procesar_movimientos(tLogica *logica)
         entidadEnMov = mov.entidad;
         entidadEnCasilla = logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].entidad;
 
-        if(entidadEnMov->estado == ENTIDAD_ATURDIDA || entidadEnMov->estado == ENTIDAD_SIN_VIDA){
+        if (entidadEnMov->estado == ENTIDAD_ATURDIDA || entidadEnMov->estado == ENTIDAD_SIN_VIDA) {
 
             puedeMoverse = 0;
-        }
 
-        if (puedeMoverse && entidadEnCasilla != NULL) {
+        } else if (entidadEnCasilla != NULL) {
 
-            tEntidad *fantasmaElim;
+            if (entidadEnCasilla->tipo == ENTIDAD_JUGADOR || entidadEnMov->tipo == ENTIDAD_JUGADOR) {
 
-            if (entidadEnMov->tipo != ENTIDAD_JUGADOR && entidadEnCasilla->tipo != ENTIDAD_JUGADOR) {
+                tEntidad *jugador = (entidadEnMov->tipo == ENTIDAD_JUGADOR) ? entidadEnMov : entidadEnCasilla;
+                tEntidad *fantasma = (entidadEnMov->tipo == ENTIDAD_JUGADOR) ? entidadEnCasilla : entidadEnMov;
 
-                puedeMoverse = 0;
-            } else {
-
-                if (entidadEnMov->tipo != ENTIDAD_JUGADOR) {
-
-                    puedeMoverse = 0;
-                }
-
+                fantasma->estado = ENTIDAD_SIN_VIDA;
                 if (logica->ronda.cantVidasActual > 0) {
-                    logica->escenario.tablero[logica->jugador.ubic.fila][logica->jugador.ubic.columna].entidad = NULL;
+
                     logica->jugador.estado = ENTIDAD_ATURDIDA;
-                    logica->ronda.cantVidasActual--;
+                    --logica->ronda.cantVidasActual;
                     temporizador_iniciar(&logica->jugador.temporEstado);
-                    _logica_colocar_jugador(&logica->escenario, &logica->jugador);
-                    puedeMoverse = 0;
                 } else {
 
                     logica->jugador.estado = ENTIDAD_SIN_VIDA;
                     logica_fin_juego(logica);
                 }
 
-                fantasmaElim = (entidadEnMov->tipo != ENTIDAD_JUGADOR) ? entidadEnMov : entidadEnCasilla;
-                logica->escenario.tablero[fantasmaElim->ubic.fila][fantasmaElim->ubic.columna].entidad = NULL;
-                fantasmaElim->estado = ENTIDAD_SIN_VIDA;
+                logica->escenario.tablero[jugador->ubic.fila][jugador->ubic.columna].entidad = NULL;
+                logica->escenario.tablero[fantasma->ubic.fila][fantasma->ubic.columna].entidad = NULL;
+                _logica_colocar_jugador(&logica->escenario, &logica->jugador);
+
+                puedeMoverse = 0;
+
+            } else {
+
+                puedeMoverse = 0;
             }
         }
 
@@ -293,10 +289,10 @@ void logica_procesar_movimientos(tLogica *logica)
 
                         tEntidad *fantasma, *fantasmaUlt = logica->fantasmas + (logica->ronda.cantFantasmas - 1);
 
-                        logica->ronda.cantPremios++;
+                        ++logica->ronda.cantPremios;
                         logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].extra = EXTRA_NINGUNO;
 
-                        for (fantasma = logica->fantasmas; fantasma <= fantasmaUlt; fantasma++) {
+                        for (fantasma = logica->fantasmas; fantasma <= fantasmaUlt; ++fantasma) {
 
                             if (fantasma->estado != ENTIDAD_SIN_VIDA) {
 
@@ -307,7 +303,7 @@ void logica_procesar_movimientos(tLogica *logica)
                         break;
                     }
                     case EXTRA_VIDA: {
-                        logica->ronda.cantVidasActual++;
+                        ++logica->ronda.cantVidasActual;
                         logica->escenario.tablero[ubicNueva.fila][ubicNueva.columna].extra = EXTRA_NINGUNO;
                         logica->jugador.estado = ENTIDAD_POTENCIADA;
                         temporizador_iniciar(&logica->jugador.temporEstado);
@@ -320,8 +316,6 @@ void logica_procesar_movimientos(tLogica *logica)
         }
     }
 }
-
-
 
 int logica_mostrar_historial_movs(tCola *movsJugador)
 {
