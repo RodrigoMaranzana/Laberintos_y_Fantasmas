@@ -30,7 +30,7 @@ typedef enum {
 typedef enum {
     M_PRI_NUEVA_PARTIDA,
     M_PRI_CONTINUAR,
-    M_PRI_CAMBIAR_USUARIO,
+    M_PRI_LOGIN,
     M_PRI_RANKING,
     M_PRI_SALIR,
     M_PRI_CANTIDAD
@@ -42,6 +42,7 @@ static void _juego_iniciar_partida(void* datos);
 static void _juego_salir_del_juego(void* datos);
 static void _juego_continuar_partida(void* datos);
 static void _juego_mostrar_ranking(void *datos);
+static void _juego_login_username(void *datos);
 static int _juego_actualizar_hud(tHud *hud, tLogica *logica);
 static int _juego_crear_hud(tJuego *juego);
 static int _juego_cargar_assets(tJuego *juego);
@@ -155,9 +156,10 @@ int _juego_procesar_contingencia(tJuego *juego)
     char solicitud[TAM_BUFFER], solicitudAux[TAM_BUFFER];
     tJugador jugadorAux = {0};
     FILE *archContingenciaTmp = NULL;
-    fseek(juego->archContingencia, 0, SEEK_SET);
 
-    mensaje_advertencia("Sincronizando progreso Offline de partidas anteriores. Espere" PARPADEO "..." TEXTO_RESET "\n");
+    rewind(juego->archContingencia);
+
+    mensaje_advertencia("Sincronizando progreso Offline de partidas anteriores." TEXTO_RESET "\n");
 
     while (fgets(solicitud, TAM_BUFFER, juego->archContingencia)) {
 
@@ -183,26 +185,27 @@ int _juego_procesar_contingencia(tJuego *juego)
                      sscanf(cursor, "cantPartidas %d", &cantPartidas);
                 }
 
-                if (*jugadorAux.username == '\0' || strcmp(jugadorAux.username, username) != 0) {
+                if (strcmp(jugadorAux.username, username) != 0) {
 
                     cola_vaciar(&juego->colaRespuestas);
 
-                    sprintf(solicitudAux, "SELECCIONAR jugadores DONDE (username IGUAL %s)", username);
+                    sprintf(solicitudAux, "SELECCIONAR jugadores DONDE (username IGUAL %s)\n", username);
                     if (cliente_enviar_solicitud(juego->sock, solicitudAux) == CE_ERR_SOCKET || cliente_recibir_respuesta(juego->sock, &juego->colaRespuestas) == CE_ERR_SOCKET) {
                         juego->sesion = SESION_OFFLINE;
                         mensaje_advertencia("Socket desconectado, modo offline activo");
                     } else {
 
-                        char cabecera[TAM_BUFFER];
+                        char buffer[TAM_BUFFER];
                         int codigoRet, cantReg;
 
-                        if (cola_desencolar(&juego->colaRespuestas, cabecera, TAM_BUFFER) != COLA_VACIA) {
-                            sscanf(cabecera, "%d;%*[^;];%d", &codigoRet, &cantReg);
+                        if (cola_desencolar(&juego->colaRespuestas, buffer, TAM_BUFFER) != COLA_VACIA) {
+
+                            sscanf(buffer, "%d;%*[^;];%d", &codigoRet, &cantReg);
 
                             if (codigoRet == BD_DATOS_OBTENIDOS && cantReg == 1) {
-                                char registroStr[TAM_BUFFER];
-                                if (cola_desencolar(&juego->colaRespuestas, registroStr, TAM_BUFFER) != COLA_VACIA) {
-                                    sscanf(registroStr, "%[^;];%d;%d", jugadorAux.username, &jugadorAux.record, &jugadorAux.cantPartidas);
+
+                                if (cola_desencolar(&juego->colaRespuestas, buffer, TAM_BUFFER) != COLA_VACIA) {
+                                    sscanf(buffer, "%[^;];%d;%d", jugadorAux.username, &jugadorAux.record, &jugadorAux.cantPartidas);
                                 }
                             }
                         }
@@ -228,6 +231,7 @@ int _juego_procesar_contingencia(tJuego *juego)
                 }
 
             } else {
+
                 _juego_encolar_solicitud(&juego->colaSolicitudes, &juego->colaContextos, solicitud, CONTEXTO_IRRELEVANTE);
             }
         } else {
@@ -266,8 +270,7 @@ int juego_ejecutar(tJuego *juego)
     eRetorno ret = ERR_TODO_OK;
     if (juego->sesion == SESION_ONLINE) {
         _juego_inicializar_base_datos(juego);
-        //_juego_procesar_contingencia(juego);
-       // _juego_procesar_cola_solicitudes(juego->sock, juego->archContingencia, &juego->sesion, &juego->colaSolicitudes, SOLICITUD_PROCESAR_TODAS);
+        _juego_procesar_contingencia(juego);
         menu_estado_opcion(juego->hud.menu, M_PRI_RANKING, OPCION_HABILITADA);
     }
 
@@ -416,6 +419,7 @@ static void _juego_manejar_eventos(tJuego *juego)
 
                     ventana_cerrar(juego->ventanaUsername);
                     widget_modificar_valor(juego->hud.widgets[HUD_WIDGETS_USERNAME], juego->jugador.username);
+                    widget_modificar_visibilidad(juego->hud.widgets[HUD_WIDGETS_USERNAME], WIDGET_VISIBLE);
                 }
                 break;
             case LOGICA_RESULTADO:
@@ -465,7 +469,7 @@ static void _juego_manejar_input(tJuego *juego, SDL_Keycode tecla)
 
         Mix_PlayChannel(-1, juego->sonidos[SONIDO_JUGADOR_GAMEOVER], 0);
 
-        widget_modificar_visibilidad(juego->hud.widgets[HUD_WIDGETS_PERDISTE], 1);
+        widget_modificar_visibilidad(juego->hud.widgets[HUD_WIDGETS_PERDISTE], WIDGET_VISIBLE);
 
         juego->logica.estado = LOGICA_RESULTADO;
         cantMovs = logica_mostrar_historial_movs(&juego->logica.movsJugador);
@@ -485,7 +489,7 @@ static void _juego_manejar_input(tJuego *juego, SDL_Keycode tecla)
     }else if (juego->logica.estado == LOGICA_RESULTADO && tecla == SDLK_RETURN) {
         juego->logica.estado = LOGICA_EN_ESPERA;
         _juego_configurar_menu(juego);
-        widget_modificar_visibilidad(juego->hud.widgets[HUD_WIDGETS_PERDISTE], 0);
+        widget_modificar_visibilidad(juego->hud.widgets[HUD_WIDGETS_PERDISTE], WIDGET_OCULTO);
     }
 }
 
@@ -493,7 +497,6 @@ static int _juego_actualizar_hud(tHud *hud, tLogica *logica)
 {
     widget_modificar_valor(hud->widgets[HUD_WIDGET_VIDAS], &logica->ronda.cantVidasActual);
     widget_modificar_valor(hud->widgets[HUD_WIDGETS_PREMIOS], &logica->ronda.cantPremios);
-    widget_modificar_valor(hud->widgets[HUD_WIDGETS_RONDA], &logica->ronda.numRonda);
 
     if (logica->mostrarSigRonda) {
         widget_modificar_visibilidad(hud->widgets[HUD_WIDGETS_TEXTO], 1);
@@ -531,13 +534,14 @@ static void _juego_configurar_menu(tJuego *juego)
         case LOGICA_EN_PAUSA:
             menu_estado_opcion(juego->hud.menu, M_PRI_CONTINUAR, OPCION_HABILITADA);
             menu_estado_opcion(juego->hud.menu, M_PRI_RANKING, OPCION_OCULTA);
+            menu_estado_opcion(juego->hud.menu, M_PRI_LOGIN, OPCION_OCULTA);
             break;
         case LOGICA_EN_ESPERA:
+            menu_estado_opcion(juego->hud.menu, M_PRI_LOGIN, OPCION_HABILITADA);
         case LOGICA_FIN_PARTIDA:
         case LOGICA_RESULTADO:
             menu_estado_opcion(juego->hud.menu, M_PRI_CONTINUAR, OPCION_OCULTA);
             break;
-
         default:
             break;
     }
@@ -557,6 +561,8 @@ static void _juego_renderizar(SDL_Renderer *renderer, SDL_Texture **imagenes, tL
         ventana_dibujar(ventanaUsername);
         ventana_dibujar(ventanaRanking);
     }
+
+    widget_dibujar(hud->widgets[HUD_WIDGETS_USERNAME]);
 
     SDL_RenderPresent(renderer);
 }
@@ -628,6 +634,16 @@ static void _juego_mostrar_ranking(void *datos)
     juego->logica.estado = LOGICA_EN_RANKING;
 }
 
+static void _juego_login_username(void *datos)
+{
+    tJuego *juego = (tJuego*)(datos);
+    *juego->jugador.username = '\0';
+    widget_modificar_valor(juego->hud.widgets[HUD_WIDGETS_CAMPO_USERNAME], juego->jugador.username);
+    widget_modificar_visibilidad(juego->hud.widgets[HUD_WIDGETS_CAMPO_USERNAME], WIDGET_VISIBLE);
+    ventana_abrir(juego->ventanaUsername);
+    juego->logica.estado = LOGICA_EN_LOGIN;
+}
+
 static int _juego_ventana_menu_crear(void *datos)
 {
     tJuego *juego = (tJuego*)(datos);
@@ -668,7 +684,7 @@ static int _juego_ventana_menu_crear(void *datos)
         menu_destruir(juego->hud.menu);
         return -1;
     }
-    if (menu_agregar_opcion(juego->hud.menu, M_PRI_CAMBIAR_USUARIO, texturaAux, 64, (tMenuAccion){NULL, NULL}, OPCION_DESHABILITADA) != ERR_TODO_OK) {
+    if (menu_agregar_opcion(juego->hud.menu, M_PRI_LOGIN, texturaAux, 64, (tMenuAccion){_juego_login_username, juego}, OPCION_HABILITADA) != ERR_TODO_OK) {
         SDL_DestroyTexture(texturaAux);
         menu_destruir(juego->hud.menu);
         return -1;
@@ -779,9 +795,7 @@ static int _juego_crear_hud(tJuego *juego)
     if (!juego->hud.widgets[HUD_WIDGET_VIDAS]) return ERR_SIN_MEMORIA;
     juego->hud.widgets[HUD_WIDGETS_PREMIOS] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_PREMIOS_Y}, juego->imagenes[IMAGEN_ICO_PREMIOS], juego->fuentes[FUENTE_TAM_48], SDL_COLOR_BLANCO, 0, WIDGET_VISIBLE);
     if (!juego->hud.widgets[HUD_WIDGETS_PREMIOS]) return ERR_SIN_MEMORIA;
-    juego->hud.widgets[HUD_WIDGETS_RONDA] = widget_crear_contador(juego->renderer, (SDL_Point){HUD_X, HUD_RONDA_Y}, NULL, juego->fuentes[FUENTE_TAM_64], SDL_COLOR_BLANCO, 0, WIDGET_VISIBLE);
-    if (!juego->hud.widgets[HUD_WIDGETS_RONDA]) return ERR_SIN_MEMORIA;
-    juego->hud.widgets[HUD_WIDGETS_USERNAME] = widget_crear_texto(juego->renderer, NULL, (SDL_Point){rendererW / 2, rendererH - 32}, juego->fuentes[FUENTE_TAM_32], SDL_COLOR_BLANCO, (SDL_Color){0,0,0,0}, WIDGET_VISIBLE);
+    juego->hud.widgets[HUD_WIDGETS_USERNAME] = widget_crear_texto(juego->renderer, NULL, (SDL_Point){rendererW / 2, rendererH - 32}, juego->fuentes[FUENTE_TAM_32], SDL_COLOR_BLANCO, (SDL_Color){18, 5, 35, 196}, WIDGET_OCULTO);
     if (!juego->hud.widgets[HUD_WIDGETS_USERNAME]) return ERR_SIN_MEMORIA;
     juego->hud.widgets[HUD_WIDGETS_TEXTO] = widget_crear_texto(juego->renderer, "¡SIGUIENTE RONDA!", (SDL_Point){rendererW / 2, 24}, juego->fuentes[FUENTE_TAM_32], SDL_COLOR_BLANCO, (SDL_Color){0,0,0,0}, WIDGET_OCULTO);
     if (!juego->hud.widgets[HUD_WIDGETS_TEXTO]) return ERR_SIN_MEMORIA;
@@ -833,7 +847,6 @@ static void _juego_ventana_menu_destruir(void *datos)
     tJuego *juego = (tJuego*)datos;
 
     menu_destruir(juego->hud.menu);
-
 }
 
 static int _juego_ventana_usuario_crear(void *datos)
