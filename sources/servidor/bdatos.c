@@ -123,7 +123,6 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
 
     _bdatos_obtener_ruta_archivo(rutaIdx, sizeof(rutaIdx), bDatos->tablaAbierta.encabezado.nombreTabla, ".idx", NULL);
     archIdx = fopen(rutaIdx, "wb");
-
     if (archIdx) {
         if (arbol_escribir_en_arch(archIdx, &bDatos->tablaAbierta.arbolPK) != ARBOL_TODO_OK) {
             ret = BD_ERROR_ESCRITURA;

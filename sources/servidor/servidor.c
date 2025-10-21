@@ -51,7 +51,7 @@ void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *soli
     const char *mensaje;
     tLista listaRegistros;
 
-    printf(FONDO_MAGENTA "Recibido:" COLOR_RESET " %s\n", solicitud);
+    printf(COLOR_RESET "%s", solicitud);
 
     lista_crear(&listaRegistros);
 
@@ -60,7 +60,7 @@ void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *soli
 
     snprintf(respuesta, TAM_BUFFER, "%d;%s;%d\n", retorno, mensaje, cantRegistros);
     send(*sock, respuesta, strlen(respuesta), 0);
-    printf(FONDO_AMARILLO "Enviado:" COLOR_RESET " %s", respuesta);
+    printf(FONDO_AMARILLO "Enviado:" COLOR_RESET " %s\n", respuesta);
 
     if (retorno == BD_DATOS_OBTENIDOS) {
 
@@ -74,11 +74,12 @@ void servidor_procesar_solicitud(tBDatos *bDatos, SOCKET *sock, const char *soli
 
             if (registroTexto) {
 
-                mensaje_color(FONDO_CIAN, "%s", registroTexto);
+                printf(TEXTO_ROJO_B "%s" TEXTO_RESET, registroTexto);
                 send(*sock, registroTexto, strlen(registroTexto), 0);
                 free(registroTexto);
             }
         }
+        puts("");
     }
 }
 

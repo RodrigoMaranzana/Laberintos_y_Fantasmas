@@ -15,6 +15,8 @@ int main()
     char buffer[TAM_BUFFER];
     SOCKET escuchaCliente, escuchaTerminal, conexionCliente, conexionTerminal;
 
+    mensaje_titulo("LyfDB - Monitor del Servicio");
+
     if ((servidorRet = servidor_inicializar(&bDatos)) != SERVIDOR_BD_TODO_OK) {
         mensaje_error("No se pudo inicializar Winsock");
         return servidorRet;
@@ -33,7 +35,6 @@ int main()
     conexionCliente = INVALID_SOCKET;
     conexionTerminal = INVALID_SOCKET;
 
-    mensaje_titulo("LyfDB - Monitor del Servicio");
     printf(FONDO_AMARILLO "Escuchando puertos %d (Cliente) y %d (Terminal)...\n" FONDO_NEGRO, PUERTO, PUERTO_TERMINAL);
 
     while (1) {
@@ -67,7 +68,7 @@ int main()
             if (bytesRecibidos > 0) {
 
                 buffer[bytesRecibidos] = '\0';
-                mensaje_color(FONDO_CIAN, "[Cliente] %s");
+                printf(FONDO_CIAN "[Cliente]:");
                 servidor_procesar_solicitud(&bDatos, &conexionCliente, buffer);
 
             } else if (bytesRecibidos == 0 || (bytesRecibidos == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)) {
@@ -75,6 +76,7 @@ int main()
                 mensaje_color(FONDO_MAGENTA, "Cliente desconectado.");
                 closesocket(conexionCliente);
                 conexionCliente = INVALID_SOCKET;
+                bdatos_apagar(&bDatos);
             }
         }
 
@@ -85,7 +87,7 @@ int main()
             if (bytesRecibidos > 0) {
 
                 buffer[bytesRecibidos] = '\0';
-                mensaje_color(FONDO_CIAN, "[Terminal] %s");
+                printf(FONDO_CIAN "[Terminal]:");
                 servidor_procesar_solicitud(&bDatos, &conexionTerminal, buffer);
 
             } else if (bytesRecibidos == 0 || (bytesRecibidos == SOCKET_ERROR && WSAGetLastError() != WSAEWOULDBLOCK)) {
@@ -93,6 +95,7 @@ int main()
                 mensaje_color(FONDO_MAGENTA, "Terminal desconectada.");
                 closesocket(conexionTerminal);
                 conexionTerminal = INVALID_SOCKET;
+                bdatos_apagar(&bDatos);
             }
         }
 

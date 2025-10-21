@@ -90,14 +90,12 @@ int main()
             printf(TEXTO_VERDE "%s%s%s", "terminal", TEXTO_RESET, "> ");
         }
 
-
         fgets(bufferLinea, sizeof(bufferLinea), stdin);
         cursor = strchr(bufferLinea, '\n');
         if (!cursor) {
             return -1;
         }
         *cursor = '\0';
-
 
         if (modo == MODO_BDATOS) {
 
@@ -122,17 +120,16 @@ int main()
 
                     cursor = strchr(bufferLinea, '{');
                     if (cursor) {
-                        *cursor = ' ';
+                        strcpy(cursor, cursor+1);
                     }
                     cursor = strchr(bufferLinea, '}');
                     if (cursor) {
-                        *cursor = ' ';
+                        *cursor = '\0';
                     }
-                    cursor = strchr(bufferLinea, '\n');
-                    if (!cursor) {
-                        return -1;
+                    cursor = strrchr(bufferLinea, '\n');
+                    if (cursor) {
+                        *cursor = '\0';
                     }
-                    *cursor = '\0';
 
                     if (strlen(bufferLinea) > 0) {
 
@@ -140,22 +137,27 @@ int main()
                             conectado = SESION_OFFLINE;
                             mensaje_advertencia("Socket desconectado.");
                             modo = MODO_TERMINAL;
-                            break;
-                        }
+                        } else {
 
-                        if (cliente_recibir_respuesta(sock, &colaRespuestas) == CE_DATOS) {
+                            int retorno = cliente_recibir_respuesta(sock, &colaRespuestas);
+                            if (retorno == CE_TODO_OK || retorno == CE_DATOS) {
 
-                            int i = 1;
-                            char buffer[TAM_BUFFER];
-                            puts("");
-                            if (cola_desencolar(&colaRespuestas, buffer, sizeof(buffer)) != COLA_VACIA) {
-                                printf(TEXTO_CIAN "[RESPUESTA]\n" TEXTO_AMARILLO "  %s" ,buffer);
-                                *buffer = '\0';
+                                char buffer[TAM_BUFFER];
+                                puts("");
+                                if (cola_desencolar(&colaRespuestas, buffer, sizeof(buffer)) != COLA_VACIA) {
+                                    printf(TEXTO_CIAN "[RESPUESTA]\n%s" ,buffer);
+                                    *buffer = '\0';
+                                }
+
+                                if (retorno == CE_DATOS) {
+
+                                    int i = 1;
+                                    while (cola_desencolar(&colaRespuestas, buffer, sizeof(buffer)) != COLA_VACIA) {
+                                        printf(TEXTO_MAGENTA "  %d. " TEXTO_AMARILLO "%s", i++, buffer);
+                                    }
+                                }
+                                puts("");
                             }
-                            while (cola_desencolar(&colaRespuestas, buffer, sizeof(buffer)) != COLA_VACIA) {
-                                printf(TEXTO_MAGENTA "  %d. " TEXTO_AMARILLO "%s", i++, buffer);
-                            }
-                            puts("");
                         }
                     }
                 }
