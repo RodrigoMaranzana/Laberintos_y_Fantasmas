@@ -1043,6 +1043,7 @@ static int _bdatos_seleccionar(tBDatos *bDatos, tLista *listaDatos, int *cantReg
                 ret = _bdatos_seleccionar_por_escaneo(bDatos, listaDatos, cantRegistrosDatos, &campoEncontrado, valor, buffer, IGUAL);
             }
         } else {
+
             ret = _bdatos_seleccionar_por_escaneo(bDatos, listaDatos, cantRegistrosDatos, &campoEncontrado, valor, buffer, DISTINTO);
         }
 

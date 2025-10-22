@@ -256,7 +256,15 @@ static int _terminal_cmp_color_simbolo(const void* a, const void* b) {
     return strcmp(buffer, color->buffer);
 }
 
-
+/**
+ * @brief Determina si las llaves estan equilibradas
+ *
+ * Esta función recorre la linea buscando llaves '{' '}' para determinar
+ * si para una llave abierta/cerrada se tiene su contraparte
+ *
+ * @param linea Puntero a la linea ingresada.
+ * @param llave Puntero al contador de llaves.
+ */
 void terminal_actualizar_llave(const char* linea, int *llave) {
 
     for (int i = 0; linea[i] != '\0'; ++i) {
