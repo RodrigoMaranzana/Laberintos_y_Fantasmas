@@ -1,3 +1,5 @@
+[![Documentación](https://img.shields.io/badge/documentación-gh--pages-blue)](https://rodrigomaranzana.github.io/Laberintos_y_Fantasmas/)
+
 # Laberintos y Fantasmas
 
 TP Algoritmos y Estructuras de Datos - Grupo Pixelados
