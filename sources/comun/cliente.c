@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static int _cliente_recibir_respuesta(SOCKET sock, char *respuesta, int tamBuffer);
+static int _cliente_recibir(SOCKET sock, char *respuesta, int tamBuffer);
 
 int cliente_inicializar()
 {
@@ -22,17 +22,18 @@ int cliente_inicializar()
 
 SOCKET cliente_conectar_servidor(const char *ipServidor, int puerto)
 {
+    struct sockaddr_in direccionSocket;
+
     SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock == INVALID_SOCKET) {
         return INVALID_SOCKET;
     }
 
-    struct sockaddr_in server_addr;
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(puerto);
-    server_addr.sin_addr.s_addr = inet_addr(ipServidor);
+    direccionSocket.sin_family = AF_INET;
+    direccionSocket.sin_port = htons(puerto);
+    direccionSocket.sin_addr.s_addr = inet_addr(ipServidor);
 
-    if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    if (connect(sock, (struct sockaddr*)&direccionSocket, sizeof(direccionSocket)) < 0) {
         closesocket(sock);
         return INVALID_SOCKET;
     }
@@ -48,11 +49,21 @@ void cliente_destruir_conexion(SOCKET sock)
 
 int cliente_enviar_solicitud(SOCKET sock, const char *solicitud)
 {
-    if (send(sock, solicitud, strlen(solicitud), 0) < 0) {
-        mensaje_error("La solcitud al servidor ha fallado");
-        closesocket(sock);
-        return CE_ERR_SOCKET;
+    unsigned bytesEnviados = 0, bytesRestantes = strlen(solicitud);
+
+    while (bytesRestantes != 0) {
+
+        int cantBytes = send(sock, solicitud + bytesEnviados, bytesRestantes, 0);
+        if (cantBytes < 0) {
+            mensaje_error("La solcitud al servidor ha fallado");
+            closesocket(sock);
+            return CE_ERR_SOCKET;
+        }
+
+        bytesEnviados += cantBytes;
+        bytesRestantes -= cantBytes;
     }
+
     return CE_TODO_OK;
 }
 
@@ -61,7 +72,7 @@ int cliente_recibir_respuesta(SOCKET sock, tCola *colaRespuestas)
     char respuesta[TAM_BUFFER], *cursor;
     int cantReg = 0, codigoRetorno;
 
-    if (_cliente_recibir_respuesta(sock, respuesta, sizeof(respuesta)) != 0) {
+    if (_cliente_recibir(sock, respuesta, sizeof(respuesta)) != 0) {
         mensaje_error("El servidor no ha respondido");
         closesocket(sock);
         return CE_ERR_SOCKET;
@@ -79,8 +90,7 @@ int cliente_recibir_respuesta(SOCKET sock, tCola *colaRespuestas)
 
         for (int i = 0; i < cantReg; i++) {
 
-            if (_cliente_recibir_respuesta(sock, respuesta, sizeof(respuesta))!= 0) {
-
+            if (_cliente_recibir(sock, respuesta, sizeof(respuesta)) != CE_TODO_OK) {
                 mensaje_error("No se pudo recibir los datos.");
                 return CE_ERR_SOCKET;
             }
@@ -92,21 +102,20 @@ int cliente_recibir_respuesta(SOCKET sock, tCola *colaRespuestas)
     }
 
     if (codigoRetorno == BD_TODO_OK) {
-
         return CE_TODO_OK;
     }
 
     return CE_ERR_SERVIDOR;
 }
 
-static int _cliente_recibir_respuesta(SOCKET sock, char *respuesta, int tamBuffer)
+static int _cliente_recibir(SOCKET sock, char *respuesta, int tamBuffer)
 {
     int bytesRecibidos = recv(sock, respuesta, tamBuffer - 1, 0);
 
     if (bytesRecibidos <= 0) {
-        return -1;
+        return CE_SIN_RESPUESTA;
     }
 
     respuesta[bytesRecibidos] = '\0';
-    return 0;
+    return CE_TODO_OK;
 }

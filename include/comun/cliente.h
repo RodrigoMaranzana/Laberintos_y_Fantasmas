@@ -6,6 +6,7 @@
 typedef enum {
     CE_TODO_OK,
     CE_DATOS,
+    CE_SIN_RESPUESTA,
     CE_SIN_RESULTADOS,
     CE_ERR_SIN_MEM,
     CE_ERR_SOCKET,
