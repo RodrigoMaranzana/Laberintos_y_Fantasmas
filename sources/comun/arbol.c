@@ -13,6 +13,8 @@ static int _arbol_eliminar_raiz(tArbol *arbol);
 static tNodoArbol** _arbol_menor_nodo(const tArbol *arbol);
 static tNodoArbol** _arbol_mayor_nodo(const tArbol *arbol);
 static unsigned _arbol_altura(const tArbol *arbol);
+static int _arbol_cargar_desde_datos_ordenados(tArbol *arbol, void *datos, tLeer leer, unsigned limiteInf, unsigned limiteSup, void *extra);
+static unsigned _arbol_leer_arch_bin(void **datoDest, void *datoFuente, unsigned pos, void *extra);
 
 
 void arbol_crear(tArbol *arbol)
@@ -219,7 +221,7 @@ int arbol_cargar_de_arch(FILE *arch, tArbol *arbol, unsigned tamReg, tCmp cmp)
     return ret;
 }
 
-int arbol_cargar_de_arch_con_lector(FILE *arch, tArbol *arbol, tLeer leer, tCmp cmp)
+int arbol_cargar_de_arch_con_lector(FILE *arch, tArbol *arbol, tLeerSimple leer, tCmp cmp)
 {
     int ret = ARBOL_TODO_OK;
     void *dato;
@@ -388,9 +390,70 @@ static tNodoArbol** _arbol_menor_nodo(const tArbol *arbol)
     return (tNodoArbol**)arbol;
 }
 
+static unsigned _arbol_leer_arch_bin(void **datoDest, void *datoFuente, unsigned pos, void *extra)
+{
+    unsigned tamReg = *((unsigned*)extra);
 
+    *datoDest = malloc(tamReg);
+    if (!*datoDest) {
+        return ARBOL_SIN_MEM;
+    }
 
+    fseek((FILE*)datoFuente, pos * tamReg, SEEK_SET);
 
+    return fread(*datoDest, tamReg, 1, (FILE*)datoFuente);
+}
+
+static int _arbol_cargar_desde_datos_ordenados(tArbol *arbol, void *datos, tLeer leer, unsigned limiteInf, unsigned limiteSup, void *extra)
+{
+    int ret, mitad = (limiteInf + limiteSup) / 2;
+
+    if (limiteInf > limiteSup) {
+        return ARBOL_TODO_OK;
+    }
+
+    *arbol = (tNodoArbol*)malloc(sizeof(tNodoArbol));
+    if (!*arbol) {
+        return ARBOL_SIN_MEM;
+    }
+
+    (*arbol)->tamDato = leer(&(*arbol)->dato, datos, mitad, extra);
+    if (!(*arbol)->tamDato) {
+        free(*arbol);
+        return ARBOL_SIN_MEM;
+    }
+
+    (*arbol)->izq = NULL;
+    (*arbol)->der = NULL;
+
+    if ((ret = _arbol_cargar_desde_datos_ordenados(&(*arbol)->izq, datos, leer, limiteInf, mitad - 1, extra)) != ARBOL_TODO_OK) {
+        return ret;
+    }
+
+    return _arbol_cargar_desde_datos_ordenados(&(*arbol)->der, datos, leer, mitad + 1, limiteSup, extra);
+}
+
+int arbol_cargar_arch_bin_ordenado(tArbol *arbol, FILE* arch, unsigned tamDato)
+{
+    unsigned cantReg;
+    if (*arbol) {
+        return ARBOL_NO_INICIALIZADO;
+    }
+
+    fseek(arch, 0, SEEK_END);
+    cantReg = ftell(arch) / tamDato;
+
+    return _arbol_cargar_desde_datos_ordenados(arbol, arch, _arbol_leer_arch_bin, 0, cantReg - 1, &tamDato);
+}
+
+int arbol_cargar_datos_ordenados(tArbol *arbol, void *datos, unsigned cantReg, void *extra, tLeer leer)
+{
+    if (*arbol) {
+        return ARBOL_NO_INICIALIZADO;
+    }
+
+    return _arbol_cargar_desde_datos_ordenados(arbol, datos, leer, 0, cantReg - 1, extra);
+}
 
 
 
