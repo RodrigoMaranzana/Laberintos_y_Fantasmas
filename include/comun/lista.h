@@ -35,6 +35,7 @@ typedef struct {
 
 void lista_crear(tLista *lista);
 void lista_recorrer(const tLista *lista, tAccion accion, void *extra);
+void lista_recorrer_inverso(const tLista *lista, tAccion accion, void *extra);
 int lista_insertar_final(tLista *lista, const void *dato, unsigned tamDato);
 int lista_insertar_comienzo(tLista *lista, const void *dato, unsigned tamDato);
 void lista_vaciar(tLista *lista);

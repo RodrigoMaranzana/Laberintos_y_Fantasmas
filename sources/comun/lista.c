@@ -18,6 +18,16 @@ void lista_recorrer(const tLista *lista, tAccion accion, void *extra)
     }
 }
 
+void lista_recorrer_inverso(const tLista *lista, tAccion accion, void *extra)
+{
+    if (*lista) {
+
+        lista_recorrer_inverso(&(*lista)->sig, accion, extra);
+        accion((*lista)->dato, extra);
+    }
+}
+
+
 int lista_insertar_final(tLista *lista, const void *dato, unsigned tamDato)
 {
     tNodo *nodoNuevo;
