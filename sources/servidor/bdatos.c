@@ -66,8 +66,8 @@ static int _bdatos_parsear_declaracion_campos(tSecuencia *secuencia, tVector *ve
 static int _bdatos_leer_campo_tipo(tSecuencia *secuencia, tCampo *campo);
 static int _bdatos_parsear_valores(tSecuencia *secuencia, tEncabezado *encabezado, eModoParseoValores modo, tVector *vecCampoValor);
 static eSimbolo _bdatos_comparar_simbolo(const char* simbolo);
-static int _bdatos_leer_indice_secundario(void **indiceIS, unsigned *tamindiceIS, FILE *arch);
-static void _bdatos_escribir_indice_secundario(void *dato, FILE *arch);
+static unsigned _bdatos_leer_indice_secundario(void **datoDest, void *datoFuente, int pos, void *extra);
+static int _bdatos_escribir_indice_secundario(void *dato, FILE *arch, void *extra);
 static int _bdatos_cmp_offset(const void *a, const void *b);
 static void _bdatos_destruir_indice_secundario(void *dato);
 static int _bdatos_accion_limite_top(void *elem, void *extra);
@@ -79,6 +79,9 @@ static int _bdatos_cmp_campo_por_offset(const void* a, const void* b);
 static void _bdatos_accion_escribir_campo(void* elem, void* extra);
 static void _bdatos_accion_liberar_campo_valor(void* elem, void* extra);
 static void _bdatos_obtener_ruta_archivo(char* buffer, size_t tamBuffer, const char* nombreTabla, const char* extension, const char* nombreCampo);
+static void _bdatos_imprimir_arbol_secundario(void *elem, unsigned tamDato, unsigned nivel, void *extra);
+static void _bdatos_imprimir_arbol_primario(void *elem, unsigned tamDato, unsigned nivel, void *extra);
+
 
 /// DEBUG
 void _bdatos_reset_metricas() {
@@ -87,26 +90,37 @@ void _bdatos_reset_metricas() {
 /// DEBUG
 
 
-static void _bdatos_escribir_indice_secundario(void *dato, FILE *arch)
+static int _bdatos_escribir_indice_secundario(void *dato, FILE *arch, void *extra)
 {
-    long *offset;
+    long offsetReg, *offsetDat;
+    tLista *listaOffsetsIdxS = (tLista*)extra;
     tListaIterador listaIt;
     tIndiceIS *indice = (tIndiceIS*)dato;
 
-    if (!dato) {
-        return;
-    }
-
     lista_it_crear(&indice->listaOffsets, &listaIt);
 
-    fwrite(indice->clave, sizeof(indice->clave), 1, arch);
-    fwrite(&indice->cantOffsets, sizeof(indice->cantOffsets), 1, arch);
+    offsetReg = ftell(arch);
+    lista_insertar_comienzo(listaOffsetsIdxS, &offsetReg, sizeof(long));
 
-    offset = (long*)lista_it_primero(&listaIt);
-    while (offset) {
-        fwrite(offset, sizeof(long), 1, arch);
-        offset = (long*)lista_it_siguiente(&listaIt);
+    if (fwrite(indice->clave, sizeof(indice->clave), 1, arch) != 1) {
+        return 0;
     }
+
+    if (fwrite(&indice->cantOffsets, sizeof(indice->cantOffsets), 1, arch) != 1) {
+        return 0;
+    }
+
+    offsetDat = (long*)lista_it_primero(&listaIt);
+    while (offsetDat) {
+
+        if (fwrite(offsetDat, sizeof(long), 1, arch) != 1) {
+            return 0;
+        }
+
+        offsetDat = (long*)lista_it_siguiente(&listaIt);
+    }
+
+    return 1;
 }
 
 
@@ -124,7 +138,7 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
     _bdatos_obtener_ruta_archivo(rutaIdx, sizeof(rutaIdx), bDatos->tablaAbierta.encabezado.nombreTabla, ".idx", NULL);
     archIdx = fopen(rutaIdx, "wb");
     if (archIdx) {
-        if (arbol_escribir_en_arch(archIdx, &bDatos->tablaAbierta.arbolPK) != ARBOL_TODO_OK) {
+        if (arbol_escribir_arch_bin_orden(&bDatos->tablaAbierta.arbolPK, archIdx) != ARBOL_TODO_OK) {
             ret = BD_ERROR_ESCRITURA;
         }
         fclose(archIdx);
@@ -139,10 +153,30 @@ static int _bdatos_cerrar_tabla(tBDatos *bDatos)
         _bdatos_obtener_ruta_archivo(rutaIdxs, sizeof(rutaIdxs), bDatos->tablaAbierta.encabezado.nombreTabla, ".idxs", campoIS->nombre);
         archIdx = fopen(rutaIdxs, "wb");
         if (archIdx) {
-
-            if (arbol_escribir_en_arch_con_escritor(archIdx, &bDatos->tablaAbierta.arbolIS, _bdatos_escribir_indice_secundario) != ARBOL_TODO_OK) {
+            int cantOffsetIdxS = 0;
+            long *offsetIdxS;
+            tLista listaOffsetsIdxS;
+            tListaIterador listaOffsetsIdxSIt;
+            lista_crear(&listaOffsetsIdxS);
+            if (arbol_escribir_arch_bin_orden_con_escritor(&bDatos->tablaAbierta.arbolIS, archIdx, _bdatos_escribir_indice_secundario, &listaOffsetsIdxS) != ARBOL_TODO_OK) {
                 ret = BD_ERROR_ESCRITURA;
             }
+            lista_it_crear(&listaOffsetsIdxS, &listaOffsetsIdxSIt);
+
+            offsetIdxS = (long*)lista_it_primero(&listaOffsetsIdxSIt);
+            while (offsetIdxS) {
+
+                if (fwrite(offsetIdxS, sizeof(long), 1, archIdx) != 1) {
+                    return 0;
+                }
+                ++cantOffsetIdxS;
+                offsetIdxS = (long*)lista_it_siguiente(&listaOffsetsIdxSIt);
+            }
+
+            if (fwrite(&cantOffsetIdxS, sizeof(int), 1, archIdx) != 1) {
+                return 0;
+            }
+
             fclose(archIdx);
         } else {
             ret = BD_ERROR_ESCRITURA;
@@ -475,20 +509,32 @@ static int _bdatos_cmp_indice_secundario(const void *a, const void *b)
     return strcmp(indiceA->clave, indiceB->clave);
 }
 
-static int _bdatos_leer_indice_secundario(void **indiceIS, unsigned *tamindiceIS, FILE *arch)
+
+static unsigned _bdatos_leer_indice_secundario(void **datoDest, void *datoFuente, int pos, void *extra)
 {
     int i;
+    long offsetReg;
+    FILE *arch = (FILE*)datoFuente;
     tIndiceIS *nuevoIndice = malloc(sizeof(tIndiceIS));
     if (!nuevoIndice) {
         return 0;
     }
+
+    fseek(arch, -(sizeof(int) + ((pos + 1) * sizeof(long))), SEEK_END);
+
+    if (fread(&offsetReg, sizeof(long), 1, arch) != 1) {
+        free(nuevoIndice);
+        return 0;
+    }
+
+    fseek(arch, offsetReg, SEEK_SET);
 
     if (fread(&nuevoIndice->clave, sizeof(nuevoIndice->clave), 1, arch) != 1) {
         free(nuevoIndice);
         return 0;
     }
 
-    if (fread(&nuevoIndice->cantOffsets, sizeof(unsigned), 1, arch) != 1) {
+    if (fread(&nuevoIndice->cantOffsets, sizeof(int), 1, arch) != 1) {
         free(nuevoIndice);
         return 0;
     }
@@ -505,10 +551,9 @@ static int _bdatos_leer_indice_secundario(void **indiceIS, unsigned *tamindiceIS
         lista_insertar_final(&nuevoIndice->listaOffsets, &offset, sizeof(long));
     }
 
-    *indiceIS = nuevoIndice;
-    *tamindiceIS = sizeof(tIndiceIS);
+    *datoDest = nuevoIndice;
 
-    return 1;
+    return sizeof(tIndiceIS);
 }
 
 static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTabla)
@@ -518,6 +563,7 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
     FILE *archDat, *archIdx;
     tEncabezado encabezado;
     tCampo* campoIS;
+    int cantRegIdxS;
     char rutaArch[TAM_RUTA];
 
     if (bDatos->tablaAbierta.arch && strcmp(bDatos->tablaAbierta.encabezado.nombreTabla, nombreTabla) == 0) return BD_TODO_OK;
@@ -546,13 +592,16 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
         return BD_ERROR_ARCHIVO;
     }
 
-    ret = arbol_cargar_de_arch(archIdx, &arbolPK, encabezado.tamRegIdx, _bdatos_cmp_indice);
+    ret = arbol_cargar_arch_bin_ordenado(&arbolPK, archIdx, encabezado.tamRegIdx);
     fclose(archIdx);
     if (ret != ARBOL_TODO_OK) {
         fclose(archDat);
         vector_destruir(&encabezado.vecCampos);
         return BD_ERROR_ARCHIVO;
     }
+
+    puts("\nIndice Primario:");
+    arbol_recorrer_orden_inverso(&arbolPK, 0, NULL, _bdatos_imprimir_arbol_primario);
 
     arbol_crear(&arbolIS);
     campoIS = _bdatos_encabezado_buscar_campo_por_tipo(&encabezado, IS);
@@ -569,7 +618,19 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
             return BD_ERROR_ARCHIVO;
         }
 
-        ret = arbol_cargar_de_arch_con_lector(archIdxS, &arbolIS, _bdatos_leer_indice_secundario, _bdatos_cmp_indice_secundario);
+        fseek(archIdxS, -(long)sizeof(int), SEEK_END);
+
+        if (fread(&cantRegIdxS, sizeof(int), 1, archIdxS) != 1) {
+            fclose(archIdxS);
+            fclose(archDat);
+            vector_destruir(&encabezado.vecCampos);
+            arbol_vaciar(&arbolPK);
+            return BD_ERROR_ARCHIVO;
+        }
+
+        rewind(archIdxS);
+
+        ret = arbol_cargar_datos_ordenados(&arbolIS, archIdxS, cantRegIdxS, NULL, _bdatos_leer_indice_secundario);
         fclose(archIdxS);
         if (ret != ARBOL_TODO_OK) {
             fclose(archDat);
@@ -578,6 +639,9 @@ static int _bdatos_manejar_apertura_tabla(tBDatos *bDatos, const char *nombreTab
             arbol_vaciar_destructor(&bDatos->tablaAbierta.arbolIS, _bdatos_destruir_indice_secundario);
             return BD_ERROR_ARCHIVO;
         }
+
+        puts("\nIndice Secundario:");
+        arbol_recorrer_orden_inverso(&arbolIS, 0, NULL, _bdatos_imprimir_arbol_secundario);
     }
 
     if (bDatos->tablaAbierta.arch) {
@@ -726,7 +790,7 @@ static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, 
             lista_insertar_final(&indice.listaOffsets, &offset, sizeof(long));
             indice.cantOffsets = 1;
 
-            arbol_insertar_rec(arbolIS, &indice, sizeof(tIndiceIS), _bdatos_cmp_indice_secundario);
+            arbol_insertar(arbolIS, &indice, sizeof(tIndiceIS), _bdatos_cmp_indice_secundario);
         }
         return;
     }
@@ -740,7 +804,7 @@ static void _bdatos_actualizar_is(tArbol* arbolIS, int valorClave, long offset, 
     }
 
     if (lista_vacia(&indice.listaOffsets) != LISTA_VACIA) {
-        arbol_insertar_rec(arbolIS, &indice, sizeof(tIndiceIS), _bdatos_cmp_indice_secundario);
+        arbol_insertar(arbolIS, &indice, sizeof(tIndiceIS), _bdatos_cmp_indice_secundario);
     }
 }
 
@@ -877,7 +941,7 @@ static int _bdatos_insertar(tBDatos *bDatos)
     offset = ftell(bDatos->tablaAbierta.arch);
 
     nuevoIndiceReg.offset = offset;
-    if ((ret = arbol_insertar_rec(&bDatos->tablaAbierta.arbolPK, &nuevoIndiceReg, sizeof(tIndicePK), _bdatos_cmp_indice)) != ARBOL_TODO_OK) {
+    if ((ret = arbol_insertar(&bDatos->tablaAbierta.arbolPK, &nuevoIndiceReg, sizeof(tIndicePK), _bdatos_cmp_indice)) != ARBOL_TODO_OK) {
         vector_recorrer(&vecCampoValor, _bdatos_accion_liberar_campo_valor, NULL);
         vector_destruir(&vecCampoValor);
         free(registro);
@@ -1461,3 +1525,35 @@ int bdatos_apagar(tBDatos *bDatos)
 {
     return _bdatos_cerrar_tabla(bDatos);
 }
+
+
+static void _bdatos_imprimir_arbol_secundario(void *elem, unsigned tamDato, unsigned nivel, void *extra)
+{
+    tIndiceIS *indiceIS = (tIndiceIS*)elem;
+
+    printf("%*s-%5s-\n", nivel * 7,"", indiceIS->clave);
+}
+
+static void _bdatos_imprimir_arbol_primario(void *elem, unsigned tamDato, unsigned nivel, void *extra)
+{
+    tIndicePK *indicePK = (tIndicePK*)elem;
+
+    printf("%*s-%5s-\n", nivel * 7,"", indicePK->clave);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

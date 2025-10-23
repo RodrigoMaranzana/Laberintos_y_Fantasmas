@@ -23,29 +23,47 @@ typedef struct sNodoArbol {
 typedef tNodoArbol *tArbol;
 
 typedef int (*tCmp)(const void *a, const void *b);
-typedef void (*tAccion)(void *elem, void *extra);
-typedef int (*tAccionLimite)(void *elem, void *extra);
-typedef unsigned (*tLeer)(void **datoDest, void *datoFuente, unsigned pos, void *extra);
-typedef int (*tLeerSimple)(void **dato, unsigned *tamDato, FILE *arch);
-typedef void (*tEscribir)(void *dato, FILE *arch);
+typedef void (*tAccionArbol)(void *elem, unsigned tamDato, unsigned nivel, void *extra);
 typedef void (*tDestruir)(void *dato);
+typedef int (*tEscribir)(void *dato, FILE *arch, void *extra);
+typedef unsigned (*tLeer)(void **datoDest, void *datoFuente, int pos, void *extra);
 
+/// REVISAR
+typedef int (*tAccionLimite)(void *elem, void *extra);
+/// REVISAR
 
 void arbol_crear(tArbol *arbol);
-int arbol_buscar(const tArbol *arbol, void *dato, unsigned tamDato, tCmp cmp);
-int arbol_insertar_rec(tArbol *arbol, const void *dato, unsigned tamDato, tCmp cmp);
-int arbol_insertar_it(tArbol *arbol, const void *dato, unsigned tamDato, tCmp cmp);
-void arbol_recorrer_orden_inverso(const tArbol *arbol, void *extra, tAccion accion);
-void arbol_recorrer_orden_inverso_con_limite(const tArbol *arbol, void *extra, tAccionLimite accionLimite);
-void arbol_recorrer_preorden(const tArbol *arbol, void *extra, tAccion accion);
-void arbol_recorrer_posorden(const tArbol *arbol, void *extra, tAccion accion);
-int arbol_cargar_de_arch(FILE *arch, tArbol *arbol, unsigned tamReg, tCmp cmp);
-int arbol_cargar_de_arch_con_lector(FILE *arch, tArbol *arbol, tLeerSimple leer, tCmp cmp);
-int arbol_escribir_en_arch(FILE *arch, tArbol *arbol);
-int arbol_escribir_en_arch_con_escritor(FILE *arch, tArbol *arbol, tEscribir escribir);
 void arbol_vaciar(tArbol *arbol);
+int arbol_insertar(tArbol *arbol, const void *dato, unsigned tamDato, tCmp cmp);
+void arbol_recorrer_preorden(const tArbol *arbol, unsigned nivel, void *extra, tAccionArbol accion);
+void arbol_recorrer_orden(const tArbol *arbol, unsigned nivel, void *extra, tAccionArbol accion);
+void arbol_recorrer_orden_inverso(const tArbol *arbol, unsigned nivel, void *extra, tAccionArbol accion);
+void arbol_recorrer_posorden(const tArbol *arbol, unsigned nivel, void *extra, tAccionArbol accion);
+int arbol_buscar(const tArbol *arbol, void *dato, unsigned tamDato, tCmp cmp);
+int arbol_escribir_arch_bin_orden(const tArbol *arbol, FILE *arch);
+int arbol_escribir_arch_bin_orden_con_escritor(const tArbol *arbol, FILE *arch, tEscribir escribir, void *extra);
 void arbol_vaciar_destructor(tArbol *arbol, tDestruir destruir);
 int arbol_eliminar(tArbol *arbol, void *dato, unsigned tamDato, tCmp cmp);
 int arbol_cargar_arch_bin_ordenado(tArbol *arbol, FILE* arch, unsigned tamDato);
-int arbol_cargar_datos_ordenados(tArbol *arbol, void *datos, unsigned cantReg, void *extra, tLeer leer);
+int arbol_cargar_datos_ordenados(tArbol *arbol, void *datos, int cantReg, void *extra, tLeer leer);
+
+/// REVISAR
+void arbol_recorrer_orden_inverso_con_limite(const tArbol *arbol, void *extra, tAccionLimite accionLimite);
+/// REVISAR
+
 #endif // ARBOL_H_INCLUDED
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
