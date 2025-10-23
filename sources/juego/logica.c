@@ -354,7 +354,7 @@ int logica_iniciar_juego(tLogica *logica)
 
     logica->ronda.cantFantasmas = 1 + (rand() % logica->config.maxFantasmas);
     logica->ronda.cantPremiosExtra = 1 + (rand() % logica->config.maxPremios);
-    logica->ronda.cantVidasExtra = (rand() % logica->config.maxVidasExtra + 1);
+    logica->ronda.cantVidasExtra = (rand() % (logica->config.maxVidasExtra + 1));
     escenario_generar(&logica->escenario, logica->ronda.cantPremiosExtra, logica->ronda.cantVidasExtra);
 
     _logica_colocar_jugador(&logica->escenario, &logica->jugador);
@@ -379,7 +379,7 @@ int logica_nueva_ronda(tLogica *logica)
 
     logica->ronda.cantFantasmas = 1 + (rand()  % logica->config.maxFantasmas);
     logica->ronda.cantPremiosExtra = 1 + (rand() % logica->config.maxPremios);
-    logica->ronda.cantVidasExtra = (rand() % logica->config.maxVidasExtra + 1);
+    logica->ronda.cantVidasExtra = (rand() % (logica->config.maxVidasExtra + 1));
     escenario_generar(&logica->escenario, logica->ronda.cantPremiosExtra, logica->ronda.cantVidasExtra);
 
     _logica_colocar_jugador(&logica->escenario, &logica->jugador);
